@@ -90,7 +90,20 @@ async function addMock(input: CycleItemInput): Promise<CycleItem> {
 async function addLive(input: CycleItemInput): Promise<CycleItem> {
   const uid = requireUid();
   const now = new Date().toISOString();
-  const payload = { ...input, createdAt: now, updatedAt: now };
+  const payload: Record<string, unknown> = {
+    peptideId: input.peptideId,
+    name: input.name,
+    dose: input.dose,
+    frequency: input.frequency,
+    createdAt: now,
+    updatedAt: now,
+  };
+  if (input.frequencyLabel?.trim()) {
+    payload.frequencyLabel = input.frequencyLabel.trim();
+  }
+  if (input.notes?.trim()) {
+    payload.notes = input.notes.trim();
+  }
   const ref = await addDoc(cycleCol(uid), payload);
   return mapItem(ref.id, payload);
 }

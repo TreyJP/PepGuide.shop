@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 
 import { ModalShell } from '@/src/components/ui/modal-shell';
 import { Button } from '@/src/components/ui/button';
-import { CYCLE_FREQUENCIES, frequencyLabel } from '@/src/constants/cycle';
+import {
+  CYCLE_FREQUENCIES,
+  extractMinimumDose,
+  frequencyLabel,
+} from '@/src/constants/cycle';
 import { useCycleStore } from '@/src/stores/cycle-store';
 import { useUiStore } from '@/src/stores/ui-store';
 import { useAuthStore } from '@/src/stores/auth-store';
@@ -14,6 +18,7 @@ export type AddToCycleModalProps = {
   open: boolean;
   peptideId: string;
   peptideName: string;
+  /** Research dosing text — used only for a min-dose placeholder, never autofilled. */
   suggestedDose?: string;
   onClose: () => void;
   onAdded?: () => void;
@@ -30,21 +35,22 @@ export function AddToCycleModal({
   const user = useAuthStore((state) => state.user);
   const openSignInModal = useUiStore((state) => state.openSignInModal);
   const addItem = useCycleStore((state) => state.addItem);
-  const [dose, setDose] = useState(suggestedDose);
+  const [dose, setDose] = useState('');
   const [frequency, setFrequency] = useState<CycleFrequency>('weekly');
   const [customFrequency, setCustomFrequency] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const minDoseHint = extractMinimumDose(suggestedDose);
 
   useEffect(() => {
     if (!open) return;
-    setDose(suggestedDose);
+    setDose('');
     setFrequency('weekly');
     setCustomFrequency('');
     setNotes('');
     setError(null);
-  }, [open, peptideId, suggestedDose]);
+  }, [open, peptideId]);
 
   const handleSave = async () => {
     if (!user) {
@@ -99,7 +105,7 @@ export function AddToCycleModal({
             value={dose}
             onChange={(event) => setDose(event.target.value)}
             className="h-10 w-full rounded-[12px] border border-border bg-surface px-3"
-            placeholder="e.g. 100 mcg"
+            placeholder={minDoseHint ? `e.g. ${minDoseHint}` : 'e.g. 100 mcg'}
           />
         </label>
 

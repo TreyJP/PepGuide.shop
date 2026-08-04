@@ -23,3 +23,15 @@ export function frequencyLabel(
     CYCLE_FREQUENCIES.find((item) => item.id === frequency)?.label ?? frequency
   );
 }
+
+/** Lowest numeric amount + unit from a research dosing blurb (e.g. "100–300 mcg" → "100 mcg"). */
+export function extractMinimumDose(researchDosing?: string): string | null {
+  if (!researchDosing?.trim()) return null;
+  const match = researchDosing.match(
+    /~?\s*(\d+(?:\.\d+)?)\s*(?:[–—-]\s*~?\s*\d+(?:\.\d+)?)?\s*(mcg|µg|ug|mg)\b/i,
+  );
+  if (!match) return null;
+  const amount = match[1];
+  const unit = match[2].toLowerCase() === 'ug' || match[2] === 'µg' ? 'mcg' : match[2].toLowerCase();
+  return `${amount} ${unit}`;
+}
