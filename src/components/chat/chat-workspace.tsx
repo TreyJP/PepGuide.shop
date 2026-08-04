@@ -1,0 +1,281 @@
+'use client';
+
+import { Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef } from 'react';
+
+import { AiMessage } from '@/src/components/chat/ai-message';
+import { EmptyChat } from '@/src/components/chat/empty-chat';
+import { MessageComposer } from '@/src/components/chat/message-composer';
+import { UserMessage } from '@/src/components/chat/user-message';
+import { Button } from '@/src/components/ui/button';
+import {
+  DEFAULT_EVIDENCE_DEPTH,
+  DEFAULT_RESEARCH_MODE,
+  PEP_GUIDE_MODEL,
+} from '@/src/constants/ai';
+import { deriveChatTitle, isDefaultChatTitle } from '@/src/lib/chat-title';
+import { PICKS_ONLY_ANSWER } from '@/src/constants/chat';
+import { sendChatMessage } from '@/src/services/api/ai';
+import { chatRepository } from '@/src/services/firestore/chats';
+import { useAuthStore } from '@/src/stores/auth-store';
+import { useChatStore } from '@/src/stores/chat-store';
+import { useUiStore } from '@/src/stores/ui-store';
+import type { ChatMessage } from '@/src/types';
+import { createId } from '@/src/utils/dates';
+
+export type ChatWorkspaceProps = {
+  chatId?: string;
+};
+
+export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
+  const router = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const user = useAuthStore((state) => state.user);
+  const openSignInModal = useUiStore((state) => state.openSignInModal);
+
+  const requireAuth = useCallback(
+    (message?: string) => {
+      if (user) return true;
+      openSignInModal(
+        message ?? 'Sign in to chat with PepGuide AI and save your research.',
+      );
+      return false;
+    },
+    [openSignInModal, user],
+  );
+
+  const activeChatId = useChatStore((state) => state.activeChatId);
+  const messagesByChat = useChatStore((state) => state.messagesByChat);
+  const isStreaming = useChatStore((state) => state.isStreaming);
+
+  const setActiveChatId = useChatStore((state) => state.setActiveChatId);
+  const setMessages = useChatStore((state) => state.setMessages);
+  const appendMessage = useChatStore((state) => state.appendMessage);
+  const updateMessage = useChatStore((state) => state.updateMessage);
+  const setIsStreaming = useChatStore((state) => state.setIsStreaming);
+  const upsertChat = useChatStore((state) => state.upsertChat);
+
+  const resolvedChatId = chatId ?? activeChatId;
+  const messages = resolvedChatId ? (messagesByChat[resolvedChatId] ?? []) : [];
+
+  useEffect(() => {
+    if (!chatId || !user) return;
+    setActiveChatId(chatId);
+    void (async () => {
+      try {
+        const loaded = await chatRepository.listMessages(chatId);
+        setMessages(chatId, loaded);
+      } catch {
+        setMessages(chatId, []);
+      }
+    })();
+  }, [chatId, setActiveChatId, setMessages, user]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
+  }, [messages, isStreaming]);
+
+  const handleNewChat = async () => {
+    if (!requireAuth('Sign in to start a new research chat.')) return;
+    const chat = await chatRepository.createChat({
+      researchMode: DEFAULT_RESEARCH_MODE,
+      evidenceDepth: DEFAULT_EVIDENCE_DEPTH,
+    });
+    upsertChat(chat);
+    setActiveChatId(chat.id);
+    setMessages(chat.id, []);
+    router.push(`/chat/${chat.id}`);
+  };
+
+  const handleSend = useCallback(
+    async (content: string) => {
+      if (!requireAuth('Sign in to chat with PepGuide AI and save your research.')) {
+        return;
+      }
+
+      let currentChatId = resolvedChatId;
+      if (!currentChatId) {
+        const chat = await chatRepository.createChat({
+          researchMode: DEFAULT_RESEARCH_MODE,
+          evidenceDepth: DEFAULT_EVIDENCE_DEPTH,
+        });
+
+        upsertChat(chat);
+        setActiveChatId(chat.id);
+        setMessages(chat.id, []);
+        currentChatId = chat.id;
+        router.push(`/chat/${chat.id}`);
+      }
+
+      const userMessage: ChatMessage = {
+        id: createId('msg'),
+        chatId: currentChatId,
+        role: 'user',
+        content,
+        createdAt: new Date().toISOString(),
+        status: 'complete',
+        classifications: [],
+        citations: [],
+        evidenceCards: [],
+        safetyAction: 'allow',
+      };
+
+      await chatRepository.appendMessage(userMessage);
+      appendMessage(currentChatId, userMessage);
+
+      const existingChat = useChatStore
+        .getState()
+        .chats.find((chat) => chat.id === currentChatId);
+      if (existingChat && isDefaultChatTitle(existingChat.title)) {
+        upsertChat({
+          ...existingChat,
+          title: deriveChatTitle(content),
+          lastMessagePreview: content.slice(0, 120),
+          updatedAt: userMessage.createdAt,
+        });
+      }
+
+      const assistantId = createId('msg');
+      const assistantMessage: ChatMessage = {
+        id: assistantId,
+        chatId: currentChatId,
+        role: 'assistant',
+        content: '',
+        createdAt: new Date().toISOString(),
+        status: 'streaming',
+        classifications: [],
+        citations: [],
+        evidenceCards: [],
+        safetyAction: 'allow',
+      };
+
+      appendMessage(currentChatId, assistantMessage);
+      setIsStreaming(true);
+
+      try {
+        const priorMessages =
+          useChatStore.getState().messagesByChat[currentChatId] ?? [];
+        const history = priorMessages
+          .filter(
+            (message) =>
+              message.id !== userMessage.id &&
+              message.id !== assistantId &&
+              (message.role === 'user' || message.role === 'assistant') &&
+              message.status === 'complete' &&
+              Boolean(message.content?.trim()),
+          )
+          .slice(-12)
+          .map((message) => ({
+            role: message.role as 'user' | 'assistant',
+            content:
+              message.content === PICKS_ONLY_ANSWER
+                ? '[Presented top research picks: retatrutide, tirzepatide, semaglutide with dosing guide.]'
+                : message.content,
+          }));
+
+        const response = await sendChatMessage({
+          chatId: currentChatId,
+          content,
+          history,
+          onToken: (token) => {
+            updateMessage(currentChatId, assistantId, {
+              content:
+                (useChatStore.getState().messagesByChat[currentChatId]?.find(
+                  (message) => message.id === assistantId,
+                )?.content ?? '') + token,
+            });
+          },
+        });
+
+        const completed: ChatMessage = {
+          ...assistantMessage,
+          content: response.answer,
+          status: 'complete',
+          classifications: [response.classification],
+          citations: response.citations,
+          evidenceCards: response.evidenceCards,
+          safetyAction: response.safetyAction,
+          suggestedQuestions: response.suggestedQuestions,
+          peptideIds: response.peptideIds,
+          modelVersion: PEP_GUIDE_MODEL,
+        };
+
+        await chatRepository.appendMessage(completed);
+        updateMessage(currentChatId, assistantId, completed);
+
+        const updatedChat = await chatRepository.updateChat(currentChatId, {
+          researchMode: DEFAULT_RESEARCH_MODE,
+          evidenceDepth: DEFAULT_EVIDENCE_DEPTH,
+        });
+        upsertChat(updatedChat);
+      } catch {
+        updateMessage(currentChatId, assistantId, {
+          content: 'Something went wrong. Please try again.',
+          status: 'error',
+        });
+      } finally {
+        setIsStreaming(false);
+      }
+    },
+    [
+      appendMessage,
+      requireAuth,
+      resolvedChatId,
+      router,
+      setActiveChatId,
+      setIsStreaming,
+      setMessages,
+      updateMessage,
+      upsertChat,
+    ],
+  );
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <header className="flex items-center justify-end border-b border-border px-4 py-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => void handleNewChat()}
+          aria-label="New chat"
+          className="shrink-0 gap-1.5"
+        >
+          <Plus className="size-4" />
+          <span className="hidden sm:inline">New</span>
+        </Button>
+      </header>
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
+        {messages.length === 0 ? (
+          <EmptyChat onSelectPrompt={handleSend} />
+        ) : (
+          <div className="mx-auto flex max-w-3xl flex-col gap-6">
+            {messages.map((message) =>
+              message.role === 'user' ? (
+                <UserMessage
+                  key={message.id}
+                  content={message.content}
+                  createdAt={message.createdAt}
+                />
+              ) : (
+                <AiMessage
+                  key={message.id}
+                  content={message.content}
+                  status={message.status}
+                  createdAt={message.createdAt}
+                  peptideIds={message.peptideIds}
+                />
+              ),
+            )}
+          </div>
+        )}
+      </div>
+
+      <MessageComposer onSubmit={handleSend} loading={isStreaming} />
+    </div>
+  );
+}

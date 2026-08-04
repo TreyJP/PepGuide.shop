@@ -1,0 +1,105 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdminClaim() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isAllowlistedAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/config/admins)
+        && request.auth.token.email is string
+        && request.auth.token.email.lower()
+          in get(/databases/$(database)/documents/config/admins).data.emails;
+    }
+
+    function isAdmin() {
+      return isAdminClaim() || isAllowlistedAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasAll([
+          'displayName',
+          'email',
+          'createdAt',
+          'onboardingCompleted',
+          'subscriptionTier',
+          'accountStatus'
+        ])
+        && request.resource.data.subscriptionTier == 'free'
+        && request.resource.data.accountStatus == 'active';
+
+      allow update: if isOwner(userId)
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['subscriptionTier', 'accountStatus']);
+
+      allow delete: if isOwner(userId) || isAdmin();
+
+      match /chats/{chatId} {
+        allow read, write: if isOwner(userId);
+
+        match /messages/{messageId} {
+          // Temporary: allow client-written assistant messages until
+          // Cloud Functions own the AI response write path.
+          allow read, write: if isOwner(userId);
+        }
+      }
+
+      match /savedResearch/{savedItemId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /folders/{folderId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /cycleItems/{itemId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    match /peptides/{peptideId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /affiliatePartners/{partnerId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /config/admins {
+      allow read: if isSignedIn();
+      // Bootstrap: first signed-in user can create allowlist with only their email.
+      allow create: if isSignedIn()
+        && !exists(/databases/$(database)/documents/config/admins)
+        && request.resource.data.keys().hasAll(['emails'])
+        && request.resource.data.emails is list
+        && request.resource.data.emails.size() == 1
+        && request.auth.token.email is string
+        && request.auth.token.email.lower() in request.resource.data.emails;
+      allow update, delete: if isAdmin();
+    }
+
+    match /safetyEvents/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /usage/{userId}/periods/{periodId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if false;
+    }
+  }
+}
