@@ -55,7 +55,7 @@ export function SignInModal({
         </button>
 
         <div className="mb-5 flex flex-col items-center gap-3 text-center">
-          <Logo variant="icon-vibrant" size="lg" />
+          <Logo variant="full" size="lg" priority className="max-w-[220px]" />
           <div>
             <h2
               id="sign-in-modal-title"
