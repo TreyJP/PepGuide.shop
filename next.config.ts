@@ -6,7 +6,9 @@ const firebaseAuthHost = `${firebaseProjectId}.firebaseapp.com`;
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  serverExternalPackages: ['firebase-admin', 'stripe'],
+  // Keep firebase-admin + jose outside the bundler — jwks-rsa/jose ESM
+  // require() crashes the research API otherwise (ERR_REQUIRE_ESM).
+  serverExternalPackages: ['firebase-admin', 'stripe', 'jose', 'jwks-rsa'],
   images: {
     // Logo uses quality={100}; required allow-list for Next.js 16+.
     qualities: [75, 100],

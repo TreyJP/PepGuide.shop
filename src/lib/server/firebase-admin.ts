@@ -1,6 +1,12 @@
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+
+import {
+  verifyBearerToken as verifyBearerTokenRest,
+  type VerifiedUser,
+} from '@/src/lib/server/verify-firebase-token';
+
+export type { VerifiedUser };
 
 function looksLikePlaceholder(value: string | undefined): boolean {
   if (!value) return true;
@@ -73,87 +79,15 @@ function initAdminApp(): App {
   });
 }
 
-export function getAdminAuth() {
-  return getAuth(initAdminApp());
-}
-
 export function getAdminDb() {
   return getFirestore(initAdminApp());
 }
 
-export type VerifiedUser = {
-  uid: string;
-  email?: string;
-};
-
-/**
- * Verify a Firebase ID token via Identity Toolkit when Admin SDK keys
- * are not configured (common in local/dev).
- */
-async function verifyIdTokenViaRest(idToken: string): Promise<VerifiedUser> {
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('Firebase API key is not configured.');
-  }
-
-  const response = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken }),
-    },
-  );
-
-  const data = (await response.json()) as {
-    error?: { message?: string };
-    users?: Array<{ localId?: string; email?: string }>;
-  };
-
-  if (!response.ok || data.error) {
-    throw new Error(data.error?.message ?? 'Invalid or expired auth token.');
-  }
-
-  const uid = data.users?.[0]?.localId;
-  if (!uid) {
-    throw new Error('Auth token did not resolve to a user.');
-  }
-
-  return {
-    uid,
-    email: data.users?.[0]?.email,
-  };
-}
-
+/** REST-only — never uses firebase-admin Auth / jwks-rsa / jose. */
 export async function verifyBearerToken(
   request: Request,
 ): Promise<VerifiedUser> {
-  const header = request.headers.get('authorization') ?? '';
-  const match = header.match(/^Bearer\s+(.+)$/i);
-  if (!match?.[1]) {
-    throw new Error('Missing auth token.');
-  }
-
-  const idToken = match[1];
-
-  // Prefer Admin SDK, but fall back to Identity Toolkit REST if admin keys
-  // are misconfigured (common Vercel private-key newline issue).
-  if (isFirebaseAdminConfigured()) {
-    try {
-      const decoded = await getAdminAuth().verifyIdToken(idToken);
-      return {
-        uid: decoded.uid,
-        email: decoded.email,
-      };
-    } catch (error) {
-      console.error(
-        'Firebase Admin verifyIdToken failed — falling back to REST lookup',
-        error,
-      );
-    }
-  }
-
-  return verifyIdTokenViaRest(idToken);
+  return verifyBearerTokenRest(request);
 }
 
 export async function setUserSubscriptionTier(
