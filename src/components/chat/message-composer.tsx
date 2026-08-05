@@ -62,20 +62,24 @@ export function MessageComposer({
   return (
     <div
       className={cn(
-        'border-t border-border bg-surface/80 px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-4',
+        'chat-composer-shell border-t px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-4',
         'pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-[max(1rem,env(safe-area-inset-bottom))]',
         className,
       )}
     >
       <form onSubmit={handleSubmit} className="mx-auto flex max-w-3xl flex-col gap-2.5 sm:gap-3">
-        <div className="relative rounded-[18px] border border-border bg-surface-elevated shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+        <div className="chat-composer-box relative">
           <textarea
             ref={textareaRef}
             value={value}
             onChange={(event) => setValue(event.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={disabled || loading}
-            placeholder="Ask about a peptide, mechanism, or research goal…"
+            disabled={disabled}
+            placeholder={
+              loading
+                ? 'PepGuide is researching…'
+                : 'Ask about a peptide, mechanism, or research goal…'
+            }
             rows={2}
             className={cn(
               'w-full resize-none rounded-[18px] bg-transparent px-3 py-3 pr-14 text-sm text-foreground sm:px-4 sm:py-3.5',
@@ -90,7 +94,7 @@ export function MessageComposer({
             loading={loading}
             disabled={!canSubmit}
             className="absolute bottom-3 right-3 size-9 rounded-[12px]"
-            aria-label="Send message"
+            aria-label={loading ? 'Generating response' : 'Send message'}
           >
             {!loading ? <ArrowUp className="size-4" /> : null}
           </Button>

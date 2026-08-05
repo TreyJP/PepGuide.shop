@@ -121,9 +121,13 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   }, [chatId, setActiveChatId, setMessages, user]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: 'smooth',
+    const el = scrollRef.current;
+    if (!el) return;
+
+    // Stick to bottom instantly while generating so the reply never feels stuck.
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: isStreaming ? 'auto' : 'smooth',
     });
   }, [messages, isStreaming]);
 
@@ -178,21 +182,6 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         safetyAction: 'allow',
       };
 
-      await chatRepository.appendMessage(userMessage);
-      appendMessage(currentChatId, userMessage);
-
-      const existingChat = useChatStore
-        .getState()
-        .chats.find((chat) => chat.id === currentChatId);
-      if (existingChat && isDefaultChatTitle(existingChat.title)) {
-        upsertChat({
-          ...existingChat,
-          title: deriveChatTitle(content),
-          lastMessagePreview: content.slice(0, 120),
-          updatedAt: userMessage.createdAt,
-        });
-      }
-
       const assistantId = createId('msg');
       const assistantMessage: ChatMessage = {
         id: assistantId,
@@ -207,8 +196,26 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         safetyAction: 'allow',
       };
 
+      // Paint immediately — persist in the background so the void never feels empty.
+      appendMessage(currentChatId, userMessage);
       appendMessage(currentChatId, assistantMessage);
       setIsStreaming(true);
+
+      const existingChat = useChatStore
+        .getState()
+        .chats.find((chat) => chat.id === currentChatId);
+      if (existingChat && isDefaultChatTitle(existingChat.title)) {
+        upsertChat({
+          ...existingChat,
+          title: deriveChatTitle(content),
+          lastMessagePreview: content.slice(0, 120),
+          updatedAt: userMessage.createdAt,
+        });
+      }
+
+      void chatRepository.appendMessage(userMessage).catch(() => {
+        // Keep optimistic UI; retry paths can reconcile later.
+      });
 
       try {
         const priorMessages =
@@ -267,8 +274,8 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           modelVersion: PEP_GUIDE_MODEL,
         };
 
-        await chatRepository.appendMessage(completed);
         updateMessage(currentChatId, assistantId, completed);
+        void chatRepository.appendMessage(completed).catch(() => undefined);
 
         const updatedChat = await chatRepository.updateChat(currentChatId, {
           researchMode: DEFAULT_RESEARCH_MODE,
@@ -319,8 +326,8 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-center justify-end border-b border-border px-4 py-2">
+    <div className="chat-design-root">
+      <header className="chat-header flex items-center justify-end border-b px-3 py-2 sm:px-4">
         <Button
           size="sm"
           variant="ghost"
@@ -343,11 +350,16 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         </div>
       ) : null}
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-4 sm:py-6">
+      <div
+        ref={scrollRef}
+        className="scrollbar-theme min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-4 sm:py-6"
+      >
         {messages.length === 0 ? (
-          <EmptyChat onSelectPrompt={chatBlocked ? () => undefined : handleSend} />
+          <EmptyChat
+            onSelectPrompt={chatBlocked ? () => undefined : handleSend}
+          />
         ) : (
-          <div className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-5 sm:gap-6">
+          <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-5 sm:gap-6">
             {messages.map((message) =>
               message.role === 'user' ? (
                 <UserMessage

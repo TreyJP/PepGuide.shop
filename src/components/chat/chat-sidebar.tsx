@@ -206,7 +206,7 @@ export function ChatSidebar({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="scrollbar-theme flex-1 overflow-y-auto p-2">
         {groups.length === 0 ? (
           <p className="px-3 py-8 text-center text-sm text-foreground-secondary">
             {query ? 'No chats match your search.' : 'No chats yet. Start a new conversation.'}

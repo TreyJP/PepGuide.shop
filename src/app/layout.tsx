@@ -5,6 +5,7 @@ import { Providers } from '@/src/components/providers';
 import { BRAND } from '@/src/constants/brand';
 
 import './globals.css';
+import './chat-designs.css';
 
 const sans = DM_Sans({
   subsets: ['latin'],

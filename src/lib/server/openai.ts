@@ -76,6 +76,14 @@ function isMuscleQuery(text: string): boolean {
   );
 }
 
+/** User asked for both fat-loss and muscle / lean-mass research in one message. */
+function isDualWeightMuscleQuery(text: string): boolean {
+  if (/\b(recomp|recompos(?:e|ition)|body\s*recomp)\b/i.test(text)) {
+    return true;
+  }
+  return isWeightLossQuery(text) && isMuscleQuery(text);
+}
+
 function isAppetiteComplementQuery(text: string): boolean {
   return /\b(appetite|hunger|hungry|satiety|craving|still hungry|left me hungry)\b/i.test(
     text,
@@ -100,7 +108,13 @@ function isMetabolicFollowUp(text: string): boolean {
 
 /** User clearly switched research goals away from the prior weight-loss thread. */
 function isTopicPivot(userMessage: string): boolean {
-  if (isMuscleQuery(userMessage) && !isAppetiteComplementQuery(userMessage)) {
+  // Combined goals stay on a dual answer — not a pure muscle pivot.
+  if (isDualWeightMuscleQuery(userMessage)) return false;
+  if (
+    isMuscleQuery(userMessage) &&
+    !isWeightLossQuery(userMessage) &&
+    !isAppetiteComplementQuery(userMessage)
+  ) {
     return true;
   }
   // New non-weight research goal while not continuing metabolic follow-up.
@@ -122,7 +136,8 @@ function shouldReturnWeightLossPicks(
   _history: ResearchChatTurn[] = [],
 ): boolean {
   if (!isWeightLossQuery(userMessage)) return false;
-  if (isMuscleQuery(userMessage)) return false;
+  // Dual goals get a split answer (one metabolic + one muscle), not weight-only picks.
+  if (isDualWeightMuscleQuery(userMessage)) return false;
   // Appetite “still hungry / add-on” follow-ups get the complement path, not picks.
   if (isMetabolicFollowUp(userMessage)) return false;
 
@@ -170,6 +185,14 @@ function buildGroundingQuery(
   const parts = [retrievalQuery, userMessage];
   const pivot = isTopicPivot(userMessage);
 
+  if (isDualWeightMuscleQuery(userMessage)) {
+    parts.push(
+      'weight loss obesity GLP-1 retatrutide tirzepatide semaglutide',
+      'muscle hypertrophy lean mass growth hormone secretagogue ipamorelin cjc-1295 sermorelin',
+    );
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+  }
+
   if (isMuscleQuery(userMessage)) {
     parts.push(
       'muscle hypertrophy lean mass growth hormone secretagogue ipamorelin cjc-1295 sermorelin igf-1 peg-mgf',
@@ -204,9 +227,13 @@ function buildSystemPrompt(
   history: ResearchChatTurn[],
 ): string {
   // Intent is based on the CURRENT message — history must not force weight-loss mode.
-  const weightQuery = isWeightLossQuery(userMessage) && !isMuscleQuery(userMessage);
-  const muscleQuery = isMuscleQuery(userMessage);
+  const dualQuery = isDualWeightMuscleQuery(userMessage);
+  const weightQuery =
+    isWeightLossQuery(userMessage) && !isMuscleQuery(userMessage);
+  const muscleQuery =
+    isMuscleQuery(userMessage) && !isWeightLossQuery(userMessage);
   const appetiteFollowUp =
+    !dualQuery &&
     !muscleQuery &&
     (isAppetiteComplementQuery(userMessage) || isMetabolicFollowUp(userMessage));
   const topicPivot = isTopicPivot(userMessage);
@@ -217,32 +244,41 @@ function buildSystemPrompt(
     history,
   );
 
-  const knowledgeContext = appetiteFollowUp
+  const knowledgeContext = dualQuery
     ? buildKnowledgeContext(
-        'cagrilintide amycretin amylin appetite satiety complementary combination retatrutide tirzepatide semaglutide',
+        'weight loss obesity GLP-1 retatrutide tirzepatide semaglutide muscle hypertrophy lean mass ipamorelin cjc-1295 sermorelin',
         8,
       )
-    : muscleQuery
+    : appetiteFollowUp
       ? buildKnowledgeContext(
-          'muscle hypertrophy lean mass growth hormone secretagogue ipamorelin cjc-1295 sermorelin igf-1 peg-mgf',
+          'cagrilintide amycretin amylin appetite satiety complementary combination retatrutide tirzepatide semaglutide',
           8,
         )
-      : weightQuery && history.length === 0
+      : muscleQuery
         ? buildKnowledgeContext(
-            'weight loss obesity GLP-1 retatrutide tirzepatide semaglutide',
-            3,
+            'muscle hypertrophy lean mass growth hormone secretagogue ipamorelin cjc-1295 sermorelin igf-1 peg-mgf',
+            8,
           )
-        : buildKnowledgeContext(groundingQuery, 8);
+        : weightQuery && history.length === 0
+          ? buildKnowledgeContext(
+              'weight loss obesity GLP-1 retatrutide tirzepatide semaglutide',
+              3,
+            )
+          : buildKnowledgeContext(groundingQuery, 8);
 
-  const dosingEntries = appetiteFollowUp
-    ? METABOLIC_TIER_GUIDE.filter((entry) =>
-        ['cagrilintide', 'amycretin', 'retatrutide'].includes(entry.id),
-      )
-    : weightQuery && !topicPivot
-      ? METABOLIC_TIER_GUIDE.filter(
-          (entry) => entry.tier === 'S' || entry.tier === 'A',
-        ).slice(0, 8)
-      : [];
+  const dosingEntries = dualQuery
+    ? [
+        ...METABOLIC_TIER_GUIDE.filter((entry) => entry.tier === 'S').slice(0, 1),
+      ]
+    : appetiteFollowUp
+      ? METABOLIC_TIER_GUIDE.filter((entry) =>
+          ['cagrilintide', 'amycretin', 'retatrutide'].includes(entry.id),
+        )
+      : weightQuery && !topicPivot
+        ? METABOLIC_TIER_GUIDE.filter(
+            (entry) => entry.tier === 'S' || entry.tier === 'A',
+          ).slice(0, 8)
+        : [];
 
   const dosingGuide = dosingEntries
     .map(
@@ -274,32 +310,42 @@ function buildSystemPrompt(
     '- Do NOT keep recommending weight-loss / GLP-1 compounds unless the user asks to combine goals.',
     '- Use prior turns only when the user is clearly continuing the same topic.',
     '- Stay educational / research framing — compare mechanisms and evidence, do not prescribe a personal protocol.',
-    muscleQuery
+    dualQuery
       ? [
-          'MUSCLE / LEAN-MASS ANSWER RULES (strict):',
-          '- Focus on GH secretagogue / muscle-research PEPTIDES only (e.g. ipamorelin, CJC-1295, sermorelin, IGF analogs).',
-          '- Do NOT recommend retatrutide, tirzepatide, semaglutide, or other weight-loss incretins unless the user explicitly asks about both goals.',
-          '- Cover evidence quality and key risks briefly.',
-          '- Include peptideIds for the top muscle-relevant peptides discussed.',
+          'DUAL GOAL ANSWER RULES (strict — weight loss + muscle):',
+          '- User asked for BOTH fat/weight loss AND muscle / lean-mass research.',
+          '- Recommend exactly ONE primary metabolic / weight-loss peptide (prefer retatrutide) AND exactly ONE primary muscle peptide (prefer ipamorelin).',
+          '- Structure the answer with two clear headings: **Weight loss** and **Muscle / lean mass**.',
+          '- Briefly note they address different pathways — not a personal combined protocol.',
+          '- peptideIds MUST start with those two primaries, then optional extras from each category.',
+          '- Do NOT collapse into a weight-only or muscle-only list.',
         ].join('\n')
-      : appetiteFollowUp
+      : muscleQuery
         ? [
-            'APPETITE / COMPLEMENT FOLLOW-UP RULES (strict):',
-            '- User still has hunger/appetite concerns on an incretin (e.g. retatrutide).',
-            '- Recommend researched complementary PEPTIDES that target appetite/satiety via a different pathway (prefer amylin: cagrilintide; also amycretin).',
-            '- Explain briefly WHY it can add appetite suppression on top of a GLP-1/triple agonist (different satiety pathway).',
-            '- Include 1–2 peptideIds for the best complements (cagrilintide first).',
-            '- Do NOT re-list retatrutide/tirzepatide/semaglutide as the main answer unless comparing.',
-            '- One short research-only disclaimer.',
+            'MUSCLE / LEAN-MASS ANSWER RULES (strict):',
+            '- Focus on GH secretagogue / muscle-research PEPTIDES only (e.g. ipamorelin, CJC-1295, sermorelin, IGF analogs).',
+            '- Do NOT recommend retatrutide, tirzepatide, semaglutide, or other weight-loss incretins unless the user explicitly asks about both goals.',
+            '- Cover evidence quality and key risks briefly.',
+            '- Include peptideIds for the top muscle-relevant peptides discussed.',
           ].join('\n')
-        : weightQuery
+        : appetiteFollowUp
           ? [
-              'WEIGHT-LOSS ANSWER RULES:',
-              '- Talk ONLY about weight-loss / obesity / metabolic PEPTIDES.',
-              '- Do NOT mention hair, healing, cosmetic, sexual, sleep, or unrelated peptides.',
-              '- Prefer peptides from the knowledge context / dosing guide.',
+              'APPETITE / COMPLEMENT FOLLOW-UP RULES (strict):',
+              '- User still has hunger/appetite concerns on an incretin (e.g. retatrutide).',
+              '- Recommend researched complementary PEPTIDES that target appetite/satiety via a different pathway (prefer amylin: cagrilintide; also amycretin).',
+              '- Explain briefly WHY it can add appetite suppression on top of a GLP-1/triple agonist (different satiety pathway).',
+              '- Include 1–2 peptideIds for the best complements (cagrilintide first).',
+              '- Do NOT re-list retatrutide/tirzepatide/semaglutide as the main answer unless comparing.',
+              '- One short research-only disclaimer.',
             ].join('\n')
-          : '',
+          : weightQuery
+            ? [
+                'WEIGHT-LOSS ANSWER RULES:',
+                '- Talk ONLY about weight-loss / obesity / metabolic PEPTIDES.',
+                '- Do NOT mention hair, healing, cosmetic, sexual, sleep, or unrelated peptides.',
+                '- Prefer peptides from the knowledge context / dosing guide.',
+              ].join('\n')
+            : '',
     'CONTENT RULES:',
     '- PEPTIDES ONLY: never recommend or list non-peptides (no MK-677, orforglipron, tesofensine, tadalafil, SR9009, noopept, small molecules, etc.).',
     '- Use ONLY peptides from the knowledge context / dosing guide.',
@@ -350,6 +396,66 @@ function buildWeightLossPicksResponse(): PepGuideAiResponse {
     suggestedQuestions: [
       'I tried retatrutide but still feel hungry — what complements appetite research?',
       'How does cagrilintide differ from GLP-1 agonists?',
+    ],
+    peptideIds,
+  });
+}
+
+/** One primary for fat loss + one primary for muscle when both goals are asked. */
+function buildDualGoalResponse(): PepGuideAiResponse {
+  const weightId = getWeightLossGuideIds(1)[0] ?? 'retatrutide';
+  const muscleId = getMuscleTopIds(1)[0] ?? 'ipamorelin';
+  const peptideIds = filterPeptideIds([
+    weightId,
+    muscleId,
+    ...getWeightLossGuideIds(4).filter((id) => id !== weightId),
+    ...getMuscleTopIds(4).filter((id) => id !== muscleId),
+  ]).slice(0, 8);
+
+  const weight = getCompoundById(weightId);
+  const muscle = getCompoundById(muscleId);
+  const cardSource = peptideIds
+    .map((id) => getCompoundById(id))
+    .filter((compound): compound is NonNullable<typeof compound> => Boolean(compound));
+
+  return pepGuideResponseSchema.parse({
+    answer: [
+      'You’re aiming at **two research goals** — here’s one strong option for each (educational only, not a personal protocol):',
+      '',
+      '**Weight loss**',
+      weight
+        ? `- **${weight.name}** — ${weight.summary}`
+        : '- **Retatrutide** — leading metabolic / fat-loss research signal.',
+      '',
+      '**Muscle / lean mass**',
+      muscle
+        ? `- **${muscle.name}** — ${muscle.summary}`
+        : '- **Ipamorelin** — selective GH secretagogue often discussed for lean-mass research.',
+      '',
+      'Different pathways — combining them is not a prescription. Use the dosing cards below for research ranges and partner prices.',
+    ].join('\n'),
+    classification: 'research_goal_exploration',
+    safetyAction: 'allow',
+    evidenceCards: cardSource.map((compound) => ({
+      peptideId: compound.id,
+      name: compound.name,
+      aliases: compound.aliases,
+      researchCategory: compound.researchAreas[0] ?? 'Research',
+      relevanceSummary: compound.summary,
+      proposedMechanism: compound.proposedMechanism,
+      humanEvidenceGrade: compound.humanEvidenceGrade,
+      preclinicalEvidenceGrade: compound.preclinicalEvidenceGrade,
+      regulatoryStatus: compound.regulatoryStatus,
+      regulatoryDetail: compound.regulatoryDetail,
+      knownRisks: compound.risks,
+      uncertainties: compound.uncertainties,
+      citationCount: compound.references.length,
+      lastReviewedAt: compound.lastReviewedAt,
+    })),
+    citations: cardSource.flatMap((compound) => compound.references),
+    suggestedQuestions: [
+      'Tell me more about retatrutide for weight-loss research',
+      'How do ipamorelin and CJC-1295 differ for muscle research?',
     ],
     peptideIds,
   });
@@ -427,6 +533,10 @@ function buildFallbackFromKnowledge(
   classification: PepGuideAiResponse['classification'] = 'research_goal_exploration',
   history: ResearchChatTurn[] = [],
 ): PepGuideAiResponse {
+  if (isDualWeightMuscleQuery(userMessage)) {
+    return buildDualGoalResponse();
+  }
+
   if (shouldReturnWeightLossPicks(userMessage, history)) {
     return buildWeightLossPicksResponse();
   }
@@ -438,7 +548,7 @@ function buildFallbackFromKnowledge(
     return buildAppetiteComplementResponse(userMessage, history);
   }
 
-  if (isMuscleQuery(userMessage)) {
+  if (isMuscleQuery(userMessage) && !isWeightLossQuery(userMessage)) {
     const peptideIds = getMuscleTopIds(6);
     const compounds = peptideIds
       .map((id) => getCompoundById(id))
@@ -603,7 +713,14 @@ export async function generateResearchResponse(
     classification.safetyAction === 'refuse' ||
     classification.safetyAction === 'urgent_warning'
   ) {
-    // Soft redirect: personal dosing asks about weight still get the compact top picks.
+    // Soft redirect: dual goals / weight discovery still get educational picks.
+    if (
+      (classification.category === 'personalized_dosing_request' ||
+        classification.category === 'cycle_or_stack_construction') &&
+      isDualWeightMuscleQuery(userMessage)
+    ) {
+      return buildDualGoalResponse();
+    }
     if (
       classification.category === 'personalized_dosing_request' &&
       shouldReturnWeightLossPicks(userMessage, priorTurns)
@@ -628,6 +745,11 @@ export async function generateResearchResponse(
   }
 
   const retrievalQuery = classification.retrievalQuery;
+
+  // Dual goals: one metabolic pick + one muscle pick (with dosing cards).
+  if (isDualWeightMuscleQuery(userMessage)) {
+    return buildDualGoalResponse();
+  }
 
   // Weight/fat-loss discovery: compact top 3 picks UI (including mid-chat).
   if (shouldReturnWeightLossPicks(userMessage, priorTurns)) {
@@ -701,6 +823,7 @@ export async function generateResearchResponse(
 
   // For appetite follow-ups only, allow amylin complements even if ranking is noisy.
   if (
+    !isDualWeightMuscleQuery(userMessage) &&
     !isMuscleQuery(userMessage) &&
     (isAppetiteComplementQuery(userMessage) || isMetabolicFollowUp(userMessage))
   ) {
@@ -709,7 +832,10 @@ export async function generateResearchResponse(
     }
   }
 
-  if (isMuscleQuery(userMessage)) {
+  if (isDualWeightMuscleQuery(userMessage)) {
+    for (const id of getWeightLossGuideIds(3)) groundedIds.add(id);
+    for (const id of getMuscleTopIds(3)) groundedIds.add(id);
+  } else if (isMuscleQuery(userMessage)) {
     for (const id of getMuscleTopIds(5)) {
       groundedIds.add(id);
     }
@@ -725,11 +851,19 @@ export async function generateResearchResponse(
       (card) => groundedIds.has(card.peptideId) && isPeptideCompoundCard(card.peptideId),
     );
 
-  const muscleIds = isMuscleQuery(userMessage)
-    ? filterPeptideIds(
-        modelIds.length > 0 ? modelIds : getMuscleTopIds(6),
-      ).slice(0, 8)
-    : null;
+  const forcedIds = isDualWeightMuscleQuery(userMessage)
+    ? filterPeptideIds([
+        getWeightLossGuideIds(1)[0] ?? 'retatrutide',
+        getMuscleTopIds(1)[0] ?? 'ipamorelin',
+        ...modelIds,
+        ...getWeightLossGuideIds(3),
+        ...getMuscleTopIds(3),
+      ]).slice(0, 8)
+    : isMuscleQuery(userMessage)
+      ? filterPeptideIds(
+          modelIds.length > 0 ? modelIds : getMuscleTopIds(6),
+        ).slice(0, 8)
+      : null;
 
   if (needsGrounding) {
     const fallback = buildFallbackFromKnowledge(
@@ -754,7 +888,7 @@ export async function generateResearchResponse(
           ? parsed.data.citations
           : fallback.citations,
       peptideIds: filterPeptideIds(
-        muscleIds ??
+        forcedIds ??
           (modelIds.length > 0 ? modelIds : fallback.peptideIds),
       ),
       answer: parsed.data.answer || fallback.answer,
@@ -764,7 +898,7 @@ export async function generateResearchResponse(
   return {
     ...parsed.data,
     classification: classification.category,
-    peptideIds: filterPeptideIds(muscleIds ?? modelIds),
+    peptideIds: filterPeptideIds(forcedIds ?? modelIds),
     evidenceCards: parsed.data.evidenceCards.filter((card) =>
       isPeptideCompoundCard(card.peptideId),
     ),

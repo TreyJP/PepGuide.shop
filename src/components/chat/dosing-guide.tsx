@@ -6,6 +6,10 @@ import { cn } from '@/src/lib/utils';
 export type DosingGuideProps = {
   peptideIds: string[];
   previewLimit?: number;
+  /** Optional per-card goal labels aligned with peptideIds order. */
+  goalLabels?: string[];
+  title?: string;
+  subtitle?: string;
   onSelect?: (peptideId: string) => void;
   onAddToCycle?: (peptideId: string) => void;
   onViewMore?: () => void;
@@ -15,6 +19,9 @@ export type DosingGuideProps = {
 export function DosingGuide({
   peptideIds,
   previewLimit = 3,
+  goalLabels,
+  title = 'Start low, then increase',
+  subtitle = 'Educational trial/label ranges only — not a personal prescription. View prices or add to your cycle log.',
   onSelect,
   onAddToCycle,
   onViewMore,
@@ -37,11 +44,10 @@ export function DosingGuide({
           Research dosing
         </p>
         <h2 className="mt-1 font-[family-name:var(--font-display)] text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-          Start low, then increase
+          {title}
         </h2>
         <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-foreground-secondary">
-          Educational trial/label ranges only — not a personal prescription.
-          View prices or add to your cycle log.
+          {subtitle}
         </p>
       </div>
 
@@ -65,6 +71,11 @@ export function DosingGuide({
               onClick={() => onSelect?.(entry.id)}
               className="flex-1 text-left transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
+              {goalLabels?.[index] ? (
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
+                  {goalLabels[index]}
+                </p>
+              ) : null}
               <div className="flex min-w-0 items-center gap-2">
                 <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-muted text-[11px] font-semibold text-accent">
                   {index + 1}

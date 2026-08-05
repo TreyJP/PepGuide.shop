@@ -116,12 +116,38 @@ export async function sendChatMessage(params: {
     parsed.answer !== PICKS_ONLY_ANSWER &&
     parsed.answer !== PRO_UNLOCK_ANSWER
   ) {
-    const parts = parsed.answer.split(' ');
-    for (const part of parts) {
-      params.onToken(`${part} `);
-      await new Promise((resolve) => setTimeout(resolve, 6));
-    }
+    await revealAnswerProgressively(parsed.answer, params.onToken);
   }
 
   return moderation ? { ...parsed, moderation } : parsed;
+}
+
+/** Progressive reveal so the reply feels live after the full JSON lands. */
+async function revealAnswerProgressively(
+  answer: string,
+  onToken: (token: string) => void,
+) {
+  const chunks = answer.match(/\S+\s*|\s+/g) ?? [answer];
+  let buffer = '';
+
+  for (let i = 0; i < chunks.length; i += 1) {
+    buffer += chunks[i] ?? '';
+
+    // Batch a few words so paint stays smooth without feeling sluggish.
+    const shouldFlush =
+      i === chunks.length - 1 ||
+      buffer.length >= 18 ||
+      /[.!?]\s*$/.test(buffer);
+
+    if (!shouldFlush) continue;
+
+    onToken(buffer);
+    buffer = '';
+
+    const remaining = chunks.length - i;
+    const delay = remaining > 80 ? 8 : remaining > 30 ? 12 : 16;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+
+  if (buffer) onToken(buffer);
 }

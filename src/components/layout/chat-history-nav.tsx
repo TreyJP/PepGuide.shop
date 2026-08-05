@@ -135,7 +135,7 @@ export function ChatHistoryNav() {
         </Button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
+      <div className="scrollbar-theme min-h-0 flex-1 overflow-y-auto pr-0.5">
         {chats.length === 0 ? (
           <p className="px-2 py-4 text-xs text-foreground-secondary">
             No chats yet. Tap + to start one.

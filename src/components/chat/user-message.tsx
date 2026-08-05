@@ -10,7 +10,7 @@ export function UserMessage({ content, createdAt, className }: UserMessageProps)
   return (
     <div className={cn('flex justify-end', className)}>
       <div className="flex max-w-[85%] flex-col items-end gap-1.5 sm:max-w-[75%]">
-        <div className="max-w-full rounded-[16px] rounded-br-[6px] bg-accent px-4 py-3 text-sm leading-relaxed text-white shadow-[0_1px_2px_rgba(0,0,0,0.08)]">
+        <div className="chat-user-bubble max-w-full px-4 py-3 text-sm leading-relaxed">
           <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
             {content}
           </p>

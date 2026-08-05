@@ -8,7 +8,6 @@ import { MarkdownContent } from '@/src/components/chat/markdown-content';
 import { ProUnlockCard } from '@/src/components/chat/pro-unlock-card';
 import { WeightLossReply } from '@/src/components/chat/weight-loss-reply';
 import { Button } from '@/src/components/ui/button';
-import { Skeleton } from '@/src/components/ui/skeleton';
 import { PICKS_ONLY_ANSWER, PRO_UNLOCK_ANSWER } from '@/src/constants/chat';
 import { cn } from '@/src/lib/utils';
 import type { MessageStatus } from '@/src/types';
@@ -23,6 +22,24 @@ export type AiMessageProps = {
   saved?: boolean;
   className?: string;
 };
+
+function ThinkingIndicator() {
+  return (
+    <div className="chat-ai-bubble chat-thinking px-4 py-3.5">
+      <div className="flex items-center gap-3">
+        <span className="chat-thinking-dots" aria-hidden>
+          <span />
+          <span />
+          <span />
+        </span>
+        <span className="chat-thinking-label text-sm text-foreground-secondary">
+          Researching
+        </span>
+      </div>
+      <div className="chat-thinking-shimmer mt-3" aria-hidden />
+    </div>
+  );
+}
 
 export function AiMessage({
   content,
@@ -41,6 +58,9 @@ export function AiMessage({
     (content === PICKS_ONLY_ANSWER || content.trim() === PICKS_ONLY_ANSWER);
   const proUnlockReply =
     content === PRO_UNLOCK_ANSWER || content.trim() === PRO_UNLOCK_ANSWER;
+  const showPlainAnswer =
+    Boolean(content) && !structuredReply && !proUnlockReply;
+  const showThinking = isStreaming && !content;
 
   const handleCopy = async () => {
     if (onCopy) {
@@ -71,15 +91,7 @@ export function AiMessage({
         ) : null}
       </div>
 
-      {isStreaming && !content ? (
-        <div className="rounded-[16px] border border-border bg-surface-elevated px-4 py-3">
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-4/5" />
-            <Skeleton className="h-3 w-3/5" />
-          </div>
-        </div>
-      ) : null}
+      {showThinking ? <ThinkingIndicator /> : null}
 
       {!isStreaming && structuredReply ? (
         <WeightLossReply peptideIds={peptideIds} />
@@ -87,7 +99,7 @@ export function AiMessage({
 
       {!isStreaming && proUnlockReply ? (
         <div className="space-y-3">
-          <div className="rounded-[16px] border border-border bg-surface-elevated px-4 py-3">
+          <div className="chat-ai-bubble px-4 py-3">
             <p className="text-sm leading-relaxed text-foreground">
               Guides and Protocols are part of{' '}
               <span className="font-semibold text-accent">PepGuide Pro</span>.
@@ -99,42 +111,59 @@ export function AiMessage({
         </div>
       ) : null}
 
-      {!isStreaming && content && !structuredReply && !proUnlockReply ? (
+      {showPlainAnswer ? (
         <>
-          <div className="min-w-0 overflow-hidden rounded-[16px] border border-border bg-surface-elevated px-3 py-3 sm:px-4">
-            <MarkdownContent content={content} />
+          <div
+            className={cn(
+              'chat-ai-bubble min-w-0 overflow-hidden px-3 py-3 sm:px-4',
+              isStreaming && 'chat-ai-streaming',
+            )}
+          >
+            {isStreaming ? (
+              <p className="whitespace-pre-wrap text-sm leading-relaxed break-words text-foreground">
+                {content}
+                <span className="chat-stream-caret" aria-hidden />
+              </p>
+            ) : (
+              <MarkdownContent content={content} />
+            )}
           </div>
-          {peptideIds.length > 0 ? (
+          {!isStreaming && peptideIds.length > 0 ? (
             <WeightLossReply peptideIds={peptideIds} />
           ) : null}
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCopy}
-              className="h-8 px-2.5 text-foreground-secondary"
-            >
-              {copied ? (
-                <Check className="size-3.5" />
-              ) : (
-                <Copy className="size-3.5" />
-              )}
-              {copied ? 'Copied' : 'Copy'}
-            </Button>
-            {onSave ? (
+          {!isStreaming ? (
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onSave}
+                onClick={handleCopy}
                 className="h-8 px-2.5 text-foreground-secondary"
               >
-                <Bookmark
-                  className={cn('size-3.5', saved && 'fill-current text-accent')}
-                />
-                {saved ? 'Saved' : 'Save'}
+                {copied ? (
+                  <Check className="size-3.5" />
+                ) : (
+                  <Copy className="size-3.5" />
+                )}
+                {copied ? 'Copied' : 'Copy'}
               </Button>
-            ) : null}
-          </div>
+              {onSave ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onSave}
+                  className="h-8 px-2.5 text-foreground-secondary"
+                >
+                  <Bookmark
+                    className={cn(
+                      'size-3.5',
+                      saved && 'fill-current text-accent',
+                    )}
+                  />
+                  {saved ? 'Saved' : 'Save'}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </>
       ) : null}
     </div>

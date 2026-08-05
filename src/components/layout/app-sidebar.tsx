@@ -31,7 +31,6 @@ const MAIN_NAV = [
   { href: '/library', label: 'Library', icon: Library },
   { href: '/cycle', label: 'Cycle', icon: RefreshCw },
   { href: '/calculator', label: 'Calculator', icon: Calculator },
-  { href: '/settings', label: 'Settings', icon: Settings },
 ] as const;
 
 const PRO_NAV = [
@@ -168,22 +167,34 @@ export function AppSidebar() {
 
             <div className="my-2 border-t border-border" />
 
-            {MAIN_NAV.map(({ href, label, icon }) => {
-              const active =
-                pathname === href || pathname.startsWith(`${href}/`);
-              return (
-                <NavLink
-                  key={href}
-                  href={href}
-                  label={label}
-                  icon={icon}
-                  active={active}
-                  onNavigate={closeSidebar}
-                />
-              );
-            })}
+          {MAIN_NAV.map(({ href, label, icon }) => {
+            const active =
+              pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <NavLink
+                key={href}
+                href={href}
+                label={label}
+                icon={icon}
+                active={active}
+                onNavigate={closeSidebar}
+              />
+            );
+          })}
 
-            {isAdmin ? (
+          {user ? (
+            <NavLink
+              href="/settings"
+              label="Settings"
+              icon={Settings}
+              active={
+                pathname === '/settings' || pathname.startsWith('/settings/')
+              }
+              onNavigate={closeSidebar}
+            />
+          ) : null}
+
+          {isAdmin ? (
               <NavLink
                 href="/admin"
                 label="Admin"

@@ -1,24 +1,36 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/src/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/src/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/src/components/ui/card';
 import { BRAND } from '@/src/constants/brand';
 import { authService } from '@/src/services/auth';
 import { useAuthStore } from '@/src/stores/auth-store';
+import { useUiStore } from '@/src/stores/ui-store';
 
 export default function SettingsPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const initializing = useAuthStore((state) => state.initializing);
   const setUser = useAuthStore((state) => state.setUser);
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const openSignInModal = useUiStore((state) => state.openSignInModal);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    if (initializing) return;
+    if (!user) {
+      openSignInModal('Sign in to manage your PepGuide settings.');
+    }
+  }, [initializing, user, openSignInModal]);
 
   const handleSignOut = async () => {
     await authService.signOut();
@@ -41,6 +53,35 @@ export default function SettingsPage() {
     }
   };
 
+  if (initializing) {
+    return (
+      <div className="flex h-full items-center justify-center gap-2 text-sm text-foreground-secondary">
+        <Loader2 className="size-4 animate-spin" />
+        Loading…
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+        <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold">
+          Settings
+        </h1>
+        <p className="max-w-md text-sm text-foreground-secondary">
+          Sign in to manage your profile and privacy settings.
+        </p>
+        <Button
+          onClick={() =>
+            openSignInModal('Sign in to manage your PepGuide settings.')
+          }
+        >
+          Sign in
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full overflow-y-auto">
       <header className="border-b border-border px-4 py-4 sm:px-6 sm:py-5">
@@ -48,7 +89,7 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="mt-1 text-sm text-foreground-secondary">
-          Manage your profile, appearance, and privacy.
+          Manage your profile and privacy.
         </p>
       </header>
 
@@ -61,39 +102,16 @@ export default function SettingsPage() {
           <CardContent className="space-y-2 text-sm">
             <p>
               <span className="text-foreground-secondary">Name: </span>
-              {user?.displayName}
+              {user.displayName}
             </p>
             <p>
               <span className="text-foreground-secondary">Email: </span>
-              {user?.email}
+              {user.email}
             </p>
             <p>
               <span className="text-foreground-secondary">Access: </span>
-              {user?.subscriptionTier === 'pro' ? 'PepGuide Pro' : 'Free'}
+              {user.subscriptionTier === 'pro' ? 'PepGuide Pro' : 'Free'}
             </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Appearance</CardTitle>
-            <CardDescription>Choose light or dark theme</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {mounted ? (
-              ['light', 'dark', 'system'].map((option) => (
-                <Button
-                  key={option}
-                  variant={theme === option ? 'primary' : 'secondary'}
-                  size="sm"
-                  onClick={() => setTheme(option)}
-                >
-                  {option.charAt(0).toUpperCase() + option.slice(1)}
-                </Button>
-              ))
-            ) : (
-              <p className="text-sm text-foreground-secondary">Loading theme…</p>
-            )}
           </CardContent>
         </Card>
 
@@ -104,7 +122,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-foreground-secondary">
-              Data retention: {user?.dataRetentionDays ?? 365} days
+              Data retention: {user.dataRetentionDays ?? 365} days
             </p>
             <Button
               variant="destructive"
@@ -123,4 +141,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
