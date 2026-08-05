@@ -67,7 +67,7 @@ export const mockAuthService = {
     notify();
     return currentUser;
   },
-  async signInWithGoogle(): Promise<UserProfile> {
+  async signInWithGoogle(): Promise<UserProfile | null> {
     currentUser = createMockUser({
       displayName: 'Google Researcher',
       email: 'researcher@gmail.com',

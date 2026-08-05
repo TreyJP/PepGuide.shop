@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { AuthLayout } from '@/src/components/auth/auth-layout';
@@ -16,9 +16,18 @@ import { useAuthStore } from '@/src/stores/auth-store';
 
 export default function SignInPage() {
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const initializing = useAuthStore((state) => state.initializing);
   const setUser = useAuthStore((state) => state.setUser);
   const [error, setError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Mobile Google redirect returns here — send signed-in users into chat.
+  useEffect(() => {
+    if (!initializing && user) {
+      router.replace('/chat');
+    }
+  }, [initializing, user, router]);
 
   const {
     register,
@@ -43,12 +52,13 @@ export default function SignInPage() {
     setError(null);
     setGoogleLoading(true);
     try {
-      const user = await authService.signInWithGoogle();
-      setUser(user);
+      const signedIn = await authService.signInWithGoogle();
+      // null = mobile redirect in progress (page will unload / come back).
+      if (!signedIn) return;
+      setUser(signedIn);
       router.push('/chat');
     } catch (err) {
       setError(getAuthErrorMessage(err));
-    } finally {
       setGoogleLoading(false);
     }
   };

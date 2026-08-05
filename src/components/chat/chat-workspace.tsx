@@ -186,12 +186,16 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
 
   const handleSend = useCallback(
     async (content: string) => {
-      if (!requireAuth('Sign in to chat with PepGuide AI and save your research.')) {
+      // Prefer live store state — mobile sign-in can settle a moment after navigation.
+      const liveUser = useAuthStore.getState().user;
+      if (!liveUser) {
+        openSignInModal(
+          'Sign in to chat with PepGuide AI and save your research.',
+        );
         return;
       }
 
-      const currentUser = useAuthStore.getState().user;
-      if (currentUser && isChatSendingBlocked(currentUser)) {
+      if (isChatSendingBlocked(liveUser)) {
         return;
       }
 
@@ -371,7 +375,7 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
       appendMessage,
       applyModeration,
       isPro,
-      requireAuth,
+      openSignInModal,
       resolvedChatId,
       router,
       setActiveChatId,

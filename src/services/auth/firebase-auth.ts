@@ -1,16 +1,19 @@
 import {
   createUserWithEmailAndPassword,
+  getRedirectResult,
   GoogleAuthProvider,
   onAuthStateChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   signOut as firebaseSignOut,
   updateProfile,
   type User,
 } from 'firebase/auth';
 
+import { BRAND } from '@/src/constants/brand';
 import type { SignInInput, SignUpInput } from '@/src/schemas/auth';
 import { getFirebaseAuth } from '@/src/services/firebase/config';
 import { userRepository } from '@/src/services/firestore/users';
@@ -22,14 +25,49 @@ function requireAuth() {
   return auth;
 }
 
-async function toProfile(user: User): Promise<UserProfile> {
-  return userRepository.ensureProfile({
+function isMobileBrowser() {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
+function fallbackProfile(user: User): UserProfile {
+  const now = new Date().toISOString();
+  return {
     id: user.uid,
     displayName: user.displayName || user.email?.split('@')[0] || 'Researcher',
     email: user.email ?? '',
     photoURL: user.photoURL,
+    createdAt: now,
+    onboardingCompleted: true,
     emailVerified: user.emailVerified,
-  });
+    subscriptionTier: 'free',
+    accountStatus: 'active',
+    chatBlockedUntil: null,
+    abuseStrikeCount: 0,
+    researchInterests: [],
+    experienceLevel: null,
+    researchPreferences: [],
+    acceptedTermsVersion: BRAND.termsVersion,
+    acceptedPrivacyVersion: BRAND.privacyVersion,
+    acceptedResearchNoticeVersion: BRAND.researchNoticeVersion,
+    dataRetentionDays: 365,
+  };
+}
+
+async function toProfile(user: User): Promise<UserProfile> {
+  try {
+    return await userRepository.ensureProfile({
+      id: user.uid,
+      displayName: user.displayName || user.email?.split('@')[0] || 'Researcher',
+      email: user.email ?? '',
+      photoURL: user.photoURL,
+      emailVerified: user.emailVerified,
+    });
+  } catch (error) {
+    // Keep the session usable even if Firestore profile sync is slow/offline.
+    console.error('Failed to sync user profile; using auth fallback', error);
+    return fallbackProfile(user);
+  }
 }
 
 export const firebaseAuthService = {
@@ -44,26 +82,31 @@ export const firebaseAuthService = {
       return () => undefined;
     }
 
+    let generation = 0;
+
+    // Complete Google redirect sign-in (common on mobile) before listening.
+    void getRedirectResult(auth).catch((error) => {
+      console.error('Google redirect sign-in failed', error);
+    });
+
     return onAuthStateChanged(auth, (firebaseUser) => {
+      const current = ++generation;
       void (async () => {
         if (!firebaseUser) {
-          listener(null);
+          if (current === generation) listener(null);
           return;
         }
-        try {
-          const profile = await toProfile(firebaseUser);
-          listener(profile);
-        } catch (error) {
-          console.error('Failed to load user profile', error);
-          listener(null);
-        }
+        const profile = await toProfile(firebaseUser);
+        if (current === generation) listener(profile);
       })();
     });
   },
 
   async signIn(input: SignInInput): Promise<UserProfile> {
+    const auth = requireAuth();
+    await auth.authStateReady();
     const credential = await signInWithEmailAndPassword(
-      requireAuth(),
+      auth,
       input.email,
       input.password,
     );
@@ -71,8 +114,9 @@ export const firebaseAuthService = {
   },
 
   async signUp(input: SignUpInput): Promise<UserProfile> {
+    const auth = requireAuth();
     const credential = await createUserWithEmailAndPassword(
-      requireAuth(),
+      auth,
       input.email,
       input.password,
     );
@@ -85,10 +129,18 @@ export const firebaseAuthService = {
     return toProfile(credential.user);
   },
 
-  async signInWithGoogle(): Promise<UserProfile> {
+  async signInWithGoogle(): Promise<UserProfile | null> {
+    const auth = requireAuth();
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    const credential = await signInWithPopup(requireAuth(), provider);
+
+    // Popups are unreliable on mobile browsers — use full-page redirect.
+    if (isMobileBrowser()) {
+      await signInWithRedirect(auth, provider);
+      return null;
+    }
+
+    const credential = await signInWithPopup(auth, provider);
     return toProfile(credential.user);
   },
 
@@ -107,7 +159,9 @@ export const firebaseAuthService = {
   },
 
   async restoreSession(_user: UserProfile): Promise<UserProfile> {
-    const current = requireAuth().currentUser;
+    const auth = requireAuth();
+    await auth.authStateReady();
+    const current = auth.currentUser;
     if (!current) throw new Error('No Firebase session to restore');
     return toProfile(current);
   },
@@ -128,7 +182,7 @@ export const firebaseAuthService = {
   async deleteAccount(): Promise<void> {
     const user = requireAuth().currentUser;
     if (!user) throw new Error('Not authenticated');
-    // Prefer Cloud Function for cascading deletes in production.
+    // Prefer custom backend for cascading deletes in production.
     await user.delete();
   },
 };

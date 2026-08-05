@@ -22,7 +22,7 @@ export const authService = {
   signUp(input: SignUpInput) {
     return activeAuth().signUp(input);
   },
-  signInWithGoogle() {
+  signInWithGoogle(): Promise<UserProfile | null> {
     return activeAuth().signInWithGoogle();
   },
   signInWithApple() {

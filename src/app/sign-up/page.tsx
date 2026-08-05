@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { AuthLayout } from '@/src/components/auth/auth-layout';
@@ -18,9 +18,17 @@ import { useAuthStore } from '@/src/stores/auth-store';
 
 export default function SignUpPage() {
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const initializing = useAuthStore((state) => state.initializing);
   const setUser = useAuthStore((state) => state.setUser);
   const [error, setError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (!initializing && user) {
+      router.replace('/chat');
+    }
+  }, [initializing, user, router]);
 
   const {
     register,
@@ -52,12 +60,12 @@ export default function SignUpPage() {
     setError(null);
     setGoogleLoading(true);
     try {
-      const user = await authService.signInWithGoogle();
-      setUser(user);
+      const signedIn = await authService.signInWithGoogle();
+      if (!signedIn) return;
+      setUser(signedIn);
       router.push('/chat');
     } catch (err) {
       setError(getAuthErrorMessage(err));
-    } finally {
       setGoogleLoading(false);
     }
   };

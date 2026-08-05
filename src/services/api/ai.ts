@@ -2,6 +2,7 @@ import { PICKS_ONLY_ANSWER, PRO_UNLOCK_ANSWER } from '@/src/constants/chat';
 import { getFirebaseAuth } from '@/src/services/firebase/config';
 import { pepGuideResponseSchema } from '@/src/schemas/ai';
 import type { AccountStatus, PepGuideAiResponse } from '@/src/types';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
 export type ChatHistoryTurn = {
   role: 'user' | 'assistant';
@@ -43,16 +44,43 @@ export class ChatApiError extends Error {
   }
 }
 
-async function getAuthToken(): Promise<string> {
+async function waitForFirebaseUser(timeoutMs = 5000): Promise<User | null> {
   const auth = getFirebaseAuth();
-  const user = auth?.currentUser;
+  if (!auth) return null;
+
+  await auth.authStateReady();
+  if (auth.currentUser) return auth.currentUser;
+
+  return new Promise((resolve) => {
+    const timer = window.setTimeout(() => {
+      unsubscribe();
+      resolve(auth.currentUser);
+    }, timeoutMs);
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) return;
+      window.clearTimeout(timer);
+      unsubscribe();
+      resolve(user);
+    });
+  });
+}
+
+async function getAuthToken(): Promise<string> {
+  const user = await waitForFirebaseUser();
   if (!user) {
     throw new ChatApiError('Sign in required to chat with PepGuide.', {
       status: 401,
       code: 'unauthenticated',
     });
   }
-  return user.getIdToken();
+
+  try {
+    return await user.getIdToken();
+  } catch {
+    // Mobile Safari can briefly return a stale session — force refresh once.
+    return user.getIdToken(true);
+  }
 }
 
 export async function sendChatMessage(params: {
@@ -62,21 +90,34 @@ export async function sendChatMessage(params: {
   isPro?: boolean;
   onToken?: (token: string) => void;
 }): Promise<SendChatResult> {
-  const token = await getAuthToken();
+  let token = await getAuthToken();
 
-  const response = await fetch('/api/research/message', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      chatId: params.chatId,
-      content: params.content,
-      history: params.history ?? [],
-      isPro: params.isPro ?? false,
-    }),
-  });
+  const doFetch = (authToken: string) =>
+    fetch('/api/research/message', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        chatId: params.chatId,
+        content: params.content,
+        history: params.history ?? [],
+        isPro: params.isPro ?? false,
+      }),
+    });
+
+  let response = await doFetch(token);
+
+  // One retry with a fresh token — common right after mobile sign-in.
+  if (response.status === 401) {
+    const auth = getFirebaseAuth();
+    const user = auth?.currentUser ?? (await waitForFirebaseUser(2000));
+    if (user) {
+      token = await user.getIdToken(true);
+      response = await doFetch(token);
+    }
+  }
 
   const data: unknown = await response.json().catch(() => null);
 
