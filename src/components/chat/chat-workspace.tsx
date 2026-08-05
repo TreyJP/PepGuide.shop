@@ -258,10 +258,10 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         return;
       }
 
-      let currentChatId = resolvedChatId;
       let shouldOpenChatRoute = false;
       let assistantId = '';
       let assistantMessage: ChatMessage | null = null;
+      let currentChatId: string | null = resolvedChatId;
 
       try {
         if (!currentChatId) {
@@ -276,9 +276,15 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           shouldOpenChatRoute = true;
         }
 
+        // Narrow for closures — TS won't treat `let` as non-null inside onToken.
+        if (!currentChatId) {
+          throw new Error('Chat id missing after create.');
+        }
+        const activeChatIdForSend = currentChatId;
+
         const userMessage: ChatMessage = {
           id: createId('msg'),
-          chatId: currentChatId,
+          chatId: activeChatIdForSend,
           role: 'user',
           content,
           createdAt: new Date().toISOString(),
@@ -292,7 +298,7 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         assistantId = createId('msg');
         assistantMessage = {
           id: assistantId,
-          chatId: currentChatId,
+          chatId: activeChatIdForSend,
           role: 'assistant',
           content: '',
           createdAt: new Date().toISOString(),
@@ -304,18 +310,18 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         };
 
         // Paint immediately — persist in the background so the void never feels empty.
-        appendMessage(currentChatId, userMessage);
-        appendMessage(currentChatId, assistantMessage);
+        appendMessage(activeChatIdForSend, userMessage);
+        appendMessage(activeChatIdForSend, assistantMessage);
         setIsStreaming(true);
 
         // Navigate after optimistic paint so mobile /chat → /chat/[id] keeps the thread.
         if (shouldOpenChatRoute) {
-          router.replace(`/chat/${currentChatId}`);
+          router.replace(`/chat/${activeChatIdForSend}`);
         }
 
         const existingChat = useChatStore
           .getState()
-          .chats.find((chat) => chat.id === currentChatId);
+          .chats.find((chat) => chat.id === activeChatIdForSend);
         if (existingChat && isDefaultChatTitle(existingChat.title)) {
           upsertChat({
             ...existingChat,
@@ -330,7 +336,7 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         });
 
         const priorMessages =
-          useChatStore.getState().messagesByChat[currentChatId] ?? [];
+          useChatStore.getState().messagesByChat[activeChatIdForSend] ?? [];
         const history = priorMessages
           .filter(
             (message) =>
@@ -352,32 +358,32 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           }));
 
         console.info('[PepGuide chat] Sending message', {
-          chatId: currentChatId,
+          chatId: activeChatIdForSend,
           contentLength: content.length,
           historyTurns: history.length,
           isPro,
         });
 
         const response = await sendChatMessage({
-          chatId: currentChatId,
+          chatId: activeChatIdForSend,
           content,
           history,
           isPro,
           onToken: (token) => {
             const existing = useChatStore
               .getState()
-              .messagesByChat[currentChatId]?.find(
+              .messagesByChat[activeChatIdForSend]?.find(
                 (message) => message.id === assistantId,
               );
             if (!existing) {
-              upsertMessage(currentChatId, {
+              upsertMessage(activeChatIdForSend, {
                 ...assistantMessage!,
                 content: token,
                 status: 'streaming',
               });
               return;
             }
-            updateMessage(currentChatId, assistantId, {
+            updateMessage(activeChatIdForSend, assistantId, {
               content: `${existing.content ?? ''}${token}`,
             });
           },
@@ -402,7 +408,7 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           modelVersion: PEP_GUIDE_MODEL,
         };
 
-        upsertMessage(currentChatId, completed);
+        upsertMessage(activeChatIdForSend, completed);
         void chatRepository.appendMessage(completed).catch((error) => {
           console.error(
             '[PepGuide chat] Failed to persist assistant message',
@@ -410,10 +416,13 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           );
         });
 
-        const updatedChat = await chatRepository.updateChat(currentChatId, {
-          researchMode: DEFAULT_RESEARCH_MODE,
-          evidenceDepth: DEFAULT_EVIDENCE_DEPTH,
-        });
+        const updatedChat = await chatRepository.updateChat(
+          activeChatIdForSend,
+          {
+            researchMode: DEFAULT_RESEARCH_MODE,
+            evidenceDepth: DEFAULT_EVIDENCE_DEPTH,
+          },
+        );
         upsertChat(updatedChat);
       } catch (error) {
         console.error('[PepGuide chat] Send failed', error);
