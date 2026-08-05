@@ -29,6 +29,7 @@ export type SendChatResult = PepGuideAiResponse & {
 export class ChatApiError extends Error {
   status: number;
   code?: string;
+  detail?: string;
   response?: PepGuideAiResponse;
   moderation?: ChatModerationState;
 
@@ -37,6 +38,7 @@ export class ChatApiError extends Error {
     options?: {
       status: number;
       code?: string;
+      detail?: string;
       response?: PepGuideAiResponse;
       moderation?: ChatModerationState;
     },
@@ -45,6 +47,7 @@ export class ChatApiError extends Error {
     this.name = 'ChatApiError';
     this.status = options?.status ?? 500;
     this.code = options?.code;
+    this.detail = options?.detail;
     this.response = options?.response;
     this.moderation = options?.moderation;
   }
@@ -142,14 +145,24 @@ export async function sendChatMessage(params: {
     const body = data as {
       error?: string;
       code?: string;
+      detail?: string;
       moderation?: ChatModerationState;
     } | null;
+
+    console.error('[PepGuide chat] API error', {
+      status: response.status,
+      code: body?.code,
+      error: body?.error,
+      detail: body?.detail,
+      body: data,
+    });
 
     const structured = pepGuideResponseSchema.safeParse(data);
     if (structured.success) {
       throw new ChatApiError(structured.data.answer, {
         status: response.status,
         code: body?.code,
+        detail: body?.detail,
         response: structured.data,
         moderation: body?.moderation,
       });
@@ -160,6 +173,7 @@ export async function sendChatMessage(params: {
       {
         status: response.status,
         code: body?.code,
+        detail: body?.detail,
         moderation: body?.moderation,
       },
     );

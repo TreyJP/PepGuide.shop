@@ -74,16 +74,23 @@ export function MessageComposer({
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   }, [value]);
 
+  const submittingRef = useRef(false);
+
   const handleSubmit = useCallback(
     (event?: FormEvent) => {
       event?.preventDefault();
       const trimmed = value.trim();
-      if (!trimmed || !canSubmit) return;
+      if (!trimmed || !canSubmit || submittingRef.current || loading) return;
+      submittingRef.current = true;
       onSubmit(trimmed);
       setValue('');
       textareaRef.current?.focus({ preventScroll: true });
+      // Unlock on next tick so Enter + click can't double-fire the same submit.
+      window.setTimeout(() => {
+        submittingRef.current = false;
+      }, 400);
     },
-    [canSubmit, onSubmit, setValue, value],
+    [canSubmit, loading, onSubmit, setValue, value],
   );
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {

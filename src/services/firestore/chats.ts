@@ -1,5 +1,4 @@
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -257,8 +256,19 @@ const firestoreRepository = {
 
   async appendMessage(message: ChatMessage) {
     const uid = requireUid();
+    // Keep the client message id so reloads don't create duplicate bubbles.
+    const messageRef = doc(
+      requireDb(),
+      'users',
+      uid,
+      'chats',
+      message.chatId,
+      'messages',
+      message.id,
+    );
     const { id: _id, ...payload } = message;
-    const ref = await addDoc(messagesCol(uid, message.chatId), payload);
+    const existingMessage = await getDoc(messageRef);
+    await setDoc(messageRef, payload, { merge: true });
 
     const chatRef = doc(requireDb(), 'users', uid, 'chats', message.chatId);
     const existingSnap = await getDoc(chatRef);
@@ -275,8 +285,12 @@ const firestoreRepository = {
       updatedAt: message.createdAt,
       lastMessagePreview: preview,
       safetyStatus: message.safetyAction,
-      messageCount: increment(1),
     };
+
+    // Only bump count for first write of this message id.
+    if (!existingMessage.exists()) {
+      safeUpdate.messageCount = increment(1);
+    }
 
     if (
       message.role === 'user' &&
@@ -287,7 +301,7 @@ const firestoreRepository = {
 
     await updateDoc(chatRef, safeUpdate);
 
-    return { ...message, id: ref.id };
+    return message;
   },
 };
 

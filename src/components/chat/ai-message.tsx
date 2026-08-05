@@ -55,13 +55,14 @@ export function AiMessage({
     (content === PICKS_ONLY_ANSWER || content.trim() === PICKS_ONLY_ANSWER);
   const proUnlockReply =
     content === PRO_UNLOCK_ANSWER || content.trim() === PRO_UNLOCK_ANSWER;
+  const isFailed = !isStreaming && (status === 'error' || status === 'refused');
   const showPlainAnswer =
-    Boolean(content) && !structuredReply && !proUnlockReply;
+    Boolean(content) &&
+    !structuredReply &&
+    !proUnlockReply &&
+    !isFailed;
   const showThinking = isStreaming && !content;
-  const showFailed =
-    !isStreaming &&
-    !content &&
-    (status === 'error' || status === 'refused');
+  const showFailed = isFailed;
 
   const handleCopy = async () => {
     if (onCopy) {
@@ -95,10 +96,23 @@ export function AiMessage({
       {showThinking ? <ThinkingIndicator /> : null}
 
       {showFailed ? (
-        <div className="chat-ai-bubble px-4 py-3">
-          <p className="text-sm text-foreground-secondary">
-            Something went wrong. Please try again.
+        <div
+          className={cn(
+            'chat-ai-bubble px-4 py-3',
+            status === 'error' && 'border border-red-300/70 bg-red-50/80',
+          )}
+        >
+          <p className="text-sm font-medium text-foreground">
+            {status === 'error' ? 'Chat error' : 'Request blocked'}
           </p>
+          <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground-secondary">
+            {content || 'Something went wrong. Please try again.'}
+          </p>
+          {status === 'error' ? (
+            <p className="mt-2 text-xs text-foreground-secondary">
+              Check the browser console for `[PepGuide chat]` logs.
+            </p>
+          ) : null}
         </div>
       ) : null}
 

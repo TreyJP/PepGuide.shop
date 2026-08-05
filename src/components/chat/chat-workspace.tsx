@@ -35,9 +35,57 @@ export type ChatWorkspaceProps = {
   chatId?: string;
 };
 
+function formatChatError(error: unknown): string {
+  if (error instanceof ChatApiError) {
+    const parts = [error.message];
+    if (error.code) parts.push(`Code: ${error.code}`);
+    if (error.status) parts.push(`HTTP ${error.status}`);
+    if (error.detail && error.detail !== error.message) {
+      parts.push(`Detail: ${error.detail}`);
+    }
+    return parts.join('\n');
+  }
+  if (error instanceof Error && error.message) {
+    return `Something went wrong.\nDetail: ${error.message}`;
+  }
+  return 'Something went wrong. Please try again.';
+}
+
+function dedupeMessages(messages: ChatMessage[]): ChatMessage[] {
+  const seenIds = new Set<string>();
+  const seenFingerprints = new Set<string>();
+  const result: ChatMessage[] = [];
+
+  for (const message of messages) {
+    if (seenIds.has(message.id)) continue;
+
+    const fingerprint =
+      message.content.trim().length > 0
+        ? `${message.role}|${message.content.trim()}|${message.createdAt.slice(0, 19)}`
+        : null;
+
+    // Drop legacy duplicates from when Firestore assigned a different id.
+    if (
+      fingerprint &&
+      seenFingerprints.has(fingerprint) &&
+      message.status !== 'streaming' &&
+      message.status !== 'sending'
+    ) {
+      continue;
+    }
+
+    seenIds.add(message.id);
+    if (fingerprint) seenFingerprints.add(fingerprint);
+    result.push(message);
+  }
+
+  return result;
+}
+
 export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sendLockRef = useRef(false);
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const openSignInModal = useUiStore((state) => state.openSignInModal);
@@ -142,11 +190,14 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           }
         }
 
-        const merged = [...mergedById.values()].sort((a, b) =>
-          a.createdAt.localeCompare(b.createdAt),
+        const merged = dedupeMessages(
+          [...mergedById.values()].sort((a, b) =>
+            a.createdAt.localeCompare(b.createdAt),
+          ),
         );
         setMessages(chatId, merged);
-      } catch {
+      } catch (error) {
+        console.error('[PepGuide chat] Failed to load messages', error);
         if (cancelled) return;
         const local = useChatStore.getState().messagesByChat[chatId] ?? [];
         if (local.length === 0) {
@@ -186,9 +237,16 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
 
   const handleSend = useCallback(
     async (content: string) => {
+      if (sendLockRef.current || useChatStore.getState().isStreaming) {
+        console.warn('[PepGuide chat] Ignoring duplicate send while in flight');
+        return;
+      }
+      sendLockRef.current = true;
+
       // Prefer live store state — mobile sign-in can settle a moment after navigation.
       const liveUser = useAuthStore.getState().user;
       if (!liveUser) {
+        sendLockRef.current = false;
         openSignInModal(
           'Sign in to chat with PepGuide AI and save your research.',
         );
@@ -196,77 +254,81 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
       }
 
       if (isChatSendingBlocked(liveUser)) {
+        sendLockRef.current = false;
         return;
       }
 
       let currentChatId = resolvedChatId;
       let shouldOpenChatRoute = false;
-      if (!currentChatId) {
-        const chat = await chatRepository.createChat({
-          researchMode: DEFAULT_RESEARCH_MODE,
-          evidenceDepth: DEFAULT_EVIDENCE_DEPTH,
-        });
-
-        upsertChat(chat);
-        setActiveChatId(chat.id);
-        currentChatId = chat.id;
-        shouldOpenChatRoute = true;
-      }
-
-      const userMessage: ChatMessage = {
-        id: createId('msg'),
-        chatId: currentChatId,
-        role: 'user',
-        content,
-        createdAt: new Date().toISOString(),
-        status: 'complete',
-        classifications: [],
-        citations: [],
-        evidenceCards: [],
-        safetyAction: 'allow',
-      };
-
-      const assistantId = createId('msg');
-      const assistantMessage: ChatMessage = {
-        id: assistantId,
-        chatId: currentChatId,
-        role: 'assistant',
-        content: '',
-        createdAt: new Date().toISOString(),
-        status: 'streaming',
-        classifications: [],
-        citations: [],
-        evidenceCards: [],
-        safetyAction: 'allow',
-      };
-
-      // Paint immediately — persist in the background so the void never feels empty.
-      appendMessage(currentChatId, userMessage);
-      appendMessage(currentChatId, assistantMessage);
-      setIsStreaming(true);
-
-      // Navigate after optimistic paint so mobile /chat → /chat/[id] keeps the thread.
-      if (shouldOpenChatRoute) {
-        router.replace(`/chat/${currentChatId}`);
-      }
-
-      const existingChat = useChatStore
-        .getState()
-        .chats.find((chat) => chat.id === currentChatId);
-      if (existingChat && isDefaultChatTitle(existingChat.title)) {
-        upsertChat({
-          ...existingChat,
-          title: deriveChatTitle(content),
-          lastMessagePreview: content.slice(0, 120),
-          updatedAt: userMessage.createdAt,
-        });
-      }
-
-      void chatRepository.appendMessage(userMessage).catch(() => {
-        // Keep optimistic UI; retry paths can reconcile later.
-      });
+      let assistantId = '';
+      let assistantMessage: ChatMessage | null = null;
 
       try {
+        if (!currentChatId) {
+          const chat = await chatRepository.createChat({
+            researchMode: DEFAULT_RESEARCH_MODE,
+            evidenceDepth: DEFAULT_EVIDENCE_DEPTH,
+          });
+
+          upsertChat(chat);
+          setActiveChatId(chat.id);
+          currentChatId = chat.id;
+          shouldOpenChatRoute = true;
+        }
+
+        const userMessage: ChatMessage = {
+          id: createId('msg'),
+          chatId: currentChatId,
+          role: 'user',
+          content,
+          createdAt: new Date().toISOString(),
+          status: 'complete',
+          classifications: [],
+          citations: [],
+          evidenceCards: [],
+          safetyAction: 'allow',
+        };
+
+        assistantId = createId('msg');
+        assistantMessage = {
+          id: assistantId,
+          chatId: currentChatId,
+          role: 'assistant',
+          content: '',
+          createdAt: new Date().toISOString(),
+          status: 'streaming',
+          classifications: [],
+          citations: [],
+          evidenceCards: [],
+          safetyAction: 'allow',
+        };
+
+        // Paint immediately — persist in the background so the void never feels empty.
+        appendMessage(currentChatId, userMessage);
+        appendMessage(currentChatId, assistantMessage);
+        setIsStreaming(true);
+
+        // Navigate after optimistic paint so mobile /chat → /chat/[id] keeps the thread.
+        if (shouldOpenChatRoute) {
+          router.replace(`/chat/${currentChatId}`);
+        }
+
+        const existingChat = useChatStore
+          .getState()
+          .chats.find((chat) => chat.id === currentChatId);
+        if (existingChat && isDefaultChatTitle(existingChat.title)) {
+          upsertChat({
+            ...existingChat,
+            title: deriveChatTitle(content),
+            lastMessagePreview: content.slice(0, 120),
+            updatedAt: userMessage.createdAt,
+          });
+        }
+
+        void chatRepository.appendMessage(userMessage).catch((error) => {
+          console.error('[PepGuide chat] Failed to persist user message', error);
+        });
+
         const priorMessages =
           useChatStore.getState().messagesByChat[currentChatId] ?? [];
         const history = priorMessages
@@ -289,6 +351,13 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
                   : message.content,
           }));
 
+        console.info('[PepGuide chat] Sending message', {
+          chatId: currentChatId,
+          contentLength: content.length,
+          historyTurns: history.length,
+          isPro,
+        });
+
         const response = await sendChatMessage({
           chatId: currentChatId,
           content,
@@ -302,7 +371,7 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
               );
             if (!existing) {
               upsertMessage(currentChatId, {
-                ...assistantMessage,
+                ...assistantMessage!,
                 content: token,
                 status: 'streaming',
               });
@@ -334,7 +403,12 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         };
 
         upsertMessage(currentChatId, completed);
-        void chatRepository.appendMessage(completed).catch(() => undefined);
+        void chatRepository.appendMessage(completed).catch((error) => {
+          console.error(
+            '[PepGuide chat] Failed to persist assistant message',
+            error,
+          );
+        });
 
         const updatedChat = await chatRepository.updateChat(currentChatId, {
           researchMode: DEFAULT_RESEARCH_MODE,
@@ -342,17 +416,22 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         });
         upsertChat(updatedChat);
       } catch (error) {
+        console.error('[PepGuide chat] Send failed', error);
         if (error instanceof ChatApiError) {
           await applyModeration(error.moderation);
-          const fallback = error.response;
+        }
+
+        if (currentChatId && assistantMessage) {
+          const fallback =
+            error instanceof ChatApiError ? error.response : undefined;
           upsertMessage(currentChatId, {
             ...assistantMessage,
-            content: fallback?.answer ?? error.message,
+            content: fallback?.answer ?? formatChatError(error),
             status:
               fallback?.safetyAction === 'refuse' ||
               fallback?.safetyAction === 'rate_limit' ||
-              error.status === 403 ||
-              error.status === 429
+              (error instanceof ChatApiError &&
+                (error.status === 403 || error.status === 429))
                 ? 'refused'
                 : 'error',
             classifications: fallback ? [fallback.classification] : [],
@@ -360,15 +439,10 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
             suggestedQuestions: fallback?.suggestedQuestions,
             peptideIds: fallback?.peptideIds,
           });
-        } else {
-          upsertMessage(currentChatId, {
-            ...assistantMessage,
-            content: 'Something went wrong. Please try again.',
-            status: 'error',
-          });
         }
       } finally {
         setIsStreaming(false);
+        sendLockRef.current = false;
       }
     },
     [
