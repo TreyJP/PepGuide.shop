@@ -3,7 +3,6 @@
 import { Bookmark, Check, Copy } from 'lucide-react';
 import { useState } from 'react';
 
-import { Logo } from '@/src/components/brand/logo';
 import { MarkdownContent } from '@/src/components/chat/markdown-content';
 import { ProUnlockCard } from '@/src/components/chat/pro-unlock-card';
 import { WeightLossReply } from '@/src/components/chat/weight-loss-reply';
@@ -25,19 +24,24 @@ export type AiMessageProps = {
 
 function ThinkingIndicator() {
   return (
-    <div className="chat-ai-bubble chat-thinking px-4 py-3.5">
-      <div className="flex items-center gap-3">
-        <span className="chat-thinking-dots" aria-hidden>
-          <span />
-          <span />
-          <span />
-        </span>
-        <span className="chat-thinking-label text-sm text-foreground-secondary">
-          Researching
-        </span>
-      </div>
-      <div className="chat-thinking-shimmer mt-3" aria-hidden />
+    <div className="chat-thinking">
+      <span className="chat-thinking-dots" aria-label="PepGuide is researching">
+        <span />
+        <span />
+        <span />
+      </span>
     </div>
+  );
+}
+
+function AssistantMark() {
+  return (
+    <span
+      className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-white"
+      aria-hidden
+    >
+      P
+    </span>
   );
 }
 
@@ -77,15 +81,13 @@ export function AiMessage({
   };
 
   return (
-    <div className={cn('flex flex-col gap-4', className)}>
-      <div className="flex items-center gap-2.5">
-        <span className="inline-flex h-8 items-center">
-          <Logo variant="full" size="sm" />
-        </span>
+    <div className={cn('flex gap-3 px-1', className)}>
+      <AssistantMark />
+      <div className="min-w-0 flex-1 space-y-3 pt-0.5">
         {createdAt ? (
           <time
             dateTime={createdAt}
-            className="flex h-8 items-center text-xs leading-none text-foreground-secondary"
+            className="hidden text-xs text-foreground-secondary sm:block"
           >
             {new Date(createdAt).toLocaleTimeString(undefined, {
               hour: 'numeric',
@@ -93,91 +95,90 @@ export function AiMessage({
             })}
           </time>
         ) : null}
-      </div>
 
-      {showThinking ? <ThinkingIndicator /> : null}
+        {showThinking ? <ThinkingIndicator /> : null}
 
-      {showFailed ? (
-        <div className="chat-ai-bubble px-4 py-3">
-          <p className="text-sm text-foreground-secondary">
+        {showFailed ? (
+          <p className="text-[15px] leading-relaxed text-foreground-secondary sm:text-sm">
             Something went wrong. Please try again.
           </p>
-        </div>
-      ) : null}
+        ) : null}
 
-      {!isStreaming && structuredReply ? (
-        <WeightLossReply peptideIds={peptideIds} />
-      ) : null}
+        {!isStreaming && structuredReply ? (
+          <WeightLossReply peptideIds={peptideIds} />
+        ) : null}
 
-      {!isStreaming && proUnlockReply ? (
-        <div className="space-y-3">
-          <div className="chat-ai-bubble px-4 py-3">
-            <p className="text-sm leading-relaxed text-foreground">
+        {!isStreaming && proUnlockReply ? (
+          <div className="space-y-3">
+            <p className="text-[15px] leading-relaxed text-foreground sm:text-sm">
               Guides and Protocols are part of{' '}
               <span className="font-semibold text-accent">PepGuide Pro</span>.
               Unlock them below to browse video lessons and goal-built stacks —
               or keep using free Chat and Library anytime.
             </p>
+            <ProUnlockCard />
           </div>
-          <ProUnlockCard />
-        </div>
-      ) : null}
+        ) : null}
 
-      {showPlainAnswer ? (
-        <>
-          <div
-            className={cn(
-              'chat-ai-bubble min-w-0 overflow-hidden px-3 py-3 sm:px-4',
-              isStreaming && 'chat-ai-streaming',
-            )}
-          >
-            {isStreaming ? (
-              <p className="whitespace-pre-wrap text-sm leading-relaxed break-words text-foreground">
-                {content}
-                <span className="chat-stream-caret" aria-hidden />
-              </p>
-            ) : (
-              <MarkdownContent content={content} />
-            )}
-          </div>
-          {!isStreaming && peptideIds.length > 0 ? (
-            <WeightLossReply peptideIds={peptideIds} />
-          ) : null}
-          {!isStreaming ? (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopy}
-                className="h-8 px-2.5 text-foreground-secondary"
-              >
-                {copied ? (
-                  <Check className="size-3.5" />
-                ) : (
-                  <Copy className="size-3.5" />
-                )}
-                {copied ? 'Copied' : 'Copy'}
-              </Button>
-              {onSave ? (
+        {showPlainAnswer ? (
+          <>
+            <div
+              className={cn(
+                'chat-ai-bubble min-w-0 overflow-hidden',
+                isStreaming && 'chat-ai-streaming',
+              )}
+            >
+              {isStreaming ? (
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed break-words text-foreground sm:text-sm">
+                  {content}
+                  <span className="chat-stream-caret" aria-hidden />
+                </p>
+              ) : (
+                <MarkdownContent
+                  content={content}
+                  className="text-[15px] leading-relaxed sm:text-sm"
+                />
+              )}
+            </div>
+            {!isStreaming && peptideIds.length > 0 ? (
+              <WeightLossReply peptideIds={peptideIds} />
+            ) : null}
+            {!isStreaming ? (
+              <div className="flex items-center gap-0.5">
                 <Button
                   variant="ghost"
-                  size="sm"
-                  onClick={onSave}
-                  className="h-8 px-2.5 text-foreground-secondary"
+                  size="icon"
+                  onClick={handleCopy}
+                  className="size-8 rounded-full text-foreground-secondary"
+                  aria-label={copied ? 'Copied' : 'Copy'}
                 >
-                  <Bookmark
-                    className={cn(
-                      'size-3.5',
-                      saved && 'fill-current text-accent',
-                    )}
-                  />
-                  {saved ? 'Saved' : 'Save'}
+                  {copied ? (
+                    <Check className="size-3.5" />
+                  ) : (
+                    <Copy className="size-3.5" />
+                  )}
                 </Button>
-              ) : null}
-            </div>
-          ) : null}
-        </>
-      ) : null}
+                {onSave ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onSave}
+                    className="size-8 rounded-full text-foreground-secondary"
+                    aria-label={saved ? 'Saved' : 'Save'}
+                  >
+                    <Bookmark
+                      className={cn(
+                        'size-3.5',
+                        saved && 'fill-current text-accent',
+                      )}
+                    />
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -40,9 +40,9 @@ export function MessageComposer({
   const setValue = onChange ?? setInternalValue;
   const charCount = value.length;
   const isOverLimit = charCount > MESSAGE_LIMITS.maxInputChars;
-  const canSubmit = value.trim().length > 0 && !disabled && !loading && !isOverLimit;
+  const canSubmit =
+    value.trim().length > 0 && !disabled && !loading && !isOverLimit;
 
-  // Pull the composer snug to the keyboard — avoid stacked safe-area gap on iOS.
   useEffect(() => {
     const root = document.documentElement;
     const viewport = window.visualViewport;
@@ -66,6 +66,14 @@ export function MessageComposer({
     };
   }, []);
 
+  // Auto-grow like ChatGPT (capped).
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = '0px';
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [value]);
+
   const handleSubmit = useCallback(
     (event?: FormEvent) => {
       event?.preventDefault();
@@ -73,7 +81,6 @@ export function MessageComposer({
       if (!trimmed || !canSubmit) return;
       onSubmit(trimmed);
       setValue('');
-      // Keep focus for follow-ups without forcing an extra viewport jump.
       textareaRef.current?.focus({ preventScroll: true });
     },
     [canSubmit, onSubmit, setValue, value],
@@ -89,18 +96,18 @@ export function MessageComposer({
   return (
     <div
       className={cn(
-        'chat-composer-shell border-t px-3 backdrop-blur-sm sm:px-4',
-        // When the keyboard is up, drop safe-area padding so the field sits snug.
-        focused || 'max-sm:[padding-bottom:max(0.5rem,env(safe-area-inset-bottom))]',
-        focused ? 'py-2' : 'py-2.5 sm:py-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))]',
+        'chat-composer-shell px-3 pt-1 sm:px-4',
+        focused
+          ? 'pb-2'
+          : 'pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-[max(1rem,env(safe-area-inset-bottom))] sm:pt-3',
         className,
       )}
     >
       <form
         onSubmit={handleSubmit}
-        className="mx-auto flex max-w-3xl flex-col gap-1.5 sm:gap-3"
+        className="mx-auto flex w-full max-w-3xl flex-col gap-1.5"
       >
-        <div className="chat-composer-box relative">
+        <div className="chat-composer-box relative flex items-end gap-2 px-2 py-2 sm:px-3 sm:py-2.5">
           <textarea
             ref={textareaRef}
             value={value}
@@ -110,50 +117,53 @@ export function MessageComposer({
             onBlur={() => setFocused(false)}
             disabled={disabled}
             enterKeyHint="send"
-            placeholder={
-              loading
-                ? 'PepGuide is researching…'
-                : 'Ask about a peptide, mechanism, or research goal…'
-            }
-            rows={focused ? 1 : 2}
+            placeholder={loading ? 'PepGuide is researching…' : 'Ask anything'}
+            rows={1}
             className={cn(
-              'w-full resize-none rounded-[18px] bg-transparent px-3 py-2.5 pr-14 text-sm text-foreground sm:px-4 sm:py-3.5',
-              'placeholder:text-foreground-secondary/70',
+              'max-h-40 min-h-[24px] w-full resize-none bg-transparent py-2 pl-2 pr-12 text-[16px] leading-6 text-foreground sm:text-sm',
+              'placeholder:text-foreground-secondary/80',
               'focus-visible:outline-none',
               'disabled:cursor-not-allowed disabled:opacity-50',
             )}
           />
-          <Button
+          <button
             type="submit"
-            size="icon"
-            loading={loading}
             disabled={!canSubmit}
-            className="absolute bottom-2 right-2 size-10 rounded-[12px] sm:bottom-3 sm:right-3 sm:size-9"
             aria-label={loading ? 'Generating response' : 'Send message'}
+            className={cn(
+              'absolute bottom-2 right-2 inline-flex size-8 items-center justify-center rounded-full transition-colors sm:bottom-2.5 sm:right-2.5',
+              canSubmit
+                ? 'bg-foreground text-white'
+                : 'bg-[#d9d9d9] text-white',
+              loading && 'opacity-70',
+            )}
           >
-            {!loading ? <ArrowUp className="size-4" /> : null}
-          </Button>
+            {loading ? (
+              <span className="size-3.5 animate-pulse rounded-full bg-white/80" />
+            ) : (
+              <ArrowUp className="size-4" strokeWidth={2.5} />
+            )}
+          </button>
         </div>
 
-        <div
-          className={cn(
-            'items-start justify-between gap-3 px-1 text-xs text-foreground-secondary',
-            focused ? 'hidden sm:flex' : 'flex',
-          )}
-        >
+        <p className="px-1 text-center text-[11px] leading-snug text-foreground-secondary/80 sm:hidden">
+          PepGuide can make mistakes. Check important research.
+        </p>
+
+        <div className="hidden items-start justify-between gap-3 px-1 text-xs text-foreground-secondary sm:flex">
           <span className="flex min-w-0 flex-col gap-1">
-            <span className="hidden items-center gap-1 sm:flex">
+            <span className="inline-flex items-center gap-1">
               <Clock className="size-3 shrink-0" />
               Enter to send · Shift+Enter for new line
             </span>
-            <span className="hidden leading-relaxed text-foreground-secondary/80 sm:inline">
+            <span className="leading-relaxed text-foreground-secondary/80">
               {BRAND.emptyChatNotice}
             </span>
           </span>
           <span
             className={cn(
               'shrink-0 tabular-nums',
-              isOverLimit ? 'text-critical' : 'hidden sm:inline',
+              isOverLimit && 'text-critical',
             )}
           >
             {charCount.toLocaleString()} /{' '}

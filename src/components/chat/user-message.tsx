@@ -8,9 +8,9 @@ export type UserMessageProps = {
 
 export function UserMessage({ content, createdAt, className }: UserMessageProps) {
   return (
-    <div className={cn('flex justify-end', className)}>
-      <div className="flex max-w-[85%] flex-col items-end gap-1.5 sm:max-w-[75%]">
-        <div className="chat-user-bubble max-w-full px-4 py-3 text-sm leading-relaxed">
+    <div className={cn('flex justify-end px-1', className)}>
+      <div className="flex max-w-[85%] flex-col items-end gap-1 sm:max-w-[75%]">
+        <div className="chat-user-bubble max-w-full px-4 py-2.5 text-[15px] leading-relaxed sm:text-sm">
           <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
             {content}
           </p>
@@ -18,7 +18,7 @@ export function UserMessage({ content, createdAt, className }: UserMessageProps)
         {createdAt ? (
           <time
             dateTime={createdAt}
-            className="text-xs text-foreground-secondary"
+            className="hidden text-xs text-foreground-secondary sm:block"
           >
             {new Date(createdAt).toLocaleTimeString(undefined, {
               hour: 'numeric',

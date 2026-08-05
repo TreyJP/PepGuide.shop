@@ -414,14 +414,14 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
 
       <div
         ref={scrollRef}
-        className="scrollbar-theme min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-4 sm:py-6"
+        className="scrollbar-theme min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 py-3 sm:px-4 sm:py-6"
       >
         {messages.length === 0 ? (
           <EmptyChat
             onSelectPrompt={chatBlocked ? () => undefined : handleSend}
           />
         ) : (
-          <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-5 sm:gap-6">
+          <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-6 pb-4 sm:gap-7">
             {messages.map((message) =>
               message.role === 'user' ? (
                 <UserMessage

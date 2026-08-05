@@ -1,10 +1,9 @@
 'use client';
 
-import { Menu, Plus } from 'lucide-react';
+import { Menu, SquarePen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
-import { Logo } from '@/src/components/brand/logo';
 import { Button } from '@/src/components/ui/button';
 import {
   DEFAULT_EVIDENCE_DEPTH,
@@ -25,9 +24,13 @@ export function MobileTopBar() {
   const upsertChat = useChatStore((state) => state.upsertChat);
   const setActiveChatId = useChatStore((state) => state.setActiveChatId);
   const setMessages = useChatStore((state) => state.setMessages);
+  const chats = useChatStore((state) => state.chats);
+  const activeChatId = useChatStore((state) => state.activeChatId);
 
   const onChatRoute = pathname === '/chat' || pathname.startsWith('/chat/');
   const chatBlocked = isChatSendingBlocked(user);
+  const activeTitle =
+    chats.find((chat) => chat.id === activeChatId)?.title?.trim() || 'PepGuide';
 
   const handleNewChat = async () => {
     if (!user) {
@@ -47,34 +50,36 @@ export function MobileTopBar() {
   };
 
   return (
-    <header className="flex shrink-0 items-center gap-2 border-b border-border bg-surface px-3 py-2.5 lg:hidden">
+    <header className="flex h-12 shrink-0 items-center gap-1 bg-white px-1.5 lg:hidden">
       <Button
         type="button"
         size="icon"
         variant="ghost"
-        className="size-10 shrink-0"
+        className="size-10 shrink-0 rounded-full text-foreground"
         aria-label="Open menu"
         onClick={openSidebar}
       >
-        <Menu className="size-5" />
+        <Menu className="size-5" strokeWidth={1.75} />
       </Button>
+
       <Link
         href="/chat"
-        className="flex min-w-0 flex-1 items-center justify-center py-1"
+        className="min-w-0 flex-1 truncate px-1 text-center text-[15px] font-semibold tracking-tight text-foreground"
       >
-        <Logo variant="full" size="sm" />
+        {onChatRoute ? activeTitle : 'PepGuide'}
       </Link>
+
       {onChatRoute ? (
         <Button
           type="button"
           size="icon"
           variant="ghost"
-          className="size-10 shrink-0"
+          className="size-10 shrink-0 rounded-full text-foreground"
           aria-label="New chat"
           disabled={chatBlocked}
           onClick={() => void handleNewChat()}
         >
-          <Plus className="size-5" />
+          <SquarePen className="size-5" strokeWidth={1.75} />
         </Button>
       ) : (
         <span className="size-10 shrink-0" aria-hidden />
