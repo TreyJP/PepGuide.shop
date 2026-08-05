@@ -105,12 +105,21 @@ export async function verifyBearerToken(
 
   const idToken = match[1];
 
+  // Prefer Admin SDK, but fall back to Identity Toolkit REST if admin keys
+  // are misconfigured (common Vercel private-key newline issue).
   if (isFirebaseAdminConfigured()) {
-    const decoded = await getAdminAuth().verifyIdToken(idToken);
-    return {
-      uid: decoded.uid,
-      email: decoded.email,
-    };
+    try {
+      const decoded = await getAdminAuth().verifyIdToken(idToken);
+      return {
+        uid: decoded.uid,
+        email: decoded.email,
+      };
+    } catch (error) {
+      console.error(
+        'Firebase Admin verifyIdToken failed — falling back to REST lookup',
+        error,
+      );
+    }
   }
 
   return verifyIdTokenViaRest(idToken);

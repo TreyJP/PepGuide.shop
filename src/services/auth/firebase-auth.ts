@@ -7,7 +7,6 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signInWithRedirect,
   signOut as firebaseSignOut,
   updateProfile,
   type User,
@@ -60,7 +59,6 @@ async function toProfile(user: User): Promise<UserProfile> {
       emailVerified: user.emailVerified,
     });
   } catch (error) {
-    // Keep the session usable even if Firestore profile sync is slow/offline.
     console.error('Failed to sync user profile; using auth fallback', error);
     return fallbackProfile(user);
   }
@@ -80,7 +78,6 @@ export const firebaseAuthService = {
 
     let generation = 0;
 
-    // Complete Google redirect sign-in (common on mobile) before listening.
     void getRedirectResult(auth).catch((error) => {
       console.error('Google redirect sign-in failed', error);
     });
@@ -106,6 +103,8 @@ export const firebaseAuthService = {
       input.email,
       input.password,
     );
+    // Force a fresh ID token so chat API works immediately on mobile.
+    await credential.user.getIdToken(true);
     return toProfile(credential.user);
   },
 
@@ -120,15 +119,16 @@ export const firebaseAuthService = {
     try {
       await sendEmailVerification(credential.user);
     } catch {
-      // Verification email is best-effort in early setup.
+      // best-effort
     }
+    await credential.user.getIdToken(true);
     return toProfile(credential.user);
   },
 
   async signInWithGoogle(): Promise<UserProfile | null> {
     if (isInAppBrowser()) {
       throw new Error(
-        `Google sign-in can’t finish inside ${inAppBrowserName()}. Open PepGuide in Safari or Chrome, then try again.`,
+        `Google sign-in can’t finish inside ${inAppBrowserName()}. Open PepGuide in Safari or Chrome (⋯ → Open in browser), then try again.`,
       );
     }
 
@@ -137,24 +137,10 @@ export const firebaseAuthService = {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
-    // Prefer popup in Safari/iOS. If the popup is blocked, fall back to redirect
-    // (same-origin `/__/auth` proxy in next.config makes that Safari-safe).
-    try {
-      const credential = await signInWithPopup(auth, provider);
-      return toProfile(credential.user);
-    } catch (error) {
-      const code =
-        error && typeof error === 'object' && 'code' in error
-          ? String((error as { code?: string }).code)
-          : '';
-
-      if (code === 'auth/popup-blocked') {
-        await signInWithRedirect(auth, provider);
-        return null;
-      }
-
-      throw error;
-    }
+    // Popup is the reliable path on Safari/iOS with the default firebaseapp.com authDomain.
+    const credential = await signInWithPopup(auth, provider);
+    await credential.user.getIdToken(true);
+    return toProfile(credential.user);
   },
 
   async signInWithApple(): Promise<UserProfile> {
@@ -195,7 +181,6 @@ export const firebaseAuthService = {
   async deleteAccount(): Promise<void> {
     const user = requireAuth().currentUser;
     if (!user) throw new Error('Not authenticated');
-    // Prefer custom backend for cascading deletes in production.
     await user.delete();
   },
 };

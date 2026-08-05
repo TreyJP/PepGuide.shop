@@ -12,6 +12,7 @@ import { Input } from '@/src/components/ui/input';
 import { getAuthErrorMessage } from '@/src/lib/firebase-errors';
 import { signInSchema, type SignInInput } from '@/src/schemas/auth';
 import { authService } from '@/src/services/auth';
+import { getFirebaseAuth } from '@/src/services/firebase/config';
 import { useAuthStore } from '@/src/stores/auth-store';
 
 export default function SignInPage() {
@@ -40,9 +41,29 @@ export default function SignInPage() {
   const onSubmit = async (values: SignInInput) => {
     setError(null);
     try {
-      const user = await authService.signIn(values);
-      setUser(user);
-      router.push('/chat');
+      if (authService.isMockMode()) {
+        setError(
+          'This site is in mock mode, so email sign-in can’t unlock chat. Set NEXT_PUBLIC_USE_MOCK_SERVICES=false on Vercel and redeploy.',
+        );
+        return;
+      }
+
+      const signedIn = await authService.signIn(values);
+      setUser(signedIn);
+
+      // Ensure Firebase session + ID token exist before entering chat (critical on mobile).
+      const auth = getFirebaseAuth();
+      await auth?.authStateReady();
+      const firebaseUser = auth?.currentUser;
+      if (!firebaseUser) {
+        setError(
+          'Signed in, but the secure session didn’t finish loading. Please try again.',
+        );
+        return;
+      }
+      await firebaseUser.getIdToken(true);
+
+      router.replace('/chat');
     } catch (err) {
       setError(getAuthErrorMessage(err));
     }

@@ -14,6 +14,7 @@ import { BRAND } from '@/src/constants/brand';
 import { getAuthErrorMessage } from '@/src/lib/firebase-errors';
 import { signUpSchema, type SignUpInput } from '@/src/schemas/auth';
 import { authService } from '@/src/services/auth';
+import { getFirebaseAuth } from '@/src/services/firebase/config';
 import { useAuthStore } from '@/src/stores/auth-store';
 
 export default function SignUpPage() {
@@ -48,9 +49,28 @@ export default function SignUpPage() {
   const onSubmit = async (values: SignUpInput) => {
     setError(null);
     try {
-      const user = await authService.signUp(values);
-      setUser(user);
-      router.push('/chat');
+      if (authService.isMockMode()) {
+        setError(
+          'This site is in mock mode, so accounts can’t unlock chat. Set NEXT_PUBLIC_USE_MOCK_SERVICES=false on Vercel and redeploy.',
+        );
+        return;
+      }
+
+      const signedIn = await authService.signUp(values);
+      setUser(signedIn);
+
+      const auth = getFirebaseAuth();
+      await auth?.authStateReady();
+      const firebaseUser = auth?.currentUser;
+      if (!firebaseUser) {
+        setError(
+          'Account created, but the secure session didn’t finish loading. Please sign in again.',
+        );
+        return;
+      }
+      await firebaseUser.getIdToken(true);
+
+      router.replace('/chat');
     } catch (err) {
       setError(getAuthErrorMessage(err));
     }

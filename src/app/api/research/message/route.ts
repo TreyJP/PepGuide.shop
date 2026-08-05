@@ -38,10 +38,13 @@ export async function POST(request: Request) {
       email = decoded.email;
     } catch (error) {
       console.error('Research auth failed', error);
+      const detail =
+        error instanceof Error ? error.message : 'Invalid or missing auth token.';
       return NextResponse.json(
         {
           error: 'Sign in required to chat with PepGuide.',
           code: 'unauthenticated',
+          detail,
         },
         { status: 401 },
       );

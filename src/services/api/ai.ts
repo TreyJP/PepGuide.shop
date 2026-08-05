@@ -1,9 +1,14 @@
+import { onAuthStateChanged, type User } from 'firebase/auth';
+
 import { PICKS_ONLY_ANSWER, PRO_UNLOCK_ANSWER } from '@/src/constants/chat';
 import { inAppBrowserName, isInAppBrowser } from '@/src/lib/in-app-browser';
-import { getFirebaseAuth } from '@/src/services/firebase/config';
+import {
+  getFirebaseAuth,
+  isFirebaseConfigured,
+  shouldUseMockServices,
+} from '@/src/services/firebase/config';
 import { pepGuideResponseSchema } from '@/src/schemas/ai';
 import type { AccountStatus, PepGuideAiResponse } from '@/src/types';
-import { onAuthStateChanged, type User } from 'firebase/auth';
 
 export type ChatHistoryTurn = {
   role: 'user' | 'assistant';
@@ -45,7 +50,7 @@ export class ChatApiError extends Error {
   }
 }
 
-async function waitForFirebaseUser(timeoutMs = 5000): Promise<User | null> {
+async function waitForFirebaseUser(timeoutMs = 8000): Promise<User | null> {
   const auth = getFirebaseAuth();
   if (!auth) return null;
 
@@ -68,23 +73,32 @@ async function waitForFirebaseUser(timeoutMs = 5000): Promise<User | null> {
 }
 
 async function getAuthToken(): Promise<string> {
-  const user = await waitForFirebaseUser();
+  if (shouldUseMockServices()) {
+    throw new ChatApiError(
+      'Chat is running in mock mode, so sign-in can’t authorize the AI API. Set NEXT_PUBLIC_USE_MOCK_SERVICES=false and configure Firebase, then redeploy.',
+      { status: 401, code: 'mock_mode' },
+    );
+  }
+
+  if (!isFirebaseConfigured()) {
+    throw new ChatApiError(
+      'Firebase is not configured in this deployment, so chat can’t authenticate. Add NEXT_PUBLIC_FIREBASE_* env vars on Vercel and redeploy.',
+      { status: 401, code: 'firebase_unconfigured' },
+    );
+  }
+
+  const user = await waitForFirebaseUser(8000);
   if (!user) {
     const inAppMessage = isInAppBrowser()
-      ? `Sign-in can’t finish inside ${inAppBrowserName()}. Open PepGuide in Safari or Chrome (⋯ → Open in browser), then sign in and try again.`
-      : 'Sign in required to chat with PepGuide.';
+      ? `Sign-in can’t finish inside ${inAppBrowserName()}. Open https://www.pepguide.shop in Safari or Chrome, sign in with email, then chat.`
+      : 'Sign in required to chat with PepGuide. If you just signed in with email, refresh once and try again.';
     throw new ChatApiError(inAppMessage, {
       status: 401,
       code: 'unauthenticated',
     });
   }
 
-  try {
-    return await user.getIdToken();
-  } catch {
-    // Mobile Safari can briefly return a stale session — force refresh once.
-    return user.getIdToken(true);
-  }
+  return user.getIdToken(true);
 }
 
 export async function sendChatMessage(params: {
@@ -113,7 +127,6 @@ export async function sendChatMessage(params: {
 
   let response = await doFetch(token);
 
-  // One retry with a fresh token — common right after mobile sign-in.
   if (response.status === 401) {
     const auth = getFirebaseAuth();
     const user = auth?.currentUser ?? (await waitForFirebaseUser(2000));
@@ -132,7 +145,6 @@ export async function sendChatMessage(params: {
       moderation?: ChatModerationState;
     } | null;
 
-    // 403/429 may still return a structured PepGuide reply for in-chat display.
     const structured = pepGuideResponseSchema.safeParse(data);
     if (structured.success) {
       throw new ChatApiError(structured.data.answer, {
@@ -167,7 +179,6 @@ export async function sendChatMessage(params: {
   return moderation ? { ...parsed, moderation } : parsed;
 }
 
-/** Progressive reveal so the reply feels live after the full JSON lands. */
 async function revealAnswerProgressively(
   answer: string,
   onToken: (token: string) => void,
@@ -178,7 +189,6 @@ async function revealAnswerProgressively(
   for (let i = 0; i < chunks.length; i += 1) {
     buffer += chunks[i] ?? '';
 
-    // Batch a few words so paint stays smooth without feeling sluggish.
     const shouldFlush =
       i === chunks.length - 1 ||
       buffer.length >= 18 ||

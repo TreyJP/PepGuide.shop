@@ -10,7 +10,6 @@ import {
   type KeyboardEvent,
 } from 'react';
 
-import { Button } from '@/src/components/ui/button';
 import { BRAND } from '@/src/constants/brand';
 import { MESSAGE_LIMITS } from '@/src/constants/chat';
 import { cn } from '@/src/lib/utils';
@@ -49,11 +48,13 @@ export function MessageComposer({
     if (!viewport) return;
 
     const sync = () => {
-      const keyboardInset = Math.max(
+      const raw = Math.max(
         0,
         window.innerHeight - viewport.height - viewport.offsetTop,
       );
-      root.style.setProperty('--keyboard-inset', `${Math.round(keyboardInset)}px`);
+      // Ignore small chrome shifts; only lift for a real keyboard.
+      const inset = raw > 120 ? Math.round(raw) : 0;
+      root.style.setProperty('--keyboard-inset', `${inset}px`);
     };
 
     sync();
@@ -66,12 +67,11 @@ export function MessageComposer({
     };
   }, []);
 
-  // Auto-grow like ChatGPT (capped).
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = '0px';
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   }, [value]);
 
   const handleSubmit = useCallback(
@@ -96,18 +96,19 @@ export function MessageComposer({
   return (
     <div
       className={cn(
-        'chat-composer-shell px-3 pt-1 sm:px-4',
+        'chat-composer-shell px-3 pt-1 sm:px-4 sm:pt-3',
+        // Keep the pill snug — no extra disclaimer strip / oversized safe gap.
         focused
-          ? 'pb-2'
-          : 'pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-[max(1rem,env(safe-area-inset-bottom))] sm:pt-3',
+          ? 'pb-1'
+          : 'pb-1 sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]',
         className,
       )}
     >
       <form
         onSubmit={handleSubmit}
-        className="mx-auto flex w-full max-w-3xl flex-col gap-1.5"
+        className="mx-auto flex w-full max-w-3xl flex-col gap-1 sm:gap-2"
       >
-        <div className="chat-composer-box relative flex items-end gap-2 px-2 py-2 sm:px-3 sm:py-2.5">
+        <div className="chat-composer-box relative flex items-end px-2 py-1.5 sm:px-3 sm:py-2.5">
           <textarea
             ref={textareaRef}
             value={value}
@@ -120,7 +121,7 @@ export function MessageComposer({
             placeholder={loading ? 'PepGuide is researching…' : 'Ask anything'}
             rows={1}
             className={cn(
-              'max-h-40 min-h-[24px] w-full resize-none bg-transparent py-2 pl-2 pr-12 text-[16px] leading-6 text-foreground sm:text-sm',
+              'max-h-36 min-h-[40px] w-full resize-none bg-transparent py-2 pl-2 pr-12 text-[16px] leading-6 text-foreground sm:min-h-[24px] sm:text-sm',
               'placeholder:text-foreground-secondary/80',
               'focus-visible:outline-none',
               'disabled:cursor-not-allowed disabled:opacity-50',
@@ -145,10 +146,6 @@ export function MessageComposer({
             )}
           </button>
         </div>
-
-        <p className="px-1 text-center text-[11px] leading-snug text-foreground-secondary/80 sm:hidden">
-          PepGuide can make mistakes. Check important research.
-        </p>
 
         <div className="hidden items-start justify-between gap-3 px-1 text-xs text-foreground-secondary sm:flex">
           <span className="flex min-w-0 flex-col gap-1">
