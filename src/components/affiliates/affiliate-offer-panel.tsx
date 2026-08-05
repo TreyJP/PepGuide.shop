@@ -3,16 +3,13 @@
 import { ExternalLink } from 'lucide-react';
 
 import { Button } from '@/src/components/ui/button';
-import { getAffiliateOffers, getLowestAffiliatePrice } from '@/src/data/affiliates/slots';
+import {
+  formatAffiliateUsd,
+  getAffiliateOffers,
+  getLowestAffiliatePrice,
+} from '@/src/data/affiliates/slots';
 import { cn } from '@/src/lib/utils';
-
-function formatUsd(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { trackAnalyticsEvent } from '@/src/services/firestore/analytics';
 
 export type AffiliateOfferPanelProps = {
   peptideId: string;
@@ -73,7 +70,7 @@ export function AffiliateOfferPanel({
                 From
               </p>
               <p className="font-[family-name:var(--font-display)] text-xl font-semibold tracking-tight text-foreground">
-                {formatUsd(fromPrice)}
+                {formatAffiliateUsd(fromPrice)}
               </p>
             </div>
           ) : null}
@@ -93,8 +90,8 @@ export function AffiliateOfferPanel({
       </button>
 
       <div className="flex items-center justify-between border-y border-border px-4 py-2 text-[11px] uppercase tracking-[0.12em] text-foreground-secondary">
-        <span>Test amount</span>
-        <span>Price</span>
+        <span>Partner</span>
+        <span>Lowest price</span>
       </div>
 
       <div className="scrollbar-theme min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-3">
@@ -107,13 +104,15 @@ export function AffiliateOfferPanel({
               <p className="truncate text-sm font-medium text-foreground">
                 {offer.vendorLabel}
               </p>
-              <span className="mt-1 inline-flex rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-foreground-secondary ring-1 ring-border">
-                {offer.testAmount}
-              </span>
+              {offer.productName ? (
+                <p className="mt-0.5 truncate text-xs text-foreground-secondary">
+                  {offer.productName}
+                </p>
+              ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
-              <span className="font-[family-name:var(--font-display)] text-base font-semibold tabular-nums text-foreground">
-                {formatUsd(offer.priceUsd)}
+              <span className="font-[family-name:var(--font-display)] text-sm font-semibold tabular-nums text-foreground">
+                {formatAffiliateUsd(offer.priceUsd)}
               </span>
               <Button
                 size="sm"
@@ -121,7 +120,21 @@ export function AffiliateOfferPanel({
                 className="size-8 p-0"
                 onClick={(event) => {
                   event.stopPropagation();
-                  // Placeholder until real affiliate URLs are wired.
+                  void trackAnalyticsEvent({
+                    name: 'affiliate_click',
+                    meta: {
+                      partnerId: offer.vendorId,
+                      partnerLabel: offer.vendorLabel,
+                      peptideId,
+                      peptideName,
+                      productName: offer.productName ?? null,
+                      href: offer.href,
+                      priceUsd: offer.priceUsd,
+                    },
+                  });
+                  if (offer.href && offer.href !== '#') {
+                    window.open(offer.href, '_blank', 'noopener,noreferrer');
+                  }
                 }}
                 aria-label={`View ${offer.vendorLabel}`}
               >

@@ -43,7 +43,7 @@ export default function SettingsPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <header className="border-b border-border px-6 py-5">
+      <header className="border-b border-border px-4 py-4 sm:px-6 sm:py-5">
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-foreground">
           Settings
         </h1>
@@ -69,7 +69,7 @@ export default function SettingsPage() {
             </p>
             <p>
               <span className="text-foreground-secondary">Access: </span>
-              Free for everyone
+              {user?.subscriptionTier === 'pro' ? 'PepGuide Pro' : 'Free'}
             </p>
           </CardContent>
         </Card>

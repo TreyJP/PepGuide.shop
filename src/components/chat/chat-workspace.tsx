@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { Plus, ShieldAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef } from 'react';
 
@@ -14,10 +14,17 @@ import {
   DEFAULT_RESEARCH_MODE,
   PEP_GUIDE_MODEL,
 } from '@/src/constants/ai';
+import { PICKS_ONLY_ANSWER, PRO_UNLOCK_ANSWER } from '@/src/constants/chat';
+import { useProAccess } from '@/src/hooks/use-pro-access';
+import { chatBlockMessage, isChatSendingBlocked } from '@/src/lib/chat-access';
 import { deriveChatTitle, isDefaultChatTitle } from '@/src/lib/chat-title';
-import { PICKS_ONLY_ANSWER } from '@/src/constants/chat';
-import { sendChatMessage } from '@/src/services/api/ai';
+import {
+  ChatApiError,
+  sendChatMessage,
+  type ChatModerationState,
+} from '@/src/services/api/ai';
 import { chatRepository } from '@/src/services/firestore/chats';
+import { userRepository } from '@/src/services/firestore/users';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useChatStore } from '@/src/stores/chat-store';
 import { useUiStore } from '@/src/stores/ui-store';
@@ -32,7 +39,10 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
   const openSignInModal = useUiStore((state) => state.openSignInModal);
+  const { isPro } = useProAccess();
+  const chatBlocked = isChatSendingBlocked(user);
 
   const requireAuth = useCallback(
     (message?: string) => {
@@ -43,6 +53,44 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
       return false;
     },
     [openSignInModal, user],
+  );
+
+  const applyModeration = useCallback(
+    async (moderation?: ChatModerationState) => {
+      if (!moderation || !user) return;
+
+      if (
+        moderation.accountStatus ||
+        moderation.chatBlockedUntil !== undefined ||
+        moderation.abuseStrikeCount !== undefined
+      ) {
+        updateUser({
+          ...(moderation.accountStatus
+            ? { accountStatus: moderation.accountStatus }
+            : {}),
+          ...(moderation.chatBlockedUntil !== undefined
+            ? { chatBlockedUntil: moderation.chatBlockedUntil }
+            : {}),
+          ...(moderation.abuseStrikeCount !== undefined
+            ? { abuseStrikeCount: moderation.abuseStrikeCount }
+            : {}),
+        });
+      }
+
+      try {
+        const fresh = await userRepository.getProfile(user.id);
+        if (fresh) {
+          updateUser({
+            accountStatus: fresh.accountStatus,
+            chatBlockedUntil: fresh.chatBlockedUntil,
+            abuseStrikeCount: fresh.abuseStrikeCount,
+          });
+        }
+      } catch {
+        // Local store patch above is enough if refresh fails.
+      }
+    },
+    [updateUser, user],
   );
 
   const activeChatId = useChatStore((state) => state.activeChatId);
@@ -81,6 +129,7 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
 
   const handleNewChat = async () => {
     if (!requireAuth('Sign in to start a new research chat.')) return;
+    if (user && isChatSendingBlocked(user)) return;
     const chat = await chatRepository.createChat({
       researchMode: DEFAULT_RESEARCH_MODE,
       evidenceDepth: DEFAULT_EVIDENCE_DEPTH,
@@ -94,6 +143,11 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   const handleSend = useCallback(
     async (content: string) => {
       if (!requireAuth('Sign in to chat with PepGuide AI and save your research.')) {
+        return;
+      }
+
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser && isChatSendingBlocked(currentUser)) {
         return;
       }
 
@@ -174,13 +228,16 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
             content:
               message.content === PICKS_ONLY_ANSWER
                 ? '[Presented top research picks: retatrutide, tirzepatide, semaglutide with dosing guide.]'
-                : message.content,
+                : message.content === PRO_UNLOCK_ANSWER
+                  ? '[Presented PepGuide Pro unlock card for Guides and Protocols.]'
+                  : message.content,
           }));
 
         const response = await sendChatMessage({
           chatId: currentChatId,
           content,
           history,
+          isPro,
           onToken: (token) => {
             updateMessage(currentChatId, assistantId, {
               content:
@@ -191,10 +248,16 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           },
         });
 
+        await applyModeration(response.moderation);
+
         const completed: ChatMessage = {
           ...assistantMessage,
           content: response.answer,
-          status: 'complete',
+          status:
+            response.safetyAction === 'refuse' ||
+            response.safetyAction === 'rate_limit'
+              ? 'refused'
+              : 'complete',
           classifications: [response.classification],
           citations: response.citations,
           evidenceCards: response.evidenceCards,
@@ -212,17 +275,38 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           evidenceDepth: DEFAULT_EVIDENCE_DEPTH,
         });
         upsertChat(updatedChat);
-      } catch {
-        updateMessage(currentChatId, assistantId, {
-          content: 'Something went wrong. Please try again.',
-          status: 'error',
-        });
+      } catch (error) {
+        if (error instanceof ChatApiError) {
+          await applyModeration(error.moderation);
+          const fallback = error.response;
+          updateMessage(currentChatId, assistantId, {
+            content: fallback?.answer ?? error.message,
+            status:
+              fallback?.safetyAction === 'refuse' ||
+              fallback?.safetyAction === 'rate_limit' ||
+              error.status === 403 ||
+              error.status === 429
+                ? 'refused'
+                : 'error',
+            classifications: fallback ? [fallback.classification] : [],
+            safetyAction: fallback?.safetyAction ?? 'refuse',
+            suggestedQuestions: fallback?.suggestedQuestions,
+            peptideIds: fallback?.peptideIds,
+          });
+        } else {
+          updateMessage(currentChatId, assistantId, {
+            content: 'Something went wrong. Please try again.',
+            status: 'error',
+          });
+        }
       } finally {
         setIsStreaming(false);
       }
     },
     [
       appendMessage,
+      applyModeration,
+      isPro,
       requireAuth,
       resolvedChatId,
       router,
@@ -243,17 +327,27 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           onClick={() => void handleNewChat()}
           aria-label="New chat"
           className="shrink-0 gap-1.5"
+          disabled={chatBlocked}
         >
           <Plus className="size-4" />
           <span className="hidden sm:inline">New</span>
         </Button>
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
+      {user && chatBlocked ? (
+        <div className="border-b border-border bg-surface-secondary px-4 py-3">
+          <div className="mx-auto flex max-w-3xl items-start gap-2.5 text-sm text-foreground">
+            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-accent" />
+            <p>{chatBlockMessage(user)}</p>
+          </div>
+        </div>
+      ) : null}
+
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-4 sm:py-6">
         {messages.length === 0 ? (
-          <EmptyChat onSelectPrompt={handleSend} />
+          <EmptyChat onSelectPrompt={chatBlocked ? () => undefined : handleSend} />
         ) : (
-          <div className="mx-auto flex max-w-3xl flex-col gap-6">
+          <div className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-5 sm:gap-6">
             {messages.map((message) =>
               message.role === 'user' ? (
                 <UserMessage
@@ -275,7 +369,11 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         )}
       </div>
 
-      <MessageComposer onSubmit={handleSend} loading={isStreaming} />
+      <MessageComposer
+        onSubmit={handleSend}
+        loading={isStreaming}
+        disabled={chatBlocked}
+      />
     </div>
   );
 }

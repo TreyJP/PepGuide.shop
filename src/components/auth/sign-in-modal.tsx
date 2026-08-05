@@ -28,21 +28,26 @@ export function SignInModal({
       if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previous;
+    };
   }, [open, onClose]);
 
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)] p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay)] p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="sign-in-modal-title"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md rounded-[18px] border border-border bg-surface p-6 shadow-xl"
+        className="relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-[18px] border border-border bg-surface p-5 shadow-xl sm:p-6"
         onClick={(event) => event.stopPropagation()}
       >
         <button

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 import { AppSidebar } from '@/src/components/layout/app-sidebar';
+import { MobileTopBar } from '@/src/components/layout/mobile-top-bar';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useCycleStore } from '@/src/stores/cycle-store';
 import { usePartnersStore } from '@/src/stores/partners-store';
@@ -26,7 +27,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-svh overflow-hidden bg-background">
       <AppSidebar />
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <MobileTopBar />
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

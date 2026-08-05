@@ -69,8 +69,10 @@ export const messageClassificationSchema = z.enum([
   'minor_user',
   'prompt_injection',
   'spam',
+  'out_of_scope',
   'automated_scraping',
   'repeated_policy_circumvention',
+  'pro_content_inquiry',
 ]);
 
 export const pepGuideResponseSchema = z.object({

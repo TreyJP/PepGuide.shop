@@ -96,19 +96,32 @@ export default function LandingPage() {
   return (
     <div className="min-h-svh">
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="container-page flex h-16 items-center justify-between">
-          <Link href="/chat" className="rounded-[12px] bg-white px-3 py-2">
-            <Logo variant="full" size="md" priority />
+        <div className="container-page flex h-14 items-center justify-between gap-2 sm:h-16">
+          <Link
+            href="/chat"
+            className="min-w-0 shrink rounded-[12px] bg-white px-2 py-1.5 sm:px-3 sm:py-2"
+          >
+            <Logo variant="full" size="sm" priority className="sm:hidden" />
+            <Logo
+              variant="full"
+              size="md"
+              priority
+              className="hidden sm:block"
+            />
           </Link>
 
-          <nav className="flex items-center gap-3">
+          <nav className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <Link href="/sign-in">
-              <Button variant="ghost">Sign in</Button>
+              <Button variant="ghost" size="sm" className="sm:h-10 sm:px-4">
+                Sign in
+              </Button>
             </Link>
             <Link href="/chat">
-              <Button>Start researching</Button>
+              <Button size="sm" className="sm:h-10 sm:px-4">
+                <span className="sm:hidden">Start</span>
+                <span className="hidden sm:inline">Start researching</span>
+              </Button>
             </Link>
-                                               
           </nav>
         </div>
       </header>

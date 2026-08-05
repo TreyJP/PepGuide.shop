@@ -429,7 +429,10 @@
     "name": "AOD-9604",
     "aliases": [
       "HGH fragment 176-191",
-      "Anti-obesity drug fragment"
+      "HGH-FRAG",
+      "HGH-FRAG 176-191",
+      "Anti-obesity drug fragment",
+      "AOD9604"
     ],
     "isPeptide": true,
     "classification": "Modified hGH fragment peptide ( investigational fat-loss agent)",
@@ -3131,6 +3134,97 @@
     "lastReviewedAt": "2026-08-03"
   },
   {
+    "id": "dihexa",
+    "name": "Dihexa",
+    "aliases": [
+      "PNB-0408",
+      "N-hexanoic-Tyr-Ile-(6)-amino hexanoic amide"
+    ],
+    "isPeptide": true,
+    "classification": "Angiotensin IV–related cognitive research peptide",
+    "categories": [
+      "cognitive_neuropeptide"
+    ],
+    "summary": "A synthetic peptide studied for neurotrophic and cognitive effects via HGF/c-Met pathway research; human clinical evidence remains very limited.",
+    "proposedMechanism": "Proposed potentiation of hepatocyte growth factor (HGF)/c-Met signaling associated with synaptogenesis in preclinical models.",
+    "researchNotes": "Dihexa emerged from angiotensin IV analog research as a potential cognitive enhancer. Animal data suggest synaptic and memory-related effects; rigorous human trials are lacking. Research-chemical product quality varies.",
+    "humanEvidenceGrade": "preclinical_only",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Cognitive research",
+      "Synaptogenesis",
+      "Neurotrophic signaling"
+    ],
+    "risks": [
+      "Unknown human safety",
+      "Unregulated research products"
+    ],
+    "uncertainties": [
+      "Human cognitive efficacy",
+      "Long-term neurotrophic modulation safety"
+    ],
+    "knownAdverseEffects": [
+      "Not characterized in humans"
+    ],
+    "references": [
+      {
+        "id": "dihexa-1",
+        "title": "Dihexa and HGF/c-Met cognitive research",
+        "authors": "McCoy AT et al.",
+        "year": 2013,
+        "journal": "J Pharmacol Exp Ther",
+        "evidenceType": "animal"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "adamax",
+    "name": "Adamax",
+    "aliases": [
+      "N-Acetyl Semax Amidate",
+      "NASA",
+      "Adamax Semax analog"
+    ],
+    "isPeptide": true,
+    "classification": "Modified Semax analog neuropeptide (research)",
+    "categories": [
+      "cognitive_neuropeptide"
+    ],
+    "summary": "A Semax-related analog discussed for nootropic research; human evidence is largely extrapolated from Semax literature and remains limited.",
+    "proposedMechanism": "Proposed BDNF/NGF pathway modulation similar to Semax-family peptides, with structural modifications intended to alter stability or delivery characteristics.",
+    "researchNotes": "Adamax is commonly marketed as an N-acetyl amidated Semax variant. Peer-reviewed human data specific to Adamax are scarce compared with Semax. Treat claims cautiously and distinguish analog marketing from clinical evidence.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Nootropic research",
+      "Neuropeptide analogs"
+    ],
+    "risks": [
+      "Unproven analog-specific benefits",
+      "Product identity variability"
+    ],
+    "uncertainties": [
+      "Whether modifications improve Semax-like effects in humans"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "adamax-1",
+        "title": "Semax peptide neuroprotective research overview",
+        "authors": "Multiple authors",
+        "year": 2018,
+        "journal": "Neurosci Behav Physiol",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
     "id": "selank",
     "name": "Selank",
     "aliases": [
@@ -3512,6 +3606,896 @@
         "evidenceType": "human"
       }
     ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "ahk-cu",
+    "name": "AHK-Cu",
+    "aliases": [
+      "AHK copper",
+      "Ala-His-Lys-Cu"
+    ],
+    "isPeptide": true,
+    "classification": "Copper-binding tripeptide (cosmetic / hair research)",
+    "categories": [
+      "cosmetic_skin",
+      "hair_research"
+    ],
+    "summary": "A copper-complexed tripeptide studied mainly in cosmetic and follicle research; human clinical evidence remains limited.",
+    "proposedMechanism": "Proposed to modulate extracellular matrix remodeling and follicular signaling via copper-dependent enzymatic pathways.",
+    "researchNotes": "AHK-Cu is discussed alongside GHK-Cu in cosmetic peptide literature. Available evidence is largely preclinical or small cosmetic studies. Not FDA approved as a drug.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Cosmetic dermatology",
+      "Hair follicle research"
+    ],
+    "risks": [
+      "Unregulated product quality",
+      "Limited safety datasets"
+    ],
+    "uncertainties": [
+      "Magnitude of human cosmetic or hair effects"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "ahk-1",
+        "title": "Copper peptides in skin and hair research",
+        "authors": "Multiple authors",
+        "year": 2018,
+        "journal": "Cosmetics",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "bronchogen",
+    "name": "Bronchogen",
+    "aliases": [
+      "AEDL peptide"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (respiratory research)",
+    "categories": [
+      "healing_recovery",
+      "general"
+    ],
+    "summary": "A short peptide from the Khavinson bioregulator family studied for bronchial/lung tissue research with limited independent human evidence.",
+    "proposedMechanism": "Proposed tissue-specific gene-expression modulation in bronchial epithelium based on bioregulator peptide models.",
+    "researchNotes": "Bronchogen appears in Russian bioregulator literature. Independent Western clinical validation is sparse. Educational discussion should emphasize limited evidence quality.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Respiratory tissue research",
+      "Bioregulator peptides"
+    ],
+    "risks": [
+      "Unproven clinical claims",
+      "Variable product quality"
+    ],
+    "uncertainties": [
+      "Independent replication",
+      "Human efficacy"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "broncho-1",
+        "title": "Cytomedines and short peptides in tissue research",
+        "authors": "Khavinson VK et al.",
+        "year": 2014,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "cardiogen",
+    "name": "Cardiogen",
+    "aliases": [
+      "AEDR peptide"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (cardiac research)",
+    "categories": [
+      "healing_recovery",
+      "general"
+    ],
+    "summary": "A short peptide studied in cardiac tissue bioregulator research; robust human outcome data are lacking.",
+    "proposedMechanism": "Proposed cardiomyocyte / myocardial gene-expression effects within cytomedine research frameworks.",
+    "researchNotes": "Cardiogen is part of the short-peptide bioregulator catalog. Evidence is primarily preclinical or limited regional literature.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Cardiac tissue research",
+      "Bioregulator peptides"
+    ],
+    "risks": [
+      "Unproven cardioprotective claims"
+    ],
+    "uncertainties": [
+      "Translation to human cardiovascular outcomes"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "cardio-1",
+        "title": "Short peptides and myocardial research",
+        "authors": "Khavinson VK et al.",
+        "year": 2013,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "chonluten",
+    "name": "Chonluten",
+    "aliases": [
+      "EDG peptide"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (mucosal / lung research)",
+    "categories": [
+      "healing_recovery",
+      "general"
+    ],
+    "summary": "A short bioregulator peptide discussed for mucosal and bronchial research contexts with limited independent clinical evidence.",
+    "proposedMechanism": "Proposed regulation of mucosal epithelial gene expression in bioregulator models.",
+    "researchNotes": "Chonluten is marketed in bioregulator catalogs; peer-reviewed Western clinical evidence remains limited.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Mucosal biology",
+      "Respiratory research"
+    ],
+    "risks": [
+      "Overstated therapeutic claims"
+    ],
+    "uncertainties": [
+      "Human efficacy and dosing"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "chon-1",
+        "title": "Peptide bioregulators overview",
+        "authors": "Khavinson VK et al.",
+        "year": 2014,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "cortagen",
+    "name": "Cortagen",
+    "aliases": [
+      "AEDP peptide"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (CNS / cortex research)",
+    "categories": [
+      "cognitive_neuropeptide",
+      "general"
+    ],
+    "summary": "A short peptide from bioregulator research aimed at cortical / CNS tissue models; human evidence remains sparse.",
+    "proposedMechanism": "Proposed cortical neuron gene-expression modulation in cytomedine research frameworks.",
+    "researchNotes": "Cortagen appears in Khavinson-related literature. Independent clinical replication is limited.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Neuroscience research",
+      "Bioregulator peptides"
+    ],
+    "risks": [
+      "Unproven cognitive claims"
+    ],
+    "uncertainties": [
+      "Human CNS effects"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "cortagen-1",
+        "title": "Short peptides in neural tissue research",
+        "authors": "Khavinson VK et al.",
+        "year": 2012,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "follistatin-344",
+    "name": "Follistatin 344",
+    "aliases": [
+      "FST-344",
+      "Follistatin"
+    ],
+    "isPeptide": true,
+    "classification": "Activin/myostatin-binding glycoprotein (research)",
+    "categories": [
+      "gh_secretagogues",
+      "metabolic_weight"
+    ],
+    "summary": "A myostatin/activin-binding protein studied for muscle hypertrophy research; systemic use carries substantial theoretical risks.",
+    "proposedMechanism": "Binds and neutralizes myostatin and related TGF-β superfamily ligands, removing a brake on muscle growth in animal models.",
+    "researchNotes": "Follistatin gene therapy and protein research show strong anabolic signals in animals. Human therapeutic development is cautious due to safety and off-target concerns. Research-chemical “Follistatin 344” products lack drug-grade evidence.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "moderate_human",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Muscle biology",
+      "Myostatin pathway",
+      "Cachexia research"
+    ],
+    "risks": [
+      "Off-target growth-factor effects",
+      "Unknown human safety for research products"
+    ],
+    "uncertainties": [
+      "Safe systemic exposure windows in humans"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data for research vials"
+    ],
+    "references": [
+      {
+        "id": "fst-1",
+        "title": "Follistatin gene delivery and muscle hypertrophy",
+        "authors": "Haidet AM et al.",
+        "year": 2008,
+        "journal": "Proc Natl Acad Sci USA",
+        "evidenceType": "animal"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "foxo4-dri",
+    "name": "FOXO4-DRI",
+    "aliases": [
+      "Proxofim",
+      "FOXO4-D-Retro-Inverso"
+    ],
+    "isPeptide": true,
+    "classification": "Modified peptide interfering with FOXO4–p53 interaction (senolytic research)",
+    "categories": [
+      "general",
+      "healing_recovery"
+    ],
+    "summary": "An experimental D-retro-inverso peptide studied for selective clearance of senescent cells in preclinical models.",
+    "proposedMechanism": "Disrupts FOXO4–p53 binding in senescent cells, proposed to trigger apoptosis of senescent cells while sparing healthy cells in models.",
+    "researchNotes": "FOXO4-DRI (Proxofim) gained attention after mouse aging/senolytic studies. Human clinical evidence is essentially absent. Product quality and sequence authenticity are major concerns in research-chemical markets.",
+    "humanEvidenceGrade": "preclinical_only",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Senolytics",
+      "Aging biology",
+      "Cellular senescence"
+    ],
+    "risks": [
+      "Unknown human toxicity",
+      "Product authenticity concerns"
+    ],
+    "uncertainties": [
+      "Human translation",
+      "Long-term effects of senescent-cell clearance"
+    ],
+    "knownAdverseEffects": [
+      "Not characterized in humans"
+    ],
+    "references": [
+      {
+        "id": "foxo-1",
+        "title": "FOXO4-DRI selectively targets senescent cells",
+        "authors": "Baar MP et al.",
+        "year": 2017,
+        "journal": "Cell",
+        "evidenceType": "animal"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "livagen",
+    "name": "Livagen",
+    "aliases": [
+      "KEDW peptide"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (liver research)",
+    "categories": [
+      "healing_recovery",
+      "general"
+    ],
+    "summary": "A short bioregulator peptide discussed for hepatic tissue research with limited independent clinical validation.",
+    "proposedMechanism": "Proposed liver-cell gene-expression modulation within cytomedine research models.",
+    "researchNotes": "Livagen appears in bioregulator catalogs. Educational framing should stress limited evidence quality.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Hepatic research",
+      "Bioregulator peptides"
+    ],
+    "risks": [
+      "Unproven hepatoprotective claims"
+    ],
+    "uncertainties": [
+      "Human liver outcomes"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "livagen-1",
+        "title": "Peptide bioregulators and organ-specific research",
+        "authors": "Khavinson VK et al.",
+        "year": 2014,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "ovagen",
+    "name": "Ovagen",
+    "aliases": [
+      "EDL peptide"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (liver / ovary research contexts)",
+    "categories": [
+      "general",
+      "healing_recovery"
+    ],
+    "summary": "A short peptide listed in bioregulator catalogs for hepatic/ovarian tissue research; human evidence is limited.",
+    "proposedMechanism": "Proposed tissue-specific gene regulation in bioregulator models.",
+    "researchNotes": "Ovagen has limited independent clinical literature outside regional bioregulator publications.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Tissue bioregulator research"
+    ],
+    "risks": [
+      "Unproven claims"
+    ],
+    "uncertainties": [
+      "Human efficacy"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "ovagen-1",
+        "title": "Short peptides in tissue research",
+        "authors": "Khavinson VK et al.",
+        "year": 2013,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "p21",
+    "name": "P21",
+    "aliases": [
+      "P021",
+      "CNTF-derived peptide"
+    ],
+    "isPeptide": true,
+    "classification": "Neurotrophic research peptide (CNTF-pathway related)",
+    "categories": [
+      "cognitive_neuropeptide"
+    ],
+    "summary": "A neurotrophic research peptide related to CNTF pathway work; human clinical evidence remains limited.",
+    "proposedMechanism": "Proposed to support neuronal plasticity and neurogenesis pathways studied in preclinical cognitive models.",
+    "researchNotes": "P21/P021 appears in nootropic and neuropeptide research discussions. Robust human trials are lacking compared with approved neurology drugs.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Cognitive research",
+      "Neurotrophic signaling"
+    ],
+    "risks": [
+      "Unproven cognitive enhancement claims"
+    ],
+    "uncertainties": [
+      "Human cognitive outcomes"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "p21-1",
+        "title": "CNTF-derived peptides in neurodegeneration models",
+        "authors": "Multiple authors",
+        "year": 2015,
+        "journal": "Neuropharmacology",
+        "evidenceType": "animal"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "pancragen",
+    "name": "Pancragen",
+    "aliases": [
+      "KEDW bioregulator"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (pancreatic research)",
+    "categories": [
+      "metabolic_weight",
+      "general"
+    ],
+    "summary": "A short bioregulator peptide discussed for pancreatic tissue research; clinical evidence is limited.",
+    "proposedMechanism": "Proposed pancreatic islet / exocrine gene-expression effects in bioregulator models.",
+    "researchNotes": "Pancragen is marketed within bioregulator lines. Independent metabolic outcome trials are scarce.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Pancreatic biology",
+      "Metabolic research"
+    ],
+    "risks": [
+      "Unproven glycemic claims"
+    ],
+    "uncertainties": [
+      "Human metabolic efficacy"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "pancragen-1",
+        "title": "Peptide bioregulators overview",
+        "authors": "Khavinson VK et al.",
+        "year": 2014,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "pe-22-28",
+    "name": "PE-22-28",
+    "aliases": [
+      "Spadin analog research peptide"
+    ],
+    "isPeptide": true,
+    "classification": "TREK-1 related research peptide",
+    "categories": [
+      "cognitive_neuropeptide"
+    ],
+    "summary": "A short research peptide associated with TREK-1 / spadin pathway work in depression and neurophysiology models.",
+    "proposedMechanism": "Proposed modulation of TREK-1 potassium channel signaling pathways studied in preclinical mood/neuro research.",
+    "researchNotes": "PE-22-28 is discussed in experimental neuropeptide contexts. Human clinical evidence is minimal.",
+    "humanEvidenceGrade": "preclinical_only",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Neurophysiology",
+      "Mood research models"
+    ],
+    "risks": [
+      "Unknown human safety"
+    ],
+    "uncertainties": [
+      "Clinical translation"
+    ],
+    "knownAdverseEffects": [
+      "Not characterized in humans"
+    ],
+    "references": [
+      {
+        "id": "pe2228-1",
+        "title": "Spadin and TREK-1 in depression models",
+        "authors": "Mazella J et al.",
+        "year": 2010,
+        "journal": "Nat Neurosci",
+        "evidenceType": "animal"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "pinealon",
+    "name": "Pinealon",
+    "aliases": [
+      "EDR peptide"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (pineal / CNS research)",
+    "categories": [
+      "sleep_circadian",
+      "cognitive_neuropeptide"
+    ],
+    "summary": "A short peptide studied in pineal and CNS bioregulator research; independent human evidence is limited.",
+    "proposedMechanism": "Proposed pinealocyte / neuronal gene-expression effects affecting circadian and antioxidant pathways in models.",
+    "researchNotes": "Pinealon is part of the short-peptide bioregulator family. Claims around cognition or aging should be treated cautiously.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Pineal research",
+      "Circadian biology"
+    ],
+    "risks": [
+      "Unproven anti-aging claims"
+    ],
+    "uncertainties": [
+      "Human CNS outcomes"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "pinealon-1",
+        "title": "EDR peptide (Pinealon) research overview",
+        "authors": "Khavinson VK et al.",
+        "year": 2011,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "prostamax",
+    "name": "Prostamax",
+    "aliases": [
+      "KEDP peptide"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (prostate research)",
+    "categories": [
+      "general",
+      "healing_recovery"
+    ],
+    "summary": "A short bioregulator peptide discussed for prostate tissue research with limited independent clinical evidence.",
+    "proposedMechanism": "Proposed prostate-cell gene-expression modulation in cytomedine models.",
+    "researchNotes": "Prostamax appears in bioregulator catalogs. Robust urology outcome trials are lacking in Western literature.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Prostate biology research"
+    ],
+    "risks": [
+      "Unproven urologic claims"
+    ],
+    "uncertainties": [
+      "Human efficacy"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "prostamax-1",
+        "title": "Peptide bioregulators overview",
+        "authors": "Khavinson VK et al.",
+        "year": 2014,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "testagen",
+    "name": "Testagen",
+    "aliases": [
+      "KEDG peptide"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (testicular research)",
+    "categories": [
+      "sexual_health",
+      "general"
+    ],
+    "summary": "A short bioregulator peptide discussed for testicular / reproductive research contexts; human evidence is limited.",
+    "proposedMechanism": "Proposed gonadal tissue gene-expression effects in bioregulator models.",
+    "researchNotes": "Testagen should not be confused with pharmaceutical testosterone therapies. Evidence quality is limited.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Reproductive biology research"
+    ],
+    "risks": [
+      "Unproven hormonal claims"
+    ],
+    "uncertainties": [
+      "Human reproductive outcomes"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "testagen-1",
+        "title": "Peptide bioregulators overview",
+        "authors": "Khavinson VK et al.",
+        "year": 2014,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "thymogen",
+    "name": "Thymogen",
+    "aliases": [
+      "EW dipeptide",
+      "Glu-Trp"
+    ],
+    "isPeptide": true,
+    "classification": "Immunomodulatory dipeptide (regional clinical history)",
+    "categories": [
+      "healing_recovery",
+      "general"
+    ],
+    "summary": "A dipeptide with regional clinical use history as an immunomodulator; broader international evidence and approvals vary.",
+    "proposedMechanism": "Proposed modulation of T-cell / innate immune signaling in thymic peptide research traditions.",
+    "researchNotes": "Thymogen (Glu-Trp) has been used in some regional medical contexts. Evidence quality and indication breadth differ from major FDA-approved immunotherapies.",
+    "humanEvidenceGrade": "limited_human",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "approved_outside_us",
+    "researchAreas": [
+      "Immunology research",
+      "Thymic peptides"
+    ],
+    "risks": [
+      "Indication creep",
+      "Variable product quality in research markets"
+    ],
+    "uncertainties": [
+      "Comparative effectiveness vs modern immunotherapies"
+    ],
+    "knownAdverseEffects": [
+      "Generally reported as well tolerated in regional literature"
+    ],
+    "references": [
+      {
+        "id": "thymogen-1",
+        "title": "Thymogen (Glu-Trp) clinical research overview",
+        "authors": "Multiple authors",
+        "year": 2000,
+        "journal": "Immunology Letters",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "vesilute",
+    "name": "Vesilute",
+    "aliases": [
+      "EE peptide bioregulator"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (bladder / urinary research)",
+    "categories": [
+      "general",
+      "healing_recovery"
+    ],
+    "summary": "A short bioregulator peptide discussed for urinary bladder tissue research with limited independent evidence.",
+    "proposedMechanism": "Proposed urothelial gene-expression modulation in bioregulator models.",
+    "researchNotes": "Vesilute is listed in bioregulator catalogs; Western clinical validation is limited.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Urology research"
+    ],
+    "risks": [
+      "Unproven urinary claims"
+    ],
+    "uncertainties": [
+      "Human efficacy"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "vesilute-1",
+        "title": "Peptide bioregulators overview",
+        "authors": "Khavinson VK et al.",
+        "year": 2014,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "vesugen",
+    "name": "Vesugen",
+    "aliases": [
+      "KED peptide"
+    ],
+    "isPeptide": true,
+    "classification": "Short bioregulator peptide (vascular research)",
+    "categories": [
+      "healing_recovery",
+      "general"
+    ],
+    "summary": "A short bioregulator peptide discussed for vascular endothelium research; independent human outcome data are limited.",
+    "proposedMechanism": "Proposed endothelial gene-expression effects in cytomedine research frameworks.",
+    "researchNotes": "Vesugen appears in bioregulator literature focused on vessels. Claims should be framed as early-stage research.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Vascular biology research"
+    ],
+    "risks": [
+      "Unproven vascular claims"
+    ],
+    "uncertainties": [
+      "Human vascular outcomes"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "vesugen-1",
+        "title": "Peptide bioregulators overview",
+        "authors": "Khavinson VK et al.",
+        "year": 2014,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "vilon",
+    "name": "Vilon",
+    "aliases": [
+      "Lys-Glu",
+      "KE dipeptide"
+    ],
+    "isPeptide": true,
+    "classification": "Immunomodulatory dipeptide bioregulator",
+    "categories": [
+      "healing_recovery",
+      "general"
+    ],
+    "summary": "A dipeptide studied in thymic/immune bioregulator research with limited broader clinical validation.",
+    "proposedMechanism": "Proposed immune-cell gene-expression modulation in short-peptide bioregulator models.",
+    "researchNotes": "Vilon (KE) is part of the Khavinson peptide family. Evidence quality varies; treat marketing claims cautiously.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "early_stage",
+    "regulatoryStatus": "research_stage",
+    "researchAreas": [
+      "Immunology research",
+      "Bioregulator peptides"
+    ],
+    "risks": [
+      "Unproven immune claims"
+    ],
+    "uncertainties": [
+      "Human clinical benefit"
+    ],
+    "knownAdverseEffects": [
+      "Insufficient systematic human data"
+    ],
+    "references": [
+      {
+        "id": "vilon-1",
+        "title": "Vilon (KE) peptide research",
+        "authors": "Khavinson VK et al.",
+        "year": 2002,
+        "journal": "Bull Exp Biol Med",
+        "evidenceType": "review"
+      }
+    ],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "bac-water",
+    "name": "Bacteriostatic Water",
+    "aliases": [
+      "BAC Water",
+      "Bacteriostatic water for injection"
+    ],
+    "isPeptide": false,
+    "classification": "Research solvent / diluent (not a peptide)",
+    "categories": [
+      "general"
+    ],
+    "summary": "Sterile water containing a bacteriostatic preservative used as a diluent in laboratory settings; not a therapeutic peptide.",
+    "proposedMechanism": "N/A — solvent/diluent, not a bioactive peptide.",
+    "researchNotes": "BAC water is a laboratory diluent. PepGuide does not provide reconstitution or injection instructions. Discuss only as a common research supply item.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "insufficient",
+    "regulatoryStatus": "unknown",
+    "researchAreas": [
+      "Laboratory supplies"
+    ],
+    "risks": [
+      "Misuse outside labeled sterile technique contexts"
+    ],
+    "uncertainties": [
+      "Product quality varies by supplier"
+    ],
+    "knownAdverseEffects": [
+      "N/A as a therapeutic agent"
+    ],
+    "references": [],
+    "lastReviewedAt": "2026-08-03"
+  },
+  {
+    "id": "acetic-acid",
+    "name": "Acetic Acid (0.6%)",
+    "aliases": [
+      "Dilute acetic acid"
+    ],
+    "isPeptide": false,
+    "classification": "Research solvent / reagent (not a peptide)",
+    "categories": [
+      "general"
+    ],
+    "summary": "Dilute acetic acid used as a laboratory reagent/solvent for some research compounds; not a therapeutic peptide.",
+    "proposedMechanism": "N/A — chemical solvent/reagent.",
+    "researchNotes": "Listed by some research suppliers as a companion solvent. PepGuide does not provide preparation or administration instructions.",
+    "humanEvidenceGrade": "insufficient",
+    "preclinicalEvidenceGrade": "insufficient",
+    "regulatoryStatus": "unknown",
+    "researchAreas": [
+      "Laboratory supplies"
+    ],
+    "risks": [
+      "Irritant / chemical handling hazards"
+    ],
+    "uncertainties": [
+      "Supplier-specific formulations"
+    ],
+    "knownAdverseEffects": [
+      "Chemical irritation with improper handling"
+    ],
+    "references": [],
     "lastReviewedAt": "2026-08-03"
   },
   {

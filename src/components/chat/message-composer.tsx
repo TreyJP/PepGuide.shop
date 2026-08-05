@@ -62,11 +62,12 @@ export function MessageComposer({
   return (
     <div
       className={cn(
-        'border-t border-border bg-surface/80 px-4 py-4 backdrop-blur-sm',
+        'border-t border-border bg-surface/80 px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-4',
+        'pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-[max(1rem,env(safe-area-inset-bottom))]',
         className,
       )}
     >
-      <form onSubmit={handleSubmit} className="mx-auto flex max-w-3xl flex-col gap-3">
+      <form onSubmit={handleSubmit} className="mx-auto flex max-w-3xl flex-col gap-2.5 sm:gap-3">
         <div className="relative rounded-[18px] border border-border bg-surface-elevated shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
           <textarea
             ref={textareaRef}
@@ -75,9 +76,9 @@ export function MessageComposer({
             onKeyDown={handleKeyDown}
             disabled={disabled || loading}
             placeholder="Ask about a peptide, mechanism, or research goal…"
-            rows={3}
+            rows={2}
             className={cn(
-              'w-full resize-none rounded-[18px] bg-transparent px-4 py-3.5 pr-14 text-sm text-foreground',
+              'w-full resize-none rounded-[18px] bg-transparent px-3 py-3 pr-14 text-sm text-foreground sm:px-4 sm:py-3.5',
               'placeholder:text-foreground-secondary/70',
               'focus-visible:outline-none',
               'disabled:cursor-not-allowed disabled:opacity-50',
@@ -97,7 +98,7 @@ export function MessageComposer({
 
         <div className="flex items-start justify-between gap-3 px-1 text-xs text-foreground-secondary">
           <span className="flex min-w-0 flex-col gap-1">
-            <span className="flex items-center gap-1">
+            <span className="hidden items-center gap-1 sm:flex">
               <Clock className="size-3 shrink-0" />
               Enter to send · Shift+Enter for new line
             </span>
@@ -105,7 +106,7 @@ export function MessageComposer({
               {BRAND.emptyChatNotice}
             </span>
           </span>
-          <span className={cn('shrink-0', isOverLimit && 'text-critical')}>
+          <span className={cn('shrink-0 tabular-nums', isOverLimit && 'text-critical')}>
             {charCount.toLocaleString()} / {MESSAGE_LIMITS.maxInputChars.toLocaleString()}
           </span>
         </div>

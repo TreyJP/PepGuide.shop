@@ -32,6 +32,11 @@ function mapUser(id: string, data: Record<string, unknown>): UserProfile {
       data.accountStatus === 'suspended'
         ? data.accountStatus
         : 'active',
+    chatBlockedUntil:
+      typeof data.chatBlockedUntil === 'string' && data.chatBlockedUntil
+        ? data.chatBlockedUntil
+        : null,
+    abuseStrikeCount: Number(data.abuseStrikeCount ?? 0),
     researchInterests: Array.isArray(data.researchInterests)
       ? (data.researchInterests as UserProfile['researchInterests'])
       : [],
@@ -78,6 +83,8 @@ export const userRepository = {
       emailVerified: input.emailVerified ?? false,
       subscriptionTier: 'free',
       accountStatus: 'active',
+      chatBlockedUntil: null,
+      abuseStrikeCount: 0,
       researchInterests: [],
       experienceLevel: null,
       researchPreferences: [],
@@ -119,8 +126,14 @@ export const userRepository = {
     userId: string,
     patch: Partial<UserProfile>,
   ): Promise<UserProfile> {
-    const { id: _id, subscriptionTier: _tier, accountStatus: _status, ...safe } =
-      patch;
+    const {
+      id: _id,
+      subscriptionTier: _tier,
+      accountStatus: _status,
+      chatBlockedUntil: _blocked,
+      abuseStrikeCount: _strikes,
+      ...safe
+    } = patch;
     await updateDoc(doc(requireDb(), 'users', userId), {
       ...safe,
       updatedAt: new Date().toISOString(),

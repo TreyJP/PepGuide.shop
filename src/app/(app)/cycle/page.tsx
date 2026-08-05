@@ -84,8 +84,8 @@ export default function CyclePage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
-        <div>
+      <header className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
+        <div className="min-w-0">
           <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-foreground">
             Cycle
           </h1>
@@ -94,7 +94,7 @@ export default function CyclePage() {
             advice.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <Button
             variant="secondary"
             size="sm"
@@ -109,7 +109,7 @@ export default function CyclePage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-3xl space-y-4 p-6">
+      <div className="mx-auto max-w-3xl space-y-4 p-4 sm:p-6">
         {loading && items.length === 0 ? (
           <p className="text-sm text-foreground-secondary">Loading…</p>
         ) : items.length === 0 ? (

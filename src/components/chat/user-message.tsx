@@ -10,8 +10,10 @@ export function UserMessage({ content, createdAt, className }: UserMessageProps)
   return (
     <div className={cn('flex justify-end', className)}>
       <div className="flex max-w-[85%] flex-col items-end gap-1.5 sm:max-w-[75%]">
-        <div className="rounded-[16px] rounded-br-[6px] bg-accent px-4 py-3 text-sm leading-relaxed text-white shadow-[0_1px_2px_rgba(0,0,0,0.08)]">
-          <p className="whitespace-pre-wrap">{content}</p>
+        <div className="max-w-full rounded-[16px] rounded-br-[6px] bg-accent px-4 py-3 text-sm leading-relaxed text-white shadow-[0_1px_2px_rgba(0,0,0,0.08)]">
+          <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+            {content}
+          </p>
         </div>
         {createdAt ? (
           <time

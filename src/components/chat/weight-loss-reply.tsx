@@ -32,7 +32,7 @@ export function WeightLossReply({ peptideIds }: WeightLossReplyProps) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       <DosingGuide
         peptideIds={ids}
         previewLimit={3}

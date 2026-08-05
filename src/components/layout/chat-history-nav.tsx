@@ -100,7 +100,7 @@ export function ChatHistoryNav() {
               <button
                 type="button"
                 onClick={() => void handleDeleteChat(chat.id)}
-                className="rounded-[8px] p-1 text-foreground-secondary opacity-0 transition-opacity hover:bg-surface-secondary hover:text-critical group-hover:opacity-100"
+                className="rounded-[8px] p-1 text-foreground-secondary opacity-100 transition-opacity hover:bg-surface-secondary hover:text-critical lg:opacity-0 lg:group-hover:opacity-100"
                 aria-label="Delete chat"
               >
                 <Trash2 className="size-3.5" />

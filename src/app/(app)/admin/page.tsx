@@ -4,6 +4,7 @@ import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { AdminDashboard } from '@/src/components/admin/admin-dashboard';
 import { Button } from '@/src/components/ui/button';
 import {
   Card,
@@ -23,6 +24,8 @@ import { partnersRepository } from '@/src/services/firestore/partners';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { usePartnersStore } from '@/src/stores/partners-store';
 import type { AffiliatePartner, PartnerTestAmount } from '@/src/types/affiliates';
+
+type AdminTab = 'dashboard' | 'partners' | 'access';
 
 function emptyLabs(): Record<PartnerLabTestId, boolean | null> {
   return Object.fromEntries(
@@ -84,6 +87,7 @@ export default function AdminPage() {
   const upsertPartner = usePartnersStore((state) => state.upsertPartner);
   const deletePartner = usePartnersStore((state) => state.deletePartner);
 
+  const [tab, setTab] = useState<AdminTab>('dashboard');
   const [draft, setDraft] = useState<Draft>(newDraft);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -300,15 +304,45 @@ export default function AdminPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <header className="border-b border-border px-6 py-5">
+      <header className="border-b border-border px-4 py-4 sm:px-6 sm:py-5">
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-foreground">
           Admin
         </h1>
         <p className="mt-1 text-sm text-foreground-secondary">
-          Manage partner sources, vial sizes, prices, and lab testing coverage.
+          Site metrics, partner sources, and admin access.
         </p>
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {(
+            [
+              { id: 'dashboard', label: 'Dashboard' },
+              { id: 'partners', label: 'Partners' },
+              { id: 'access', label: 'Access' },
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTab(item.id)}
+              className={cn(
+                'h-9 rounded-[10px] border px-3 text-sm font-semibold transition-colors',
+                tab === item.id
+                  ? 'border-accent bg-accent text-white'
+                  : 'border-border bg-surface text-foreground-secondary hover:bg-surface-secondary',
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </header>
 
+      {tab === 'dashboard' ? (
+        <div className="mx-auto max-w-6xl p-6">
+          <AdminDashboard />
+        </div>
+      ) : null}
+
+      {tab === 'partners' ? (
       <div className="mx-auto grid max-w-5xl gap-6 p-6 lg:grid-cols-[1fr_1.2fr]">
         <Card>
           <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
@@ -346,8 +380,10 @@ export default function AdminPage() {
                       {partner.label}
                     </p>
                     <p className="mt-0.5 text-xs text-foreground-secondary">
-                      {partner.testAmounts.length} sizes ·{' '}
-                      {partner.active ? 'Active' : 'Hidden'}
+                      {partner.products?.length
+                        ? `${partner.products.length} products`
+                        : `${partner.testAmounts.length} sizes`}{' '}
+                      · {partner.active ? 'Active' : 'Hidden'}
                     </p>
                   </div>
                 </button>
@@ -516,7 +552,12 @@ export default function AdminPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      </div>
+      ) : null}
 
+      {tab === 'access' ? (
+        <div className="mx-auto max-w-xl p-6">
           <Card>
             <CardHeader>
               <CardTitle>Admin access</CardTitle>
@@ -530,7 +571,7 @@ export default function AdminPage() {
                 <input
                   value={emailInput}
                   onChange={(event) => setEmailInput(event.target.value)}
-                  className="h-10 min-w-[220px] flex-1 rounded-[12px] border border-border bg-surface px-3 text-sm"
+                  className="h-10 w-full min-w-0 flex-1 rounded-[12px] border border-border bg-surface px-3 text-sm"
                   placeholder="admin@example.com"
                 />
                 <Button
@@ -568,7 +609,7 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

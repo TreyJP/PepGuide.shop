@@ -10,11 +10,19 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 
+import { DEFAULT_AFFILIATE_COUPON } from '@/src/constants/affiliates';
 import {
   PARTNER_LAB_TESTS,
   type PartnerLabTestId,
 } from '@/src/data/affiliates/lab-tests';
-import { VIAL_TEST_AMOUNTS } from '@/src/data/affiliates/slots';
+import {
+  NEUROLABS_CATALOG,
+  NEUROLABS_PARTNER,
+} from '@/src/data/affiliates/neurolabs-catalog';
+import {
+  SOMACHEMS_CATALOG,
+  SOMACHEMS_PARTNER,
+} from '@/src/data/affiliates/somachems-catalog';
 import {
   getFirestoreDb,
   shouldUseMockServices,
@@ -22,9 +30,35 @@ import {
 import type {
   AffiliatePartner,
   AffiliatePartnerInput,
+  PartnerProduct,
   PartnerTestAmount,
 } from '@/src/types/affiliates';
 import { createId } from '@/src/utils/dates';
+
+const FAKE_SLOT_IDS = new Set(['slot-a', 'slot-b', 'slot-c', 'slot-d']);
+
+type CatalogPartnerDef = {
+  id: string;
+  label: string;
+  href: string;
+  couponCode: string;
+  discountLabel: string;
+  sortOrder: number;
+  products: PartnerProduct[];
+};
+
+const CATALOG_PARTNERS: CatalogPartnerDef[] = [
+  {
+    ...SOMACHEMS_PARTNER,
+    sortOrder: 0,
+    products: SOMACHEMS_CATALOG,
+  },
+  {
+    ...NEUROLABS_PARTNER,
+    sortOrder: 1,
+    products: NEUROLABS_CATALOG,
+  },
+];
 
 function emptyLabTests(): Record<PartnerLabTestId, boolean | null> {
   return Object.fromEntries(
@@ -32,67 +66,40 @@ function emptyLabTests(): Record<PartnerLabTestId, boolean | null> {
   ) as Record<PartnerLabTestId, boolean | null>;
 }
 
-function defaultTestAmounts(): PartnerTestAmount[] {
-  return VIAL_TEST_AMOUNTS.map((testAmount, index) => ({
-    testAmount,
-    priceUsd: 40 + index * 18,
-  }));
+function defaultLabTests(): Record<PartnerLabTestId, boolean | null> {
+  const labTests = emptyLabTests();
+  labTests.net_content = true;
+  labTests.net_purity = true;
+  labTests.identification = true;
+  labTests.endotoxins = true;
+  labTests.sterility = true;
+  labTests.heavy_metals = null;
+  labTests.fentanyl = null;
+  return labTests;
+}
+
+function buildCatalogPartner(
+  def: CatalogPartnerDef,
+  now = new Date().toISOString(),
+): AffiliatePartner {
+  return {
+    id: def.id,
+    label: def.label,
+    href: def.href,
+    active: true,
+    sortOrder: def.sortOrder,
+    couponCode: def.couponCode,
+    discountLabel: def.discountLabel,
+    testAmounts: [],
+    products: def.products.map((product) => ({ ...product })),
+    labTests: defaultLabTests(),
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 function seedPartners(): AffiliatePartner[] {
-  const now = new Date().toISOString();
-  const seeds: Array<{
-    id: string;
-    label: string;
-    labs: Array<boolean | null>;
-    priceBase: number;
-  }> = [
-    {
-      id: 'slot-a',
-      label: 'Partner Slot A',
-      labs: [true, true, true, true, true, null, true],
-      priceBase: 48,
-    },
-    {
-      id: 'slot-b',
-      label: 'Partner Slot B',
-      labs: [true, true, null, null, null, null, null],
-      priceBase: 42,
-    },
-    {
-      id: 'slot-c',
-      label: 'Partner Slot C',
-      labs: [null, null, null, null, null, null, null],
-      priceBase: 38,
-    },
-    {
-      id: 'slot-d',
-      label: 'Partner Slot D',
-      labs: [true, true, true, true, true, true, true],
-      priceBase: 55,
-    },
-  ];
-
-  return seeds.map((seed, index) => {
-    const labTests = emptyLabTests();
-    PARTNER_LAB_TESTS.forEach((test, i) => {
-      labTests[test.id] = seed.labs[i] ?? null;
-    });
-    return {
-      id: seed.id,
-      label: seed.label,
-      href: '#',
-      active: true,
-      sortOrder: index,
-      testAmounts: VIAL_TEST_AMOUNTS.map((testAmount, amountIndex) => ({
-        testAmount,
-        priceUsd: seed.priceBase + amountIndex * 16,
-      })),
-      labTests,
-      createdAt: now,
-      updatedAt: now,
-    };
-  });
+  return CATALOG_PARTNERS.map((def) => buildCatalogPartner(def));
 }
 
 let mockPartners = seedPartners();
@@ -102,6 +109,36 @@ function requireDb() {
   const db = getFirestoreDb();
   if (!db) throw new Error('Firestore is not configured');
   return db;
+}
+
+function mapProducts(raw: unknown): PartnerProduct[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      const row = item as Record<string, unknown>;
+      const peptideIds = Array.isArray(row.peptideIds)
+        ? row.peptideIds.map((id) => String(id))
+        : [];
+      const priceRaw = row.priceUsd;
+      const priceUsd =
+        priceRaw === null || priceRaw === undefined
+          ? null
+          : Number(priceRaw);
+      return {
+        id: String(row.id ?? createId('product')),
+        name: String(row.name ?? 'Product'),
+        peptideIds,
+        priceUsd: Number.isFinite(priceUsd as number) ? (priceUsd as number) : null,
+        priceMaxUsd:
+          row.priceMaxUsd === null || row.priceMaxUsd === undefined
+            ? null
+            : Number(row.priceMaxUsd) || null,
+        testAmount:
+          typeof row.testAmount === 'string' ? row.testAmount : 'Standard',
+        href: typeof row.href === 'string' ? row.href : undefined,
+      } satisfies PartnerProduct;
+    })
+    .filter((product) => product.peptideIds.length > 0);
 }
 
 function mapPartner(id: string, data: Record<string, unknown>): AffiliatePartner {
@@ -116,7 +153,9 @@ function mapPartner(id: string, data: Record<string, unknown>): AffiliatePartner
 
   const rawAmounts = Array.isArray(data.testAmounts)
     ? (data.testAmounts as PartnerTestAmount[])
-    : defaultTestAmounts();
+    : [];
+
+  const products = mapProducts(data.products);
 
   return {
     id,
@@ -124,10 +163,19 @@ function mapPartner(id: string, data: Record<string, unknown>): AffiliatePartner
     href: String(data.href ?? '#'),
     active: data.active !== false,
     sortOrder: Number(data.sortOrder ?? 0),
+    couponCode:
+      typeof data.couponCode === 'string' && data.couponCode.trim()
+        ? data.couponCode.trim()
+        : DEFAULT_AFFILIATE_COUPON.code,
+    discountLabel:
+      typeof data.discountLabel === 'string' && data.discountLabel.trim()
+        ? data.discountLabel.trim()
+        : DEFAULT_AFFILIATE_COUPON.discountLabel,
     testAmounts: rawAmounts.map((item) => ({
       testAmount: String(item.testAmount),
       priceUsd: Number(item.priceUsd) || 0,
     })),
+    products,
     labTests,
     createdAt: String(data.createdAt ?? new Date().toISOString()),
     updatedAt: String(data.updatedAt ?? new Date().toISOString()),
@@ -138,14 +186,71 @@ function partnersCol() {
   return collection(requireDb(), 'affiliatePartners');
 }
 
+async function syncCatalogPartnerLive(def: CatalogPartnerDef): Promise<void> {
+  const db = requireDb();
+  const ref = doc(db, 'affiliatePartners', def.id);
+  const existing = await getDoc(ref);
+  const now = new Date().toISOString();
+  const next = buildCatalogPartner(def, now);
+
+  if (existing.exists()) {
+    const current = mapPartner(def.id, existing.data() as Record<string, unknown>);
+    await setDoc(ref, {
+      ...next,
+      createdAt: current.createdAt,
+      labTests: current.labTests,
+      active: current.active,
+      couponCode: current.couponCode || next.couponCode,
+      discountLabel: current.discountLabel || next.discountLabel,
+      href: current.href || next.href,
+      updatedAt: now,
+    });
+    return;
+  }
+
+  await setDoc(ref, next);
+}
+
+async function syncCatalogPartnersLive(): Promise<void> {
+  const snap = await getDocs(partnersCol());
+  await Promise.all(
+    snap.docs
+      .filter((item) => FAKE_SLOT_IDS.has(item.id))
+      .map((item) => deleteDoc(item.ref)),
+  );
+  await Promise.all(CATALOG_PARTNERS.map((def) => syncCatalogPartnerLive(def)));
+}
+
 async function listMock(): Promise<AffiliatePartner[]> {
+  const catalogIds = new Set(CATALOG_PARTNERS.map((def) => def.id));
+  const custom = mockPartners.filter(
+    (partner) =>
+      !FAKE_SLOT_IDS.has(partner.id) && !catalogIds.has(partner.id),
+  );
+
+  mockPartners = [
+    ...CATALOG_PARTNERS.map((def) => {
+      const existing = mockPartners.find((partner) => partner.id === def.id);
+      if (!existing) return buildCatalogPartner(def);
+      return {
+        ...buildCatalogPartner(def, existing.createdAt),
+        labTests: existing.labTests,
+        active: existing.active,
+        couponCode: existing.couponCode,
+        discountLabel: existing.discountLabel,
+        href: existing.href,
+      };
+    }),
+    ...custom,
+  ];
+
   return [...mockPartners].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 async function listLive(): Promise<AffiliatePartner[]> {
+  await syncCatalogPartnersLive();
   const snap = await getDocs(query(partnersCol(), orderBy('sortOrder', 'asc')));
   if (snap.empty) {
-    // First load: seed placeholder partners so the shop isn’t empty.
     const seeded = seedPartners();
     await Promise.all(
       seeded.map((partner) =>
@@ -154,9 +259,9 @@ async function listLive(): Promise<AffiliatePartner[]> {
     );
     return seeded;
   }
-  return snap.docs.map((item) =>
-    mapPartner(item.id, item.data() as Record<string, unknown>),
-  );
+  return snap.docs
+    .map((item) => mapPartner(item.id, item.data() as Record<string, unknown>))
+    .filter((partner) => !FAKE_SLOT_IDS.has(partner.id));
 }
 
 async function upsertMock(
@@ -173,7 +278,10 @@ async function upsertMock(
       href: input.href?.trim() || existing.href,
       active: input.active ?? existing.active,
       sortOrder: input.sortOrder ?? existing.sortOrder,
+      couponCode: input.couponCode?.trim() || existing.couponCode,
+      discountLabel: input.discountLabel?.trim() || existing.discountLabel,
       testAmounts: input.testAmounts ?? existing.testAmounts,
+      products: input.products ?? existing.products,
       labTests: { ...existing.labTests, ...input.labTests },
       updatedAt: now,
     };
@@ -189,9 +297,11 @@ async function upsertMock(
     href: input.href?.trim() || '#',
     active: input.active ?? true,
     sortOrder: input.sortOrder ?? mockPartners.length,
-    testAmounts: input.testAmounts?.length
-      ? input.testAmounts
-      : defaultTestAmounts(),
+    couponCode: input.couponCode?.trim() || DEFAULT_AFFILIATE_COUPON.code,
+    discountLabel:
+      input.discountLabel?.trim() || DEFAULT_AFFILIATE_COUPON.discountLabel,
+    testAmounts: input.testAmounts ?? [],
+    products: input.products ?? [],
     labTests: { ...emptyLabTests(), ...input.labTests },
     createdAt: now,
     updatedAt: now,
@@ -218,7 +328,10 @@ async function upsertLive(
       href: input.href?.trim() || current.href,
       active: input.active ?? current.active,
       sortOrder: input.sortOrder ?? current.sortOrder,
+      couponCode: input.couponCode?.trim() || current.couponCode,
+      discountLabel: input.discountLabel?.trim() || current.discountLabel,
       testAmounts: input.testAmounts ?? current.testAmounts,
+      products: input.products ?? current.products,
       labTests: { ...current.labTests, ...input.labTests },
       updatedAt: now,
     };
@@ -233,9 +346,11 @@ async function upsertLive(
     href: input.href?.trim() || '#',
     active: input.active ?? true,
     sortOrder: input.sortOrder ?? Date.now(),
-    testAmounts: input.testAmounts?.length
-      ? input.testAmounts
-      : defaultTestAmounts(),
+    couponCode: input.couponCode?.trim() || DEFAULT_AFFILIATE_COUPON.code,
+    discountLabel:
+      input.discountLabel?.trim() || DEFAULT_AFFILIATE_COUPON.discountLabel,
+    testAmounts: input.testAmounts ?? [],
+    products: input.products ?? [],
     labTests: { ...emptyLabTests(), ...input.labTests },
     createdAt: now,
     updatedAt: now,

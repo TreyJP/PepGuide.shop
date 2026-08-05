@@ -77,8 +77,10 @@ export type MessageClassification =
   | 'minor_user'
   | 'prompt_injection'
   | 'spam'
+  | 'out_of_scope'
   | 'automated_scraping'
-  | 'repeated_policy_circumvention';
+  | 'repeated_policy_circumvention'
+  | 'pro_content_inquiry';
 
 export type SavedItemType =
   | 'ai_response'
@@ -98,6 +100,9 @@ export type UserProfile = {
   emailVerified: boolean;
   subscriptionTier: SubscriptionTier;
   accountStatus: AccountStatus;
+  /** ISO timestamp; when set and in the future, chat sending is blocked. */
+  chatBlockedUntil: string | null;
+  abuseStrikeCount: number;
   researchInterests: ResearchInterest[];
   experienceLevel: ExperienceLevel | null;
   researchPreferences: ResearchPreference[];

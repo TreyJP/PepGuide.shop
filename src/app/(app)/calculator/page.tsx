@@ -31,7 +31,7 @@ export default function CalculatorPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <header className="border-b border-border px-6 py-5">
+      <header className="border-b border-border px-4 py-4 sm:px-6 sm:py-5">
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-foreground">
           Calculator
         </h1>

@@ -50,7 +50,7 @@ export default function ComparePage() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-4 py-4 sm:px-6 sm:py-5">
         <div>
           <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-foreground">
             Compare compounds

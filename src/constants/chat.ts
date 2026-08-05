@@ -16,3 +16,6 @@ export const MESSAGE_LIMITS = {
 
 /** Marker answer — UI renders Top 3 picks instead of markdown. */
 export const PICKS_ONLY_ANSWER = '[[picks]]';
+
+/** Marker answer — UI renders PepGuide Pro unlock CTA in chat. */
+export const PRO_UNLOCK_ANSWER = '[[pro-unlock]]';

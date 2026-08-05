@@ -7,7 +7,7 @@ import {
   getCompoundById,
   searchKnowledge,
 } from '@/src/data/knowledge';
-import { PICKS_ONLY_ANSWER } from '@/src/constants/chat';
+import { PICKS_ONLY_ANSWER, PRO_UNLOCK_ANSWER } from '@/src/constants/chat';
 import {
   findMentionedMetabolicIds,
   getAppetiteComplementIds,
@@ -16,7 +16,10 @@ import {
 } from '@/src/data/knowledge/metabolic-guide';
 import { getMuscleTopIds } from '@/src/data/knowledge/muscle-guide';
 import { PEP_GUIDE_KNOWLEDGE_PREAMBLE } from '@/src/data/knowledge/system-context';
-import { classifyMessage } from '@/src/lib/server/classify';
+import {
+  classifyMessage,
+  isProContentInquiry,
+} from '@/src/lib/server/classify';
 import { pepGuideResponseSchema } from '@/src/schemas/ai';
 import type { PepGuideAiResponse } from '@/src/types';
 
@@ -49,10 +52,16 @@ const REFUSAL_ANSWERS: Partial<Record<string, string>> = {
     'I can’t help circumvent medical supervision. Please speak with a qualified clinician for personal medical decisions.',
   prompt_injection:
     'I can’t follow requests that try to override PepGuide’s research-only boundaries.',
+  spam:
+    'That message doesn’t look like a PepGuide research question. Ask about peptides, mechanisms, evidence, or research goals.',
+  out_of_scope:
+    'I’m PepGuide — I only help with peptide research education (compounds, mechanisms, evidence, regulatory context, and research dosing ranges). Rephrase your question within that scope.',
   minor_user:
     'PepGuide is only for adults. If you are under 18, please stop and talk with a parent/guardian and a clinician.',
   acute_adverse_event:
     'If you may be having a medical emergency, seek emergency care immediately or contact local emergency services. I can’t provide emergency medical treatment advice.',
+  repeated_policy_circumvention:
+    'Repeated requests outside PepGuide’s research boundaries aren’t allowed. Chat may be temporarily locked if this continues.',
 };
 
 function isWeightLossQuery(text: string): boolean {
@@ -107,14 +116,28 @@ function isTopicPivot(userMessage: string): boolean {
   return false;
 }
 
+/** Compact top-picks UI for weight/fat-loss discovery asks. */
 function shouldReturnWeightLossPicks(
   userMessage: string,
-  history: ResearchChatTurn[],
+  _history: ResearchChatTurn[] = [],
 ): boolean {
   if (!isWeightLossQuery(userMessage)) return false;
   if (isMuscleQuery(userMessage)) return false;
+  // Appetite “still hungry / add-on” follow-ups get the complement path, not picks.
   if (isMetabolicFollowUp(userMessage)) return false;
-  if (history.length > 0) return false;
+
+  // Deep dives on a named metabolic compound → full research answer.
+  const named = findMentionedMetabolicIds(userMessage);
+  if (
+    named.length > 0 &&
+    /\b(how|why|mechanism|evidence|risk|side effect|compare|vs\.?|versus|differ|trial|study)\b/i.test(
+      userMessage,
+    )
+  ) {
+    return false;
+  }
+
+  // Any other weight/fat-loss ask → top 3 picks UI (even mid-chat).
   return true;
 }
 
@@ -528,29 +551,68 @@ function buildRefusalResponse(
   });
 }
 
+function buildProUnlockResponse(isPro: boolean): PepGuideAiResponse {
+  if (isPro) {
+    return pepGuideResponseSchema.parse({
+      answer:
+        'Guides and Protocols are already unlocked with your PepGuide Pro access. Open **Guides** for Skool-style video lessons by level, or **Protocols** for goal-built peptide stacks — both are in the PepGuide Pro section of the sidebar.',
+      classification: 'pro_content_inquiry',
+      safetyAction: 'allow',
+      evidenceCards: [],
+      citations: [],
+      suggestedQuestions: [
+        'Which peptides are researched for metabolic health?',
+        'Compare BPC-157 and TB-500 research.',
+        'Summarize current retatrutide research.',
+      ],
+      peptideIds: [],
+    });
+  }
+
+  return pepGuideResponseSchema.parse({
+    answer: PRO_UNLOCK_ANSWER,
+    classification: 'pro_content_inquiry',
+    safetyAction: 'allow',
+    evidenceCards: [],
+    citations: [],
+    suggestedQuestions: [
+      'Which peptides are researched for metabolic health?',
+      'Compare BPC-157 and TB-500 research.',
+      'Show me a weight-loss research tier list with dosing ranges',
+    ],
+    peptideIds: [],
+  });
+}
+
 export async function generateResearchResponse(
   userMessage: string,
   history: ResearchChatTurn[] = [],
+  options: { isPro?: boolean } = {},
 ): Promise<PepGuideAiResponse> {
   const priorTurns = normalizeHistory(history);
   const classification = classifyMessage(userMessage);
 
   if (
+    classification.category === 'pro_content_inquiry' ||
+    isProContentInquiry(userMessage)
+  ) {
+    return buildProUnlockResponse(Boolean(options.isPro));
+  }
+
+  if (
     classification.safetyAction === 'refuse' ||
     classification.safetyAction === 'urgent_warning'
   ) {
-    // Soft redirect: personal dosing asks about weight still get the educational tier list.
+    // Soft redirect: personal dosing asks about weight still get the compact top picks.
     if (
       classification.category === 'personalized_dosing_request' &&
-      isWeightLossQuery(userMessage) &&
-      priorTurns.length === 0 &&
-      !isMetabolicFollowUp(userMessage)
+      shouldReturnWeightLossPicks(userMessage, priorTurns)
     ) {
       return buildWeightLossPicksResponse();
     }
     if (
       classification.category === 'personalized_dosing_request' &&
-      (isAppetiteComplementQuery(userMessage) || priorTurns.length > 0)
+      (isAppetiteComplementQuery(userMessage) || isMetabolicFollowUp(userMessage))
     ) {
       return buildFallbackFromKnowledge(
         userMessage,
@@ -567,7 +629,7 @@ export async function generateResearchResponse(
 
   const retrievalQuery = classification.retrievalQuery;
 
-  // First-turn weight discovery only: top 3 picks UI.
+  // Weight/fat-loss discovery: compact top 3 picks UI (including mid-chat).
   if (shouldReturnWeightLossPicks(userMessage, priorTurns)) {
     return buildWeightLossPicksResponse();
   }

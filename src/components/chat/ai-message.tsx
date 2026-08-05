@@ -5,10 +5,11 @@ import { useState } from 'react';
 
 import { Logo } from '@/src/components/brand/logo';
 import { MarkdownContent } from '@/src/components/chat/markdown-content';
+import { ProUnlockCard } from '@/src/components/chat/pro-unlock-card';
 import { WeightLossReply } from '@/src/components/chat/weight-loss-reply';
 import { Button } from '@/src/components/ui/button';
 import { Skeleton } from '@/src/components/ui/skeleton';
-import { PICKS_ONLY_ANSWER } from '@/src/constants/chat';
+import { PICKS_ONLY_ANSWER, PRO_UNLOCK_ANSWER } from '@/src/constants/chat';
 import { cn } from '@/src/lib/utils';
 import type { MessageStatus } from '@/src/types';
 
@@ -38,6 +39,8 @@ export function AiMessage({
   const structuredReply =
     peptideIds.length > 0 &&
     (content === PICKS_ONLY_ANSWER || content.trim() === PICKS_ONLY_ANSWER);
+  const proUnlockReply =
+    content === PRO_UNLOCK_ANSWER || content.trim() === PRO_UNLOCK_ANSWER;
 
   const handleCopy = async () => {
     if (onCopy) {
@@ -82,9 +85,23 @@ export function AiMessage({
         <WeightLossReply peptideIds={peptideIds} />
       ) : null}
 
-      {!isStreaming && content && !structuredReply ? (
-        <>
+      {!isStreaming && proUnlockReply ? (
+        <div className="space-y-3">
           <div className="rounded-[16px] border border-border bg-surface-elevated px-4 py-3">
+            <p className="text-sm leading-relaxed text-foreground">
+              Guides and Protocols are part of{' '}
+              <span className="font-semibold text-accent">PepGuide Pro</span>.
+              Unlock them below to browse video lessons and goal-built stacks —
+              or keep using free Chat and Library anytime.
+            </p>
+          </div>
+          <ProUnlockCard />
+        </div>
+      ) : null}
+
+      {!isStreaming && content && !structuredReply && !proUnlockReply ? (
+        <>
+          <div className="min-w-0 overflow-hidden rounded-[16px] border border-border bg-surface-elevated px-3 py-3 sm:px-4">
             <MarkdownContent content={content} />
           </div>
           {peptideIds.length > 0 ? (

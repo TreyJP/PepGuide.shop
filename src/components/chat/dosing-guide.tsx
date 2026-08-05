@@ -32,11 +32,11 @@ export function DosingGuide({
         className,
       )}
     >
-      <div className="border-b border-border bg-[linear-gradient(160deg,color-mix(in_srgb,var(--accent)_10%,transparent),transparent_72%)] px-5 py-4">
+      <div className="border-b border-border bg-[linear-gradient(160deg,color-mix(in_srgb,var(--accent)_10%,transparent),transparent_72%)] px-4 py-4 sm:px-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
           Research dosing
         </p>
-        <h2 className="mt-1 font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-foreground">
+        <h2 className="mt-1 font-[family-name:var(--font-display)] text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
           Start low, then increase
         </h2>
         <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-foreground-secondary">
@@ -56,17 +56,20 @@ export function DosingGuide({
         )}
       >
         {entries.map((entry, index) => (
-          <div key={entry.id} className="flex flex-col px-5 py-4">
+          <div
+            key={entry.id}
+            className="flex min-w-0 flex-col border-b border-border px-4 py-4 last:border-b-0 md:border-b-0 sm:px-5"
+          >
             <button
               type="button"
               onClick={() => onSelect?.(entry.id)}
               className="flex-1 text-left transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <div className="flex items-center gap-2">
-                <span className="inline-flex size-6 items-center justify-center rounded-full bg-accent-muted text-[11px] font-semibold text-accent">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-muted text-[11px] font-semibold text-accent">
                   {index + 1}
                 </span>
-                <h3 className="font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight text-foreground">
+                <h3 className="min-w-0 truncate font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight text-foreground">
                   {entry.name}
                 </h3>
               </div>

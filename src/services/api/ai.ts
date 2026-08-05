@@ -1,39 +1,121 @@
-import { PICKS_ONLY_ANSWER } from '@/src/constants/chat';
+import { PICKS_ONLY_ANSWER, PRO_UNLOCK_ANSWER } from '@/src/constants/chat';
+import { getFirebaseAuth } from '@/src/services/firebase/config';
 import { pepGuideResponseSchema } from '@/src/schemas/ai';
-import type { PepGuideAiResponse } from '@/src/types';
+import type { AccountStatus, PepGuideAiResponse } from '@/src/types';
 
 export type ChatHistoryTurn = {
   role: 'user' | 'assistant';
   content: string;
 };
 
+export type ChatModerationState = {
+  accountStatus?: AccountStatus;
+  chatBlockedUntil?: string | null;
+  abuseStrikeCount?: number;
+  code?: string;
+};
+
+export type SendChatResult = PepGuideAiResponse & {
+  moderation?: ChatModerationState;
+};
+
+export class ChatApiError extends Error {
+  status: number;
+  code?: string;
+  response?: PepGuideAiResponse;
+  moderation?: ChatModerationState;
+
+  constructor(
+    message: string,
+    options?: {
+      status: number;
+      code?: string;
+      response?: PepGuideAiResponse;
+      moderation?: ChatModerationState;
+    },
+  ) {
+    super(message);
+    this.name = 'ChatApiError';
+    this.status = options?.status ?? 500;
+    this.code = options?.code;
+    this.response = options?.response;
+    this.moderation = options?.moderation;
+  }
+}
+
+async function getAuthToken(): Promise<string> {
+  const auth = getFirebaseAuth();
+  const user = auth?.currentUser;
+  if (!user) {
+    throw new ChatApiError('Sign in required to chat with PepGuide.', {
+      status: 401,
+      code: 'unauthenticated',
+    });
+  }
+  return user.getIdToken();
+}
+
 export async function sendChatMessage(params: {
   chatId: string;
   content: string;
   history?: ChatHistoryTurn[];
+  isPro?: boolean;
   onToken?: (token: string) => void;
-}): Promise<PepGuideAiResponse> {
+}): Promise<SendChatResult> {
+  const token = await getAuthToken();
+
   const response = await fetch('/api/research/message', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({
       chatId: params.chatId,
       content: params.content,
       history: params.history ?? [],
+      isPro: params.isPro ?? false,
     }),
   });
 
+  const data: unknown = await response.json().catch(() => null);
+
   if (!response.ok) {
-    const errorBody = (await response.json().catch(() => null)) as {
+    const body = data as {
       error?: string;
+      code?: string;
+      moderation?: ChatModerationState;
     } | null;
-    throw new Error(errorBody?.error ?? 'Unable to generate a research response.');
+
+    // 403/429 may still return a structured PepGuide reply for in-chat display.
+    const structured = pepGuideResponseSchema.safeParse(data);
+    if (structured.success) {
+      throw new ChatApiError(structured.data.answer, {
+        status: response.status,
+        code: body?.code,
+        response: structured.data,
+        moderation: body?.moderation,
+      });
+    }
+
+    throw new ChatApiError(
+      body?.error ?? 'Unable to generate a research response.',
+      {
+        status: response.status,
+        code: body?.code,
+        moderation: body?.moderation,
+      },
+    );
   }
 
-  const data: unknown = await response.json();
   const parsed = pepGuideResponseSchema.parse(data);
+  const moderation = (data as { moderation?: ChatModerationState })?.moderation;
 
-  if (params.onToken && parsed.answer !== PICKS_ONLY_ANSWER) {
+  if (
+    params.onToken &&
+    parsed.answer !== PICKS_ONLY_ANSWER &&
+    parsed.answer !== PRO_UNLOCK_ANSWER
+  ) {
     const parts = parsed.answer.split(' ');
     for (const part of parts) {
       params.onToken(`${part} `);
@@ -41,5 +123,5 @@ export async function sendChatMessage(params: {
     }
   }
 
-  return parsed;
+  return moderation ? { ...parsed, moderation } : parsed;
 }

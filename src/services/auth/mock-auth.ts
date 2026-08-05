@@ -25,6 +25,8 @@ function createMockUser(
     emailVerified: true,
     subscriptionTier: 'free',
     accountStatus: 'active',
+    chatBlockedUntil: null,
+    abuseStrikeCount: 0,
     researchInterests: [],
     experienceLevel: null,
     researchPreferences: [],
