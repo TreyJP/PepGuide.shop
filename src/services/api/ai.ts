@@ -1,4 +1,5 @@
 import { PICKS_ONLY_ANSWER, PRO_UNLOCK_ANSWER } from '@/src/constants/chat';
+import { inAppBrowserName, isInAppBrowser } from '@/src/lib/in-app-browser';
 import { getFirebaseAuth } from '@/src/services/firebase/config';
 import { pepGuideResponseSchema } from '@/src/schemas/ai';
 import type { AccountStatus, PepGuideAiResponse } from '@/src/types';
@@ -69,7 +70,10 @@ async function waitForFirebaseUser(timeoutMs = 5000): Promise<User | null> {
 async function getAuthToken(): Promise<string> {
   const user = await waitForFirebaseUser();
   if (!user) {
-    throw new ChatApiError('Sign in required to chat with PepGuide.', {
+    const inAppMessage = isInAppBrowser()
+      ? `Sign-in can’t finish inside ${inAppBrowserName()}. Open PepGuide in Safari or Chrome (⋯ → Open in browser), then sign in and try again.`
+      : 'Sign in required to chat with PepGuide.';
+    throw new ChatApiError(inAppMessage, {
       status: 401,
       code: 'unauthenticated',
     });

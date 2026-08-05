@@ -1,6 +1,12 @@
 import { type Analytics, getAnalytics, isSupported } from 'firebase/analytics';
 import { type FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
-import { type Auth, getAuth } from 'firebase/auth';
+import {
+  type Auth,
+  browserLocalPersistence,
+  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
+} from 'firebase/auth';
 import { type Firestore, getFirestore } from 'firebase/firestore';
 import { type Functions, getFunctions } from 'firebase/functions';
 
@@ -8,7 +14,7 @@ import { useMockServices } from '@/src/utils/env';
 
 // Next.js only inlines NEXT_PUBLIC_* when accessed as static property paths.
 // Dynamic process.env[name] stays undefined in the browser and silently forces mock auth.
-const firebaseConfig = {
+const firebaseEnvConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -24,8 +30,24 @@ let db: Firestore | null = null;
 let functionsClient: Functions | null = null;
 let analytics: Analytics | null = null;
 
+/**
+ * On real deployed hosts, use the current hostname as authDomain so the
+ * `/__/auth` helper is same-origin (via Next rewrite). Localhost keeps the
+ * Firebase-hosted authDomain.
+ */
+function resolveAuthDomain(): string | undefined {
+  const fallback = firebaseEnvConfig.authDomain;
+  if (typeof window === 'undefined') return fallback;
+
+  const host = window.location.hostname;
+  if (!host || host === 'localhost' || host === '127.0.0.1') {
+    return fallback;
+  }
+  return host;
+}
+
 export function isFirebaseConfigured(): boolean {
-  return Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+  return Boolean(firebaseEnvConfig.apiKey && firebaseEnvConfig.projectId);
 }
 
 export function shouldUseMockServices(): boolean {
@@ -37,14 +59,33 @@ export function getFirebaseApp(): FirebaseApp | null {
   if (!isFirebaseConfigured()) return null;
   if (app) return app;
 
-  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  app = getApps().length
+    ? getApp()
+    : initializeApp({
+        apiKey: firebaseEnvConfig.apiKey,
+        authDomain: resolveAuthDomain(),
+        projectId: firebaseEnvConfig.projectId,
+        storageBucket: firebaseEnvConfig.storageBucket,
+        messagingSenderId: firebaseEnvConfig.messagingSenderId,
+        appId: firebaseEnvConfig.appId,
+        measurementId: firebaseEnvConfig.measurementId,
+      });
   return app;
 }
 
 export function getFirebaseAuth(): Auth | null {
   const firebaseApp = getFirebaseApp();
   if (!firebaseApp) return null;
-  if (!auth) auth = getAuth(firebaseApp);
+  if (auth) return auth;
+
+  try {
+    auth = initializeAuth(firebaseApp, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+    });
+  } catch {
+    // Hot reload / already initialized
+    auth = getAuth(firebaseApp);
+  }
   return auth;
 }
 

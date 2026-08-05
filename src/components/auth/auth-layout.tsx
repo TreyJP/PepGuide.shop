@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { InAppBrowserGate } from '@/src/components/auth/in-app-browser-gate';
 import { Logo } from '@/src/components/brand/logo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { BRAND } from '@/src/constants/brand';
@@ -37,6 +38,8 @@ export function AuthLayout({ title, description, children, footer }: AuthLayoutP
       <p className="mt-8 max-w-md text-center text-xs text-foreground-secondary/80">
         {BRAND.notice}
       </p>
+
+      <InAppBrowserGate />
     </div>
   );
 }

@@ -1,8 +1,30 @@
 import type { NextConfig } from 'next';
 
+const firebaseProjectId =
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim() || 'pepguide-c4a8d';
+const firebaseAuthHost = `${firebaseProjectId}.firebaseapp.com`;
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['firebase-admin', 'stripe'],
+
+  /**
+   * Same-origin Firebase Auth helper proxy (required for Safari / iOS).
+   * Without this, signInWithRedirect/popup helper storage is third-party and gets blocked.
+   * @see https://firebase.google.com/docs/auth/web/redirect-best-practices
+   */
+  async rewrites() {
+    return [
+      {
+        source: '/__/auth/:path*',
+        destination: `https://${firebaseAuthHost}/__/auth/:path*`,
+      },
+      {
+        source: '/__/firebase/:path*',
+        destination: `https://${firebaseAuthHost}/__/firebase/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

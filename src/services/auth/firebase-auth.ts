@@ -14,6 +14,7 @@ import {
 } from 'firebase/auth';
 
 import { BRAND } from '@/src/constants/brand';
+import { inAppBrowserName, isInAppBrowser } from '@/src/lib/in-app-browser';
 import type { SignInInput, SignUpInput } from '@/src/schemas/auth';
 import { getFirebaseAuth } from '@/src/services/firebase/config';
 import { userRepository } from '@/src/services/firestore/users';
@@ -23,11 +24,6 @@ function requireAuth() {
   const auth = getFirebaseAuth();
   if (!auth) throw new Error('Firebase Auth is not configured');
   return auth;
-}
-
-function isMobileBrowser() {
-  if (typeof navigator === 'undefined') return false;
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 }
 
 function fallbackProfile(user: User): UserProfile {
@@ -130,18 +126,35 @@ export const firebaseAuthService = {
   },
 
   async signInWithGoogle(): Promise<UserProfile | null> {
+    if (isInAppBrowser()) {
+      throw new Error(
+        `Google sign-in can’t finish inside ${inAppBrowserName()}. Open PepGuide in Safari or Chrome, then try again.`,
+      );
+    }
+
     const auth = requireAuth();
+    await auth.authStateReady();
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
-    // Popups are unreliable on mobile browsers — use full-page redirect.
-    if (isMobileBrowser()) {
-      await signInWithRedirect(auth, provider);
-      return null;
-    }
+    // Prefer popup in Safari/iOS. If the popup is blocked, fall back to redirect
+    // (same-origin `/__/auth` proxy in next.config makes that Safari-safe).
+    try {
+      const credential = await signInWithPopup(auth, provider);
+      return toProfile(credential.user);
+    } catch (error) {
+      const code =
+        error && typeof error === 'object' && 'code' in error
+          ? String((error as { code?: string }).code)
+          : '';
 
-    const credential = await signInWithPopup(auth, provider);
-    return toProfile(credential.user);
+      if (code === 'auth/popup-blocked') {
+        await signInWithRedirect(auth, provider);
+        return null;
+      }
+
+      throw error;
+    }
   },
 
   async signInWithApple(): Promise<UserProfile> {

@@ -1,5 +1,6 @@
 'use client';
 
+import { InAppBrowserGate } from '@/src/components/auth/in-app-browser-gate';
 import { SignInModal } from '@/src/components/auth/sign-in-modal';
 import { ProSubscribeModal } from '@/src/components/billing/pro-subscribe-modal';
 import { AppShell } from '@/src/components/layout/app-shell';
@@ -29,6 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         message={signInModalMessage}
       />
       <ProSubscribeModal />
+      <InAppBrowserGate />
     </AppShell>
   );
 }
