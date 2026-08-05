@@ -58,12 +58,11 @@ export async function assertChatAccess(
   const userRef = db.collection('users').doc(uid);
   const snap = await userRef.get();
   if (!snap.exists) {
+    // Don't block chat when the client profile write hasn't landed yet.
     return {
-      allowed: false,
-      accountStatus: 'suspended',
+      allowed: true,
+      accountStatus: 'active',
       chatBlockedUntil: null,
-      reason: 'User profile missing.',
-      code: 'account_suspended',
     };
   }
 

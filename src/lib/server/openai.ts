@@ -784,31 +784,48 @@ export async function generateResearchResponse(
       ] satisfies ResearchChatTurn[])
     : priorTurns;
 
-  const client = new OpenAI({ apiKey });
-  const completion = await client.chat.completions.create({
-    model: PEP_GUIDE_MODEL,
-    temperature: 0.2,
-    max_tokens: 800,
-    response_format: { type: 'json_object' },
-    messages: [
-      {
-        role: 'system',
-        content: buildSystemPrompt(userMessage, retrievalQuery, priorTurns),
-      },
-      ...historyForModel.map((turn) => ({
-        role: turn.role as 'user' | 'assistant',
-        content: turn.content,
-      })),
-      { role: 'user', content: userMessage },
-    ],
-  });
+  let parsedContent: unknown;
+  try {
+    const client = new OpenAI({ apiKey });
+    const completion = await client.chat.completions.create({
+      model: PEP_GUIDE_MODEL,
+      temperature: 0.2,
+      max_tokens: 800,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: buildSystemPrompt(userMessage, retrievalQuery, priorTurns),
+        },
+        ...historyForModel.map((turn) => ({
+          role: turn.role as 'user' | 'assistant',
+          content: turn.content,
+        })),
+        { role: 'user', content: userMessage },
+      ],
+    });
 
-  const content = completion.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error('Empty OpenAI response');
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      return buildFallbackFromKnowledge(
+        userMessage,
+        retrievalQuery,
+        classification.category,
+        priorTurns,
+      );
+    }
+    parsedContent = JSON.parse(content);
+  } catch (error) {
+    console.error('OpenAI research generation failed', error);
+    return buildFallbackFromKnowledge(
+      userMessage,
+      retrievalQuery,
+      classification.category,
+      priorTurns,
+    );
   }
 
-  const parsed = pepGuideResponseSchema.safeParse(JSON.parse(content));
+  const parsed = pepGuideResponseSchema.safeParse(parsedContent);
   if (!parsed.success) {
     return buildFallbackFromKnowledge(
       userMessage,

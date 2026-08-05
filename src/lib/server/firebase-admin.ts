@@ -2,6 +2,19 @@ import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
+function looksLikePlaceholder(value: string | undefined): boolean {
+  if (!value) return true;
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized.length === 0 ||
+    normalized.includes('fill_me') ||
+    normalized.includes('xxxxx') ||
+    normalized.includes('...') ||
+    normalized.includes('your_') ||
+    normalized.includes('example')
+  );
+}
+
 export function isFirebaseAdminConfigured(): boolean {
   const projectId =
     process.env.FIREBASE_ADMIN_PROJECT_ID?.trim() ||
@@ -11,7 +24,25 @@ export function isFirebaseAdminConfigured(): boolean {
     /\\n/g,
     '\n',
   );
-  return Boolean(projectId && clientEmail && privateKey);
+
+  if (!projectId || !clientEmail || !privateKey) return false;
+  if (looksLikePlaceholder(clientEmail) || looksLikePlaceholder(privateKey)) {
+    return false;
+  }
+  if (!privateKey.includes('BEGIN PRIVATE KEY')) return false;
+
+  return true;
+}
+
+/** Safe Admin Firestore accessor — null when unset/placeholder/broken. */
+export function tryGetAdminDb() {
+  if (!isFirebaseAdminConfigured()) return null;
+  try {
+    return getAdminDb();
+  } catch (error) {
+    console.error('Firebase Admin DB init failed', error);
+    return null;
+  }
 }
 
 function initAdminApp(): App {
