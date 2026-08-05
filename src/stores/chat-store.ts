@@ -26,6 +26,8 @@ type ChatState = {
     messageId: string,
     patch: Partial<ChatMessage>,
   ) => void;
+  /** Update an existing message, or append when a mid-send navigation wiped it. */
+  upsertMessage: (chatId: string, message: ChatMessage) => void;
   setResearchMode: (mode: ResearchMode) => void;
   setEvidenceDepth: (depth: EvidenceDepth) => void;
   setIsStreaming: (streaming: boolean) => void;
@@ -70,6 +72,27 @@ export const useChatStore = create<ChatState>((set) => ({
         ),
       },
     })),
+  upsertMessage: (chatId, message) =>
+    set((state) => {
+      const current = state.messagesByChat[chatId] ?? [];
+      const index = current.findIndex((item) => item.id === message.id);
+      if (index === -1) {
+        return {
+          messagesByChat: {
+            ...state.messagesByChat,
+            [chatId]: [...current, message],
+          },
+        };
+      }
+      const next = [...current];
+      next[index] = { ...next[index], ...message };
+      return {
+        messagesByChat: {
+          ...state.messagesByChat,
+          [chatId]: next,
+        },
+      };
+    }),
   setResearchMode: (mode) => set({ researchMode: mode }),
   setEvidenceDepth: (depth) => set({ evidenceDepth: depth }),
   setIsStreaming: (streaming) => set({ isStreaming: streaming }),

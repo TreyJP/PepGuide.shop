@@ -101,6 +101,7 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   const setMessages = useChatStore((state) => state.setMessages);
   const appendMessage = useChatStore((state) => state.appendMessage);
   const updateMessage = useChatStore((state) => state.updateMessage);
+  const upsertMessage = useChatStore((state) => state.upsertMessage);
   const setIsStreaming = useChatStore((state) => state.setIsStreaming);
   const upsertChat = useChatStore((state) => state.upsertChat);
 
@@ -110,14 +111,53 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   useEffect(() => {
     if (!chatId || !user) return;
     setActiveChatId(chatId);
+    let cancelled = false;
+
     void (async () => {
       try {
         const loaded = await chatRepository.listMessages(chatId);
-        setMessages(chatId, loaded);
+        if (cancelled) return;
+
+        const state = useChatStore.getState();
+        const local = state.messagesByChat[chatId] ?? [];
+        const loadedById = new Map(loaded.map((message) => [message.id, message]));
+
+        // Keep optimistic / in-flight messages that Firestore has not caught up with yet.
+        // Otherwise navigating /chat → /chat/[id] mid-send wipes the AI reply on mobile.
+        const mergedById = new Map(loadedById);
+        for (const message of local) {
+          const remote = mergedById.get(message.id);
+          if (!remote) {
+            mergedById.set(message.id, message);
+            continue;
+          }
+          const localInFlight =
+            message.status === 'streaming' ||
+            message.status === 'sending' ||
+            state.isStreaming;
+          const localRicher =
+            (message.content?.length ?? 0) > (remote.content?.length ?? 0);
+          if (localInFlight || localRicher) {
+            mergedById.set(message.id, { ...remote, ...message });
+          }
+        }
+
+        const merged = [...mergedById.values()].sort((a, b) =>
+          a.createdAt.localeCompare(b.createdAt),
+        );
+        setMessages(chatId, merged);
       } catch {
-        setMessages(chatId, []);
+        if (cancelled) return;
+        const local = useChatStore.getState().messagesByChat[chatId] ?? [];
+        if (local.length === 0) {
+          setMessages(chatId, []);
+        }
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [chatId, setActiveChatId, setMessages, user]);
 
   useEffect(() => {
@@ -156,6 +196,7 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
       }
 
       let currentChatId = resolvedChatId;
+      let shouldOpenChatRoute = false;
       if (!currentChatId) {
         const chat = await chatRepository.createChat({
           researchMode: DEFAULT_RESEARCH_MODE,
@@ -164,9 +205,8 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
 
         upsertChat(chat);
         setActiveChatId(chat.id);
-        setMessages(chat.id, []);
         currentChatId = chat.id;
-        router.push(`/chat/${chat.id}`);
+        shouldOpenChatRoute = true;
       }
 
       const userMessage: ChatMessage = {
@@ -200,6 +240,11 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
       appendMessage(currentChatId, userMessage);
       appendMessage(currentChatId, assistantMessage);
       setIsStreaming(true);
+
+      // Navigate after optimistic paint so mobile /chat → /chat/[id] keeps the thread.
+      if (shouldOpenChatRoute) {
+        router.replace(`/chat/${currentChatId}`);
+      }
 
       const existingChat = useChatStore
         .getState()
@@ -246,11 +291,21 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           history,
           isPro,
           onToken: (token) => {
+            const existing = useChatStore
+              .getState()
+              .messagesByChat[currentChatId]?.find(
+                (message) => message.id === assistantId,
+              );
+            if (!existing) {
+              upsertMessage(currentChatId, {
+                ...assistantMessage,
+                content: token,
+                status: 'streaming',
+              });
+              return;
+            }
             updateMessage(currentChatId, assistantId, {
-              content:
-                (useChatStore.getState().messagesByChat[currentChatId]?.find(
-                  (message) => message.id === assistantId,
-                )?.content ?? '') + token,
+              content: `${existing.content ?? ''}${token}`,
             });
           },
         });
@@ -274,7 +329,7 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           modelVersion: PEP_GUIDE_MODEL,
         };
 
-        updateMessage(currentChatId, assistantId, completed);
+        upsertMessage(currentChatId, completed);
         void chatRepository.appendMessage(completed).catch(() => undefined);
 
         const updatedChat = await chatRepository.updateChat(currentChatId, {
@@ -286,7 +341,8 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         if (error instanceof ChatApiError) {
           await applyModeration(error.moderation);
           const fallback = error.response;
-          updateMessage(currentChatId, assistantId, {
+          upsertMessage(currentChatId, {
+            ...assistantMessage,
             content: fallback?.answer ?? error.message,
             status:
               fallback?.safetyAction === 'refuse' ||
@@ -301,7 +357,8 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
             peptideIds: fallback?.peptideIds,
           });
         } else {
-          updateMessage(currentChatId, assistantId, {
+          upsertMessage(currentChatId, {
+            ...assistantMessage,
             content: 'Something went wrong. Please try again.',
             status: 'error',
           });
@@ -319,15 +376,16 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
       router,
       setActiveChatId,
       setIsStreaming,
-      setMessages,
       updateMessage,
       upsertChat,
+      upsertMessage,
     ],
   );
 
   return (
     <div className="chat-design-root">
-      <header className="chat-header flex items-center justify-end border-b px-3 py-2 sm:px-4">
+      {/* Desktop only — on mobile, New lives in the top bar next to the menu. */}
+      <header className="chat-header hidden items-center justify-end border-b px-4 py-2 lg:flex">
         <Button
           size="sm"
           variant="ghost"
@@ -337,7 +395,7 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           disabled={chatBlocked}
         >
           <Plus className="size-4" />
-          <span className="hidden sm:inline">New</span>
+          <span>New</span>
         </Button>
       </header>
 

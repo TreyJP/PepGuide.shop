@@ -61,6 +61,10 @@ export function AiMessage({
   const showPlainAnswer =
     Boolean(content) && !structuredReply && !proUnlockReply;
   const showThinking = isStreaming && !content;
+  const showFailed =
+    !isStreaming &&
+    !content &&
+    (status === 'error' || status === 'refused');
 
   const handleCopy = async () => {
     if (onCopy) {
@@ -92,6 +96,14 @@ export function AiMessage({
       </div>
 
       {showThinking ? <ThinkingIndicator /> : null}
+
+      {showFailed ? (
+        <div className="chat-ai-bubble px-4 py-3">
+          <p className="text-sm text-foreground-secondary">
+            Something went wrong. Please try again.
+          </p>
+        </div>
+      ) : null}
 
       {!isStreaming && structuredReply ? (
         <WeightLossReply peptideIds={peptideIds} />
