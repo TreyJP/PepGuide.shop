@@ -7,6 +7,10 @@ const firebaseAuthHost = `${firebaseProjectId}.firebaseapp.com`;
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['firebase-admin', 'stripe'],
+  images: {
+    // Logo uses quality={100}; required allow-list for Next.js 16+.
+    qualities: [75, 100],
+  },
 
   /**
    * Same-origin Firebase Auth helper proxy (required for Safari / iOS).

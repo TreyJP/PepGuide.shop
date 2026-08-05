@@ -97,10 +97,7 @@ export default function LandingPage() {
     <div className="min-h-svh">
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div className="container-page flex h-14 items-center justify-between gap-2 sm:h-16">
-          <Link
-            href="/chat"
-            className="min-w-0 shrink rounded-[12px] bg-white px-2 py-1.5 sm:px-3 sm:py-2"
-          >
+          <Link href="/chat" className="min-w-0 shrink py-1">
             <Logo variant="full" size="sm" priority className="sm:hidden" />
             <Logo
               variant="full"
@@ -132,9 +129,7 @@ export default function LandingPage() {
             Research intelligence platform
           </Badge>
           <div className="mb-6 flex justify-center">
-            <div className="rounded-[18px] bg-white px-5 py-4 shadow-sm">
-              <Logo variant="full" size="lg" priority />
-            </div>
+            <Logo variant="full" size="lg" priority />
           </div>
           <h1 className="font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
             {BRAND.headline}
@@ -410,7 +405,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-border py-12">
         <div className="container-page flex flex-col items-center justify-between gap-6 md:flex-row">
-          <Link href="/chat" className="rounded-[12px] bg-white px-3 py-2">
+          <Link href="/chat" className="py-1">
             <Logo variant="full" size="sm" />
           </Link>
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-foreground-secondary">
