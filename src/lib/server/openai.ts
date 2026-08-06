@@ -23,6 +23,21 @@ import {
 import { pepGuideResponseSchema } from '@/src/schemas/ai';
 import type { PepGuideAiResponse } from '@/src/types';
 
+export type TokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+};
+
+export type ResearchGenerationResult = PepGuideAiResponse & {
+  /** Server-only; strip before sending to the client. */
+  usage?: TokenUsage;
+};
+
+function estimateTokens(text: string): number {
+  if (!text) return 0;
+  return Math.max(1, Math.ceil(text.length / 4));
+}
+
 export type ResearchChatTurn = {
   role: 'user' | 'assistant';
   content: string;
@@ -53,9 +68,9 @@ const REFUSAL_ANSWERS: Partial<Record<string, string>> = {
   prompt_injection:
     'I can’t follow requests that try to override PepGuide’s research-only boundaries.',
   spam:
-    'That’s outside PepGuide’s scope. Please ask a question relevant to peptides — compounds, mechanisms, evidence, or research dosing ranges.\n\nRepeated off-topic messages can temporarily lock chat.',
+    'That doesn’t look like a peptide research question. Try asking about a compound, mechanism, evidence, or a research goal like weight loss, recovery, or sleep.',
   out_of_scope:
-    'That’s outside PepGuide’s scope. Please return to peptide research — compounds, mechanisms, evidence, regulatory context, or research dosing ranges.\n\nRepeated off-topic messages can temporarily lock chat.',
+    'I’m focused on peptide research. Ask about a compound, mechanism, evidence, or a research goal (for example weight loss, muscle, recovery, or sleep).',
   minor_user:
     'PepGuide is only for adults. If you are under 18, please stop and talk with a parent/guardian and a clinician.',
   acute_adverse_event:
@@ -707,7 +722,7 @@ export async function generateResearchResponse(
   userMessage: string,
   history: ResearchChatTurn[] = [],
   options: { isPro?: boolean } = {},
-): Promise<PepGuideAiResponse> {
+): Promise<ResearchGenerationResult> {
   const priorTurns = normalizeHistory(history);
   const classification = classifyMessage(userMessage);
 
@@ -722,23 +737,28 @@ export async function generateResearchResponse(
     classification.safetyAction === 'refuse' ||
     classification.safetyAction === 'urgent_warning'
   ) {
-    // Soft redirect: dual goals / weight discovery still get educational picks.
+    // Soft redirect: research goals / weight discovery still get educational picks.
     if (
       (classification.category === 'personalized_dosing_request' ||
-        classification.category === 'cycle_or_stack_construction') &&
+        classification.category === 'cycle_or_stack_construction' ||
+        classification.category === 'out_of_scope') &&
       isDualWeightMuscleQuery(userMessage)
     ) {
       return buildDualGoalResponse();
     }
     if (
-      classification.category === 'personalized_dosing_request' &&
+      (classification.category === 'personalized_dosing_request' ||
+        classification.category === 'out_of_scope') &&
       shouldReturnWeightLossPicks(userMessage, priorTurns)
     ) {
       return buildWeightLossPicksResponse();
     }
     if (
-      classification.category === 'personalized_dosing_request' &&
-      (isAppetiteComplementQuery(userMessage) || isMetabolicFollowUp(userMessage))
+      (classification.category === 'personalized_dosing_request' ||
+        classification.category === 'out_of_scope') &&
+      (isAppetiteComplementQuery(userMessage) ||
+        isMetabolicFollowUp(userMessage) ||
+        isMuscleQuery(userMessage))
     ) {
       return buildFallbackFromKnowledge(
         userMessage,
@@ -794,8 +814,14 @@ export async function generateResearchResponse(
     : priorTurns;
 
   let parsedContent: unknown;
+  let usage: TokenUsage | undefined;
   try {
     const client = new OpenAI({ apiKey });
+    const systemPrompt = buildSystemPrompt(
+      userMessage,
+      retrievalQuery,
+      priorTurns,
+    );
     const completion = await client.chat.completions.create({
       model: PEP_GUIDE_MODEL,
       temperature: 0.2,
@@ -804,7 +830,7 @@ export async function generateResearchResponse(
       messages: [
         {
           role: 'system',
-          content: buildSystemPrompt(userMessage, retrievalQuery, priorTurns),
+          content: systemPrompt,
         },
         ...historyForModel.map((turn) => ({
           role: turn.role as 'user' | 'assistant',
@@ -814,14 +840,42 @@ export async function generateResearchResponse(
       ],
     });
 
+    const promptTokens = completion.usage?.prompt_tokens;
+    const completionTokens = completion.usage?.completion_tokens;
+    if (
+      typeof promptTokens === 'number' ||
+      typeof completionTokens === 'number'
+    ) {
+      usage = {
+        inputTokens: promptTokens ?? 0,
+        outputTokens: completionTokens ?? 0,
+      };
+    } else {
+      const historyChars = historyForModel.reduce(
+        (sum, turn) => sum + turn.content.length,
+        0,
+      );
+      usage = {
+        inputTokens: estimateTokens(
+          `${systemPrompt}${userMessage}${historyChars}`,
+        ),
+        outputTokens: estimateTokens(
+          completion.choices[0]?.message?.content ?? '',
+        ),
+      };
+    }
+
     const content = completion.choices[0]?.message?.content;
     if (!content) {
-      return buildFallbackFromKnowledge(
-        userMessage,
-        retrievalQuery,
-        classification.category,
-        priorTurns,
-      );
+      return {
+        ...buildFallbackFromKnowledge(
+          userMessage,
+          retrievalQuery,
+          classification.category,
+          priorTurns,
+        ),
+        usage,
+      };
     }
     parsedContent = JSON.parse(content);
   } catch (error) {
@@ -918,6 +972,7 @@ export async function generateResearchResponse(
           (modelIds.length > 0 ? modelIds : fallback.peptideIds),
       ),
       answer: parsed.data.answer || fallback.answer,
+      usage,
     };
   }
 
@@ -928,6 +983,7 @@ export async function generateResearchResponse(
     evidenceCards: parsed.data.evidenceCards.filter((card) =>
       isPeptideCompoundCard(card.peptideId),
     ),
+    usage,
   };
 }
 

@@ -6,11 +6,12 @@ const WINDOW_MS = 24 * 60 * 60 * 1000;
 const COOLDOWN_SHORT_MS = 60 * 60 * 1000;
 const COOLDOWN_LONG_MS = 24 * 60 * 60 * 1000;
 
-/** Categories that count toward abuse escalation. */
+/**
+ * Categories that count toward abuse escalation.
+ * Soft off-topic (`out_of_scope`) does NOT strike — token budgets handle overuse.
+ */
 const ABUSE_WEIGHT: Partial<Record<MessageClassification, number>> = {
-  // 1 point each → 3 off-topic chances, then 1-hour lock.
-  out_of_scope: 1,
-  spam: 1,
+  spam: 2,
   prompt_injection: 3,
   automated_scraping: 3,
   repeated_policy_circumvention: 3,
@@ -19,9 +20,6 @@ const ABUSE_WEIGHT: Partial<Record<MessageClassification, number>> = {
   reconstitution_instructions: 2,
   evade_medical_supervision: 2,
   minor_user: 2,
-  personalized_dosing_request: 1,
-  cycle_or_stack_construction: 1,
-  personalized_medical_request: 1,
 };
 
 const STRIKE_REVIEW = 2;

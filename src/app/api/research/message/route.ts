@@ -4,6 +4,11 @@ import { z } from 'zod';
 import { isEnvAdminEmail } from '@/src/lib/admin';
 import { generateResearchResponse } from '@/src/lib/server/openai';
 import {
+  enforceMemoryRateLimits,
+  RateLimitError,
+  recordMemoryTokenUsage,
+} from '@/src/lib/server/rate-limit';
+import {
   getMemoryChatBlock,
   recordMemoryScopeStrike,
   scopeWarningForStrikes,
@@ -136,24 +141,6 @@ export async function POST(request: Request) {
           }
 
           try {
-            await rateLimit.enforceRateLimits(db, uid, parsed.data.content);
-          } catch (error) {
-            if (error instanceof rateLimit.RateLimitError) {
-              const limited = pepGuideResponseSchema.parse({
-                answer: error.message,
-                classification: 'spam',
-                safetyAction: 'rate_limit',
-                evidenceCards: [],
-                citations: [],
-                suggestedQuestions: [],
-                peptideIds: [],
-              });
-              return NextResponse.json(limited, { status: 429 });
-            }
-            console.error('Rate limit check failed; continuing', error);
-          }
-
-          try {
             const userSnap = await db.collection('users').doc(uid).get();
             const userEmail =
               email?.toLowerCase() ||
@@ -177,6 +164,26 @@ export async function POST(request: Request) {
           } catch (error) {
             console.error('Pro status lookup failed; continuing as free', error);
           }
+
+          try {
+            await rateLimit.enforceRateLimits(db, uid, parsed.data.content, {
+              isPro,
+            });
+          } catch (error) {
+            if (error instanceof rateLimit.RateLimitError) {
+              const limited = pepGuideResponseSchema.parse({
+                answer: error.message,
+                classification: 'spam',
+                safetyAction: 'rate_limit',
+                evidenceCards: [],
+                citations: [],
+                suggestedQuestions: [],
+                peptideIds: [],
+              });
+              return NextResponse.json(limited, { status: 429 });
+            }
+            console.error('Rate limit check failed; continuing', error);
+          }
         }
       } catch (error) {
         console.error(
@@ -188,9 +195,29 @@ export async function POST(request: Request) {
       }
     }
 
-    let response;
+    if (!adminReady) {
+      try {
+        enforceMemoryRateLimits(uid, parsed.data.content, { isPro });
+      } catch (error) {
+        if (error instanceof RateLimitError) {
+          const limited = pepGuideResponseSchema.parse({
+            answer: error.message,
+            classification: 'spam',
+            safetyAction: 'rate_limit',
+            evidenceCards: [],
+            citations: [],
+            suggestedQuestions: [],
+            peptideIds: [],
+          });
+          return NextResponse.json(limited, { status: 429 });
+        }
+        throw error;
+      }
+    }
+
+    let generated;
     try {
-      response = await generateResearchResponse(
+      generated = await generateResearchResponse(
         parsed.data.content,
         parsed.data.history ?? [],
         { isPro },
@@ -207,6 +234,21 @@ export async function POST(request: Request) {
         },
         { status: 500 },
       );
+    }
+
+    const { usage, ...response } = generated;
+
+    if (usage) {
+      try {
+        if (adminReady && db) {
+          const rateLimit = await import('@/src/lib/server/rate-limit');
+          await rateLimit.recordTokenUsage(db, uid, usage);
+        } else {
+          recordMemoryTokenUsage(uid, usage);
+        }
+      } catch (error) {
+        console.error('Token usage recording failed; continuing', error);
+      }
     }
 
     const shouldEscalateSafety =
@@ -226,7 +268,6 @@ export async function POST(request: Request) {
             safetyAction: response.safetyAction,
           });
         } else if (
-          response.classification === 'out_of_scope' ||
           response.classification === 'spam' ||
           response.classification === 'prompt_injection'
         ) {
@@ -238,7 +279,7 @@ export async function POST(request: Request) {
           const lockNote =
             escalation.accountStatus === 'suspended'
               ? '\n\nYour account is now suspended from chat for repeated policy violations.'
-              : '\n\nChat is temporarily locked after repeated out-of-scope or policy-violating requests. Come back with a peptide research question later.';
+              : '\n\nChat is temporarily locked after repeated abusive requests. Please try again later.';
           return NextResponse.json({
             ...response,
             answer: `${response.answer}${lockNote}`,

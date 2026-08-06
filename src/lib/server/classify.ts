@@ -20,9 +20,16 @@ const URGENT = [
   /severe abdominal pain/i,
 ];
 
-/** Research goals + PepGuide vocabulary that keep a message in scope. */
+/**
+ * Research goals + PepGuide vocabulary that keep a message in scope.
+ * Includes natural phrasing ("lose weight", "build muscle") — not only jargon.
+ */
 const IN_SCOPE_HINT =
-  /\b(peptide|peptides|compound|compounds|research|clinical|trial|trials|evidence|mechanism|receptor|agonist|antagonist|glp-?1|gip|glucagon|retatrutide|tirzepatide|semaglutide|bpc-?157|tb-?500|cjc|ipamorelin|sermorelin|mk-?677|ghk|melanotan|pt-?141|kisspeptin|gonadorelin|hcg|hmg|aod|mots-?c|ss-?31|epithalon|epitalon|thymosin|metabolic|obesity|weight\s*loss|fat\s*loss|lean\s*mass|body\s*recomp|recomp|muscle|hypertrophy|recovery|healing|injury|inflammation|joint|tendon|ligament|gut|insulin|diabetes|cortisol|testosterone|fertility|hypogonadism|sleep|cognitive|longevity|aging|dosing|dose|mcg|mg|iu|fda|investigational|preclinical|incretin|secretagogue|ampk|mtor|collagen|wound|scar|satiety|appetite|libido|erectile|hair|skin|tan(?:ning)?|cycle|stack|library|calculator|pepguide|nafld|masld|sarcopenia|neuropeptide|gh\b|growth hormone)\b/i;
+  /\b(peptide|peptides|compound|compounds|research|clinical|trial|trials|evidence|mechanism|receptor|agonist|antagonist|glp-?1|gip|glucagon|retatrutide|tirzepatide|semaglutide|bpc-?157|tb-?500|cjc|ipamorelin|sermorelin|mk-?677|ghk|melanotan|pt-?141|kisspeptin|gonadorelin|hcg|hmg|aod|mots-?c|ss-?31|epithalon|epitalon|thymosin|metabolic|obesity|obese|overweight|weight\s*loss|fat\s*loss|lose\s+(?:weight|fat|pounds)|losing\s+(?:weight|fat|pounds)|lost\s+(?:weight|fat)|shed\s+(?:weight|fat|pounds)|drop\s+(?:weight|pounds)|burn\s+fat|belly\s*fat|body\s*fat|slim\s+down|get\s+lean|cut\s+(?:weight|fat)|lean\s*mass|body\s*recomp|recomp|muscle|hypertrophy|build\s+muscle|gain\s+muscle|put\s+on\s+muscle|get\s+stronger|recovery|healing|heal(?:ing)?|injury|inflammation|joint|tendon|ligament|gut|insulin|diabetes|cortisol|testosterone|fertility|hypogonadism|sleep(?:ing)?(?:\s+better)?|cognitive|longevity|anti[- ]?aging|aging|dosing|dose|mcg|mg|iu|fda|investigational|preclinical|incretin|secretagogue|ampk|mtor|collagen|wound|scar|satiety|appetite|hunger|hungry|craving|libido|erectile|hair|skin|tan(?:ning)?|cycle|stack|library|calculator|pepguide|nafld|masld|sarcopenia|neuropeptide|gh\b|growth hormone)\b/i;
+
+/** Plain-language research goals users naturally type without peptide jargon. */
+const RESEARCH_GOAL_INTENT =
+  /\b(i\s+(want|need|hope)\s+to|looking\s+to|trying\s+to|help\s+me|how\s+(do|can)\s+i|what\s+(can|should)\s+i|goal\s+is|my\s+goal)\b.{0,60}\b(lose|losing|weight|fat|pounds|muscle|lean|recover|heal|sleep|focus|energy|libido|skin|hair|inflam|joint|age|aging|appetite|hunger)\b/i;
 
 /** Greetings, fillers, and nonsense that aren't research questions. */
 const IRRELEVANT_FILLER =
@@ -70,7 +77,11 @@ export function mentionsKnownCompound(content: string): boolean {
 }
 
 export function hasInScopeSignal(content: string): boolean {
-  return IN_SCOPE_HINT.test(content) || mentionsKnownCompound(content);
+  return (
+    IN_SCOPE_HINT.test(content) ||
+    RESEARCH_GOAL_INTENT.test(content) ||
+    mentionsKnownCompound(content)
+  );
 }
 
 /** Clear spam / nonsensical abuse of the chat. */
@@ -89,20 +100,20 @@ export function isSpamMessage(content: string): boolean {
 }
 
 /**
- * Messages with no peptide/research signal — "test", sports, coding, etc.
- * Default deny unless a clear PepGuide research signal is present.
+ * Only pure filler ("hi", "test") — natural-language goals are allowed through.
+ * Broader abuse is handled by spam detection + daily token budgets.
  */
 export function isIrrelevantToPeptides(content: string): boolean {
   const text = content.trim();
   if (!text) return true;
   if (hasInScopeSignal(text)) return false;
-  if (IRRELEVANT_FILLER.test(text)) return true;
-
-  // No PepGuide research vocabulary and no known compound → out of scope.
-  return true;
+  return IRRELEVANT_FILLER.test(text);
 }
 
-/** Off-topic asks that are not peptide / PepGuide research. */
+/**
+ * Clear off-topic abuse only (coding homework, sports scores, etc.).
+ * Do NOT default-deny every message that lacks peptide jargon.
+ */
 export function isOutOfScopeMessage(content: string): boolean {
   const text = content.trim();
   if (!text) return false;
@@ -117,7 +128,6 @@ export function isOutOfScopeMessage(content: string): boolean {
 
   if (isIrrelevantToPeptides(text)) return true;
 
-  // General-assistant pivots even if they sneak a research word somehow.
   if (
     /\b(chat with me|be my (friend|girlfriend|boyfriend)|tell me a joke|what can you do for fun)\b/i.test(
       text,

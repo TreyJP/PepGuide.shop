@@ -6,10 +6,9 @@ const WINDOW_MS = 24 * 60 * 60 * 1000;
 const COOLDOWN_SHORT_MS = 60 * 60 * 1000;
 const COOLDOWN_LONG_MS = 24 * 60 * 60 * 1000;
 
+/** Soft off-topic does not strike — focus on spam / jailbreak abuse. */
 const WEIGHT: Partial<Record<MessageClassification, number>> = {
-  // 1 point each → 3 off-topic chances, then 1-hour lock.
-  out_of_scope: 1,
-  spam: 1,
+  spam: 2,
   prompt_injection: 3,
   repeated_policy_circumvention: 3,
 };
@@ -156,10 +155,10 @@ export function scopeWarningForStrikes(strikes: number): string | null {
   if (strikes >= STRIKE_COOLDOWN_SHORT) return null;
   const remaining = Math.max(0, STRIKE_COOLDOWN_SHORT - strikes);
   if (remaining === 1) {
-    return '1 off-topic chance left before chat is locked for 1 hour.';
+    return '1 abuse warning left before chat is locked for 1 hour.';
   }
   if (remaining > 0) {
-    return `${remaining} off-topic chances left before chat is locked for 1 hour.`;
+    return `${remaining} abuse warnings left before chat is locked for 1 hour.`;
   }
   return null;
 }
