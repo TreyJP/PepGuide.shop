@@ -1,3 +1,4 @@
+import { KNOWLEDGE_COMPOUNDS } from '@/src/data/knowledge';
 import type { MessageClassification, SafetyAction } from '@/src/types';
 
 export type ClassificationResult = {
@@ -19,8 +20,13 @@ const URGENT = [
   /severe abdominal pain/i,
 ];
 
+/** Research goals + PepGuide vocabulary that keep a message in scope. */
 const IN_SCOPE_HINT =
-  /\b(peptide|peptides|compound|compounds|research|clinical|trial|trials|evidence|mechanism|receptor|agonist|antagonist|glp-?1|gip|glucagon|retatrutide|tirzepatide|semaglutide|bpc-?157|tb-?500|cjc|ipamorelin|sermorelin|mk-?677|ghk|melanotan|pt-?141|kisspeptin|gonadorelin|hcg|hmg|aod|mots-?c|ss-?31|epithalon|thymosin|metabolic|obesity|weight\s*loss|muscle|hypertrophy|recovery|healing|injury|sleep|cognitive|longevity|aging|dosing|dose|mcg|mg|iu|fda|investigational|preclinical|incretin|secretagogue|ampk|mtor|collagen|wound|satiety|appetite|libido|hair|skin|tan(?:ning)?|cycle|stack|library|calculator|pepguide)\b/i;
+  /\b(peptide|peptides|compound|compounds|research|clinical|trial|trials|evidence|mechanism|receptor|agonist|antagonist|glp-?1|gip|glucagon|retatrutide|tirzepatide|semaglutide|bpc-?157|tb-?500|cjc|ipamorelin|sermorelin|mk-?677|ghk|melanotan|pt-?141|kisspeptin|gonadorelin|hcg|hmg|aod|mots-?c|ss-?31|epithalon|epitalon|thymosin|metabolic|obesity|weight\s*loss|fat\s*loss|lean\s*mass|body\s*recomp|recomp|muscle|hypertrophy|recovery|healing|injury|inflammation|joint|tendon|ligament|gut|insulin|diabetes|cortisol|testosterone|fertility|hypogonadism|sleep|cognitive|longevity|aging|dosing|dose|mcg|mg|iu|fda|investigational|preclinical|incretin|secretagogue|ampk|mtor|collagen|wound|scar|satiety|appetite|libido|erectile|hair|skin|tan(?:ning)?|cycle|stack|library|calculator|pepguide|nafld|masld|sarcopenia|neuropeptide|gh\b|growth hormone)\b/i;
+
+/** Greetings, fillers, and nonsense that aren't research questions. */
+const IRRELEVANT_FILLER =
+  /^(hi|hello|hey|yo|sup|test(ing)?|asdf+|qwerty|ok(ay)?|k|yes|no|thanks|thank you|thx|cool|lol|lmao|hmm+|huh+|what|who are you|help|ping|foo|bar|abc|123+|n\/?a)[.!?]*$/i;
 
 const OUT_OF_SCOPE_PATTERNS = [
   /\b(write|generate|create)\b.{0,40}\b(poem|essay|story|song|lyrics|joke|screenplay|homework|resume|cover letter)\b/i,
@@ -33,7 +39,39 @@ const OUT_OF_SCOPE_PATTERNS = [
   /\b(weather (today|tomorrow)|what'?s the weather)\b/i,
   /\b(dating advice|horoscope|astrology reading)\b/i,
   /\b(how (do|can) i (hack|phish|ddos)|make a bomb|illegal (drugs|weapons))\b/i,
+  /\b(capital of|who is the president|movie recommendations?|netflix|celebrity gossip)\b/i,
+  /\b(do my homework|write my essay|solve this math)\b/i,
 ];
+
+let knownCompoundPattern: RegExp | null = null;
+
+function getKnownCompoundPattern(): RegExp {
+  if (knownCompoundPattern) return knownCompoundPattern;
+
+  const terms = new Set<string>();
+  for (const compound of KNOWLEDGE_COMPOUNDS) {
+    terms.add(compound.id);
+    terms.add(compound.name);
+    for (const alias of compound.aliases) {
+      if (alias.trim().length >= 3) terms.add(alias.trim());
+    }
+  }
+
+  const escaped = [...terms]
+    .sort((a, b) => b.length - a.length)
+    .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
+  knownCompoundPattern = new RegExp(`\\b(?:${escaped.join('|')})\\b`, 'i');
+  return knownCompoundPattern;
+}
+
+export function mentionsKnownCompound(content: string): boolean {
+  return getKnownCompoundPattern().test(content);
+}
+
+export function hasInScopeSignal(content: string): boolean {
+  return IN_SCOPE_HINT.test(content) || mentionsKnownCompound(content);
+}
 
 /** Clear spam / nonsensical abuse of the chat. */
 export function isSpamMessage(content: string): boolean {
@@ -50,21 +88,37 @@ export function isSpamMessage(content: string): boolean {
   return false;
 }
 
+/**
+ * Messages with no peptide/research signal — "test", sports, coding, etc.
+ * Default deny unless a clear PepGuide research signal is present.
+ */
+export function isIrrelevantToPeptides(content: string): boolean {
+  const text = content.trim();
+  if (!text) return true;
+  if (hasInScopeSignal(text)) return false;
+  if (IRRELEVANT_FILLER.test(text)) return true;
+
+  // No PepGuide research vocabulary and no known compound → out of scope.
+  return true;
+}
+
 /** Off-topic asks that are not peptide / PepGuide research. */
 export function isOutOfScopeMessage(content: string): boolean {
   const text = content.trim();
   if (!text) return false;
+
   if (OUT_OF_SCOPE_PATTERNS.some((pattern) => pattern.test(text))) {
     // Still allow if clearly about peptides (e.g. "write a summary of retatrutide research").
-    if (IN_SCOPE_HINT.test(text) && !/\b(poem|song|lyrics|joke|hack|bomb)\b/i.test(text)) {
+    if (hasInScopeSignal(text) && !/\b(poem|song|lyrics|joke|hack|bomb)\b/i.test(text)) {
       return false;
     }
     return true;
   }
 
-  // Short general-assistant pivots with zero research framing.
+  if (isIrrelevantToPeptides(text)) return true;
+
+  // General-assistant pivots even if they sneak a research word somehow.
   if (
-    !IN_SCOPE_HINT.test(text) &&
     /\b(chat with me|be my (friend|girlfriend|boyfriend)|tell me a joke|what can you do for fun)\b/i.test(
       text,
     )
@@ -80,7 +134,6 @@ export function isProContentInquiry(content: string): boolean {
   const text = content.trim();
   if (!text) return false;
 
-  // Explicit Pro product / catalog branding.
   if (
     /\b(pep\s*-?\s*guide\s*pro|pepguide\s*pro|pro\s+(section|area|tab|content|library)|video\s+lessons?|skool)\b/i.test(
       text,
@@ -89,12 +142,10 @@ export function isProContentInquiry(content: string): boolean {
     return true;
   }
 
-  // Any mention of protocol(s).
   if (/\bprotocols?\b/i.test(text)) {
     return true;
   }
 
-  // Any mention of guide/guides, but skip casual "guide me" / "guidance".
   const withoutCasualGuide = text
     .replace(/\bguide me\b/gi, ' ')
     .replace(/\bguidance\b/gi, ' ');
@@ -159,7 +210,6 @@ export function classifyMessage(content: string): ClassificationResult {
       retrievalQuery,
     };
   }
-  // Guides / Protocols talk → Pro unlock (before other protocol/stack handling).
   if (isProContentInquiry(content)) {
     return {
       category: 'pro_content_inquiry',
@@ -168,7 +218,6 @@ export function classifyMessage(content: string): ClassificationResult {
     };
   }
 
-  // Allow educational research/label dosing ranges. Refuse only clear personal titration asks.
   if (
     /\b(dose me|dosing for me|how much should i take|what dose should i|titrate me)\b/i.test(
       content,
@@ -180,7 +229,6 @@ export function classifyMessage(content: string): ClassificationResult {
       retrievalQuery,
     };
   }
-  // Refuse personal cycle/stack builds, but allow educational add-on / complementary research.
   if (/cycle for me|stack for me/i.test(content)) {
     const educationalCombo =
       /\b(appetite|hunger|hungry|satiety|craving|complement|add[- ]?on|alongside|combine|combination|pair(?:ed|ing)?)\b/i.test(
@@ -202,7 +250,6 @@ export function classifyMessage(content: string): ClassificationResult {
     };
   }
 
-  // Personalized phrasing with a clear research topic → educational allow.
   if (/what should i take|diagnose me|prescribe/i.test(content)) {
     return {
       category: 'research_goal_exploration',

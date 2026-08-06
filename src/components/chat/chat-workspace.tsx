@@ -17,6 +17,7 @@ import {
 import { PICKS_ONLY_ANSWER, PRO_UNLOCK_ANSWER } from '@/src/constants/chat';
 import { useProAccess } from '@/src/hooks/use-pro-access';
 import { chatBlockMessage, isChatSendingBlocked } from '@/src/lib/chat-access';
+import { mergeChatMessages } from '@/src/lib/chat-messages';
 import { deriveChatTitle, isDefaultChatTitle } from '@/src/lib/chat-title';
 import {
   ChatApiError,
@@ -49,37 +50,6 @@ function formatChatError(error: unknown): string {
     return `Something went wrong.\nDetail: ${error.message}`;
   }
   return 'Something went wrong. Please try again.';
-}
-
-function dedupeMessages(messages: ChatMessage[]): ChatMessage[] {
-  const seenIds = new Set<string>();
-  const seenFingerprints = new Set<string>();
-  const result: ChatMessage[] = [];
-
-  for (const message of messages) {
-    if (seenIds.has(message.id)) continue;
-
-    const fingerprint =
-      message.content.trim().length > 0
-        ? `${message.role}|${message.content.trim()}|${message.createdAt.slice(0, 19)}`
-        : null;
-
-    // Drop legacy duplicates from when Firestore assigned a different id.
-    if (
-      fingerprint &&
-      seenFingerprints.has(fingerprint) &&
-      message.status !== 'streaming' &&
-      message.status !== 'sending'
-    ) {
-      continue;
-    }
-
-    seenIds.add(message.id);
-    if (fingerprint) seenFingerprints.add(fingerprint);
-    result.push(message);
-  }
-
-  return result;
 }
 
 export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
@@ -168,34 +138,18 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
 
         const state = useChatStore.getState();
         const local = state.messagesByChat[chatId] ?? [];
-        const loadedById = new Map(loaded.map((message) => [message.id, message]));
+        const preferLocalOrder =
+          state.isStreaming ||
+          local.some(
+            (message) =>
+              message.status === 'streaming' || message.status === 'sending',
+          );
 
-        // Keep optimistic / in-flight messages that Firestore has not caught up with yet.
-        // Otherwise navigating /chat → /chat/[id] mid-send wipes the AI reply on mobile.
-        const mergedById = new Map(loadedById);
-        for (const message of local) {
-          const remote = mergedById.get(message.id);
-          if (!remote) {
-            mergedById.set(message.id, message);
-            continue;
-          }
-          const localInFlight =
-            message.status === 'streaming' ||
-            message.status === 'sending' ||
-            state.isStreaming;
-          const localRicher =
-            (message.content?.length ?? 0) > (remote.content?.length ?? 0);
-          if (localInFlight || localRicher) {
-            mergedById.set(message.id, { ...remote, ...message });
-          }
-        }
-
-        const merged = dedupeMessages(
-          [...mergedById.values()].sort((a, b) =>
-            a.createdAt.localeCompare(b.createdAt),
-          ),
+        // Keep optimistic / in-flight messages and never scramble turn order.
+        setMessages(
+          chatId,
+          mergeChatMessages(loaded, local, { preferLocalOrder }),
         );
-        setMessages(chatId, merged);
       } catch (error) {
         console.error('[PepGuide chat] Failed to load messages', error);
         if (cancelled) return;
@@ -282,12 +236,13 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         }
         const activeChatIdForSend = currentChatId;
 
+        const sentAt = Date.now();
         const userMessage: ChatMessage = {
           id: createId('msg'),
           chatId: activeChatIdForSend,
           role: 'user',
           content,
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(sentAt).toISOString(),
           status: 'complete',
           classifications: [],
           citations: [],
@@ -301,7 +256,8 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
           chatId: activeChatIdForSend,
           role: 'assistant',
           content: '',
-          createdAt: new Date().toISOString(),
+          // Always after the user turn so sorts can't flip the pair.
+          createdAt: new Date(sentAt + 1).toISOString(),
           status: 'streaming',
           classifications: [],
           citations: [],

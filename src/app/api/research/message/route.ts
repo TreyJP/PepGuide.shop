@@ -3,6 +3,11 @@ import { z } from 'zod';
 
 import { isEnvAdminEmail } from '@/src/lib/admin';
 import { generateResearchResponse } from '@/src/lib/server/openai';
+import {
+  getMemoryChatBlock,
+  recordMemoryScopeStrike,
+  scopeWarningForStrikes,
+} from '@/src/lib/server/scope-strikes';
 import { verifyBearerToken } from '@/src/lib/server/verify-firebase-token';
 import { pepGuideResponseSchema } from '@/src/schemas/ai';
 
@@ -70,6 +75,34 @@ export async function POST(request: Request) {
     let adminReady = false;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let db: any = null;
+
+    // Memory fallback lock (used when Admin Firestore isn’t configured).
+    const memoryBlock = getMemoryChatBlock(uid);
+    if (memoryBlock.blocked) {
+      return NextResponse.json(
+        {
+          answer: memoryBlock.reason,
+          classification: 'repeated_policy_circumvention',
+          safetyAction: 'rate_limit',
+          evidenceCards: [],
+          citations: [],
+          suggestedQuestions: [
+            'Which peptides are researched for metabolic health?',
+            'What does PepGuide cover?',
+          ],
+          peptideIds: [],
+          moderation: {
+            code:
+              memoryBlock.accountStatus === 'suspended'
+                ? 'account_suspended'
+                : 'account_cooldown',
+            accountStatus: memoryBlock.accountStatus,
+            chatBlockedUntil: memoryBlock.chatBlockedUntil,
+          },
+        },
+        { status: 403 },
+      );
+    }
 
     if (adminEnvLooksReady()) {
       try {
@@ -176,26 +209,36 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      adminReady &&
-      db &&
-      (response.safetyAction === 'refuse' ||
-        response.safetyAction === 'urgent_warning')
-    ) {
+    const shouldEscalateSafety =
+      response.safetyAction === 'urgent_warning' ||
+      response.safetyAction === 'refuse';
+
+    if (shouldEscalateSafety) {
       try {
-        const abuse = await import('@/src/lib/server/abuse');
-        const escalation = await abuse.recordSafetyEventAndEscalate(db, {
-          uid,
-          chatId: parsed.data.chatId,
-          category: response.classification,
-          safetyAction: response.safetyAction,
-        });
+        let escalation = null;
+
+        if (adminReady && db) {
+          const abuse = await import('@/src/lib/server/abuse');
+          escalation = await abuse.recordSafetyEventAndEscalate(db, {
+            uid,
+            chatId: parsed.data.chatId,
+            category: response.classification,
+            safetyAction: response.safetyAction,
+          });
+        } else if (
+          response.classification === 'out_of_scope' ||
+          response.classification === 'spam' ||
+          response.classification === 'prompt_injection'
+        ) {
+          // Persist strikes in memory when Admin isn’t configured.
+          escalation = recordMemoryScopeStrike(uid, response.classification);
+        }
 
         if (escalation?.newlyBlocked) {
           const lockNote =
             escalation.accountStatus === 'suspended'
               ? '\n\nYour account is now suspended from chat for repeated policy violations.'
-              : '\n\nChat is temporarily locked after repeated out-of-scope or policy-violating requests.';
+              : '\n\nChat is temporarily locked after repeated out-of-scope or policy-violating requests. Come back with a peptide research question later.';
           return NextResponse.json({
             ...response,
             answer: `${response.answer}${lockNote}`,
@@ -208,8 +251,10 @@ export async function POST(request: Request) {
         }
 
         if (escalation) {
+          const warning = scopeWarningForStrikes(escalation.abuseStrikeCount);
           return NextResponse.json({
             ...response,
+            answer: warning ? `${response.answer}\n\n${warning}` : response.answer,
             moderation: {
               accountStatus: escalation.accountStatus,
               chatBlockedUntil: escalation.chatBlockedUntil,

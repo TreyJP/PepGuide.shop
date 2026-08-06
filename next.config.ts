@@ -15,6 +15,24 @@ const nextConfig: NextConfig = {
   },
 
   /**
+   * Allow Google/Firebase auth popups to communicate with the opener window.
+   * Without this, browsers (and some hosts) break signInWithPopup.
+   */
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups',
+          },
+        ],
+      },
+    ];
+  },
+
+  /**
    * Same-origin Firebase Auth helper proxy (required for Safari / iOS).
    * Without this, signInWithRedirect/popup helper storage is third-party and gets blocked.
    * @see https://firebase.google.com/docs/auth/web/redirect-best-practices

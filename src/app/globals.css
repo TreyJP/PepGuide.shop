@@ -173,32 +173,48 @@ textarea {
   }
 }
 
-/* Themed scrollbars for modals / dense panels */
+/* Themed scrollbars — site-wide + dense panels */
+html,
+body,
 .scrollbar-theme {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--accent) 45%, var(--border))
-    transparent;
+  scrollbar-color: color-mix(in srgb, var(--accent) 48%, var(--border))
+    color-mix(in srgb, var(--accent-secondary) 6%, var(--surface-secondary));
 }
 
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
 .scrollbar-theme::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
 .scrollbar-theme::-webkit-scrollbar-track {
-  background: transparent;
-  margin-block: 6px;
+  background: color-mix(in srgb, var(--accent-secondary) 6%, var(--surface-secondary));
+  margin-block: 4px;
 }
 
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
 .scrollbar-theme::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 42%, var(--border));
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
 .scrollbar-theme::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--accent) 65%, var(--border));
+  background: color-mix(in srgb, var(--accent) 72%, var(--accent-secondary));
   background-clip: content-box;
   border: 2px solid transparent;
+}
+
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
+.scrollbar-theme::-webkit-scrollbar-corner {
+  background: transparent;
 }

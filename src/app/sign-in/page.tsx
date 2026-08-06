@@ -73,12 +73,26 @@ export default function SignInPage() {
     setError(null);
     setGoogleLoading(true);
     try {
+      if (authService.isMockMode()) {
+        setError(
+          'This site is in mock mode, so Google sign-in can’t unlock a real session. Set NEXT_PUBLIC_USE_MOCK_SERVICES=false and configure Firebase, then restart.',
+        );
+        setGoogleLoading(false);
+        return;
+      }
+
       const signedIn = await authService.signInWithGoogle();
-      // null = mobile redirect in progress (page will unload / come back).
+      // null = redirect in progress (page will unload / come back).
       if (!signedIn) return;
       setUser(signedIn);
-      router.push('/chat');
+
+      const auth = getFirebaseAuth();
+      await auth?.authStateReady();
+      await auth?.currentUser?.getIdToken(true);
+
+      router.replace('/chat');
     } catch (err) {
+      console.error('[PepGuide auth] Google sign-in UI error', err);
       setError(getAuthErrorMessage(err));
       setGoogleLoading(false);
     }

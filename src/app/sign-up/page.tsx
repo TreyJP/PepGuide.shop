@@ -80,11 +80,20 @@ export default function SignUpPage() {
     setError(null);
     setGoogleLoading(true);
     try {
+      if (authService.isMockMode()) {
+        setError(
+          'This site is in mock mode, so Google sign-in can’t unlock a real session. Set NEXT_PUBLIC_USE_MOCK_SERVICES=false and configure Firebase, then restart.',
+        );
+        setGoogleLoading(false);
+        return;
+      }
+
       const signedIn = await authService.signInWithGoogle();
       if (!signedIn) return;
       setUser(signedIn);
-      router.push('/chat');
+      router.replace('/chat');
     } catch (err) {
+      console.error('[PepGuide auth] Google sign-in UI error', err);
       setError(getAuthErrorMessage(err));
       setGoogleLoading(false);
     }

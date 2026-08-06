@@ -35,6 +35,11 @@ export function AddToCycleModal({
   const user = useAuthStore((state) => state.user);
   const openSignInModal = useUiStore((state) => state.openSignInModal);
   const addItem = useCycleStore((state) => state.addItem);
+  const isCustomEntry =
+    peptideId === 'custom' ||
+    !peptideName.trim() ||
+    peptideName.trim().toLowerCase() === 'custom peptide';
+  const [name, setName] = useState(peptideName);
   const [dose, setDose] = useState('');
   const [frequency, setFrequency] = useState<CycleFrequency>('weekly');
   const [customFrequency, setCustomFrequency] = useState('');
@@ -45,16 +50,21 @@ export function AddToCycleModal({
 
   useEffect(() => {
     if (!open) return;
+    setName(isCustomEntry ? '' : peptideName);
     setDose('');
     setFrequency('weekly');
     setCustomFrequency('');
     setNotes('');
     setError(null);
-  }, [open, peptideId]);
+  }, [open, peptideId, peptideName, isCustomEntry]);
 
   const handleSave = async () => {
     if (!user) {
       openSignInModal('Sign in to add peptides to your cycle log.');
+      return;
+    }
+    if (!name.trim()) {
+      setError('Enter a peptide name.');
       return;
     }
     if (!dose.trim()) {
@@ -71,7 +81,7 @@ export function AddToCycleModal({
     try {
       await addItem({
         peptideId,
-        name: peptideName,
+        name: name.trim(),
         dose: dose.trim(),
         frequency,
         frequencyLabel:
@@ -93,12 +103,23 @@ export function AddToCycleModal({
       onClose={onClose}
       titleId="add-to-cycle-title"
       eyebrow="Cycle log"
-      title={peptideName}
-      description="Track dose and frequency for your research log — not a prescription."
+      title={isCustomEntry ? 'Add to cycle' : peptideName}
+      description="Track name, dose, and frequency for your research log — not a prescription."
       className="max-w-md"
       footer="Educational tracker only. Confirm any personal use with a qualified clinician."
     >
       <div className="space-y-4">
+        <label className="block space-y-1.5 text-sm">
+          <span className="font-medium text-foreground">Peptide name</span>
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="h-10 w-full rounded-[12px] border border-border bg-surface px-3"
+            placeholder="e.g. Retatrutide"
+            autoFocus={isCustomEntry}
+          />
+        </label>
+
         <label className="block space-y-1.5 text-sm">
           <span className="font-medium text-foreground">Dose</span>
           <input
@@ -152,7 +173,7 @@ export function AddToCycleModal({
         <p className="text-xs text-foreground-secondary">
           Will show as{' '}
           <span className="font-medium text-foreground">
-            {dose.trim() || '—'} ·{' '}
+            {name.trim() || '—'} · {dose.trim() || '—'} ·{' '}
             {frequencyLabel(frequency, customFrequency)}
           </span>
         </p>

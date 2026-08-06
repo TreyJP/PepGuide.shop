@@ -3,6 +3,7 @@ import { type FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import {
   type Auth,
   browserLocalPersistence,
+  browserPopupRedirectResolver,
   getAuth,
   indexedDBLocalPersistence,
   initializeAuth,
@@ -54,13 +55,17 @@ export function getFirebaseAuth(): Auth | null {
   if (auth) return auth;
 
   try {
+    // popupRedirectResolver is required for Google signInWithPopup/Redirect.
+    // Without it, Firebase throws auth/argument-error.
     auth = initializeAuth(firebaseApp, {
       persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+      popupRedirectResolver: browserPopupRedirectResolver,
     });
   } catch {
     try {
       auth = initializeAuth(firebaseApp, {
         persistence: browserLocalPersistence,
+        popupRedirectResolver: browserPopupRedirectResolver,
       });
     } catch {
       auth = getAuth(firebaseApp);

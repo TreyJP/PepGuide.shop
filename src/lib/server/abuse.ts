@@ -8,8 +8,9 @@ const COOLDOWN_LONG_MS = 24 * 60 * 60 * 1000;
 
 /** Categories that count toward abuse escalation. */
 const ABUSE_WEIGHT: Partial<Record<MessageClassification, number>> = {
-  out_of_scope: 2,
-  spam: 2,
+  // 1 point each → 3 off-topic chances, then 1-hour lock.
+  out_of_scope: 1,
+  spam: 1,
   prompt_injection: 3,
   automated_scraping: 3,
   repeated_policy_circumvention: 3,
@@ -24,6 +25,7 @@ const ABUSE_WEIGHT: Partial<Record<MessageClassification, number>> = {
 };
 
 const STRIKE_REVIEW = 2;
+/** Lock after 3 off-topic (weight-1) refusals in the window. */
 const STRIKE_COOLDOWN_SHORT = 3;
 const STRIKE_COOLDOWN_LONG = 5;
 const STRIKE_SUSPEND = 8;

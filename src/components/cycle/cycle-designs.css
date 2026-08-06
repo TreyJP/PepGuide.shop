@@ -1,0 +1,204 @@
+/* Cycle page — Orbit header + Grid peptide mosaic */
+
+.cycle-root {
+  --cycle-navy: #0a1b3a;
+  --cycle-blue: #0057ff;
+  --cycle-mist: #f3f6fc;
+  position: relative;
+  min-height: 100%;
+  overflow-x: clip;
+  -webkit-overflow-scrolling: touch;
+  background:
+    radial-gradient(800px 500px at 20% -10%, color-mix(in srgb, var(--cycle-blue) 22%, transparent), transparent 55%),
+    radial-gradient(700px 420px at 90% 0%, color-mix(in srgb, var(--cycle-navy) 16%, transparent), transparent 50%),
+    linear-gradient(165deg, #edf2fb 0%, #f8fafc 45%, #e8eef8 100%);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@keyframes cycle-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cycle-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -6px, 0);
+  }
+}
+
+.cycle-rise {
+  animation: cycle-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cycle-stage {
+  position: relative;
+  padding: 1.25rem 0.9rem 1rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .cycle-stage {
+    padding: 2rem 1.25rem 1.1rem;
+  }
+}
+
+.cycle-stage__halo {
+  position: absolute;
+  left: 50%;
+  top: 1.2rem;
+  width: min(28rem, 86vw);
+  height: 10rem;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--cycle-blue) 18%, transparent),
+    transparent 70%
+  );
+  filter: blur(4px);
+  animation: cycle-drift 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.cycle-stage h1 {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4.5vw, 3rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: var(--cycle-navy);
+}
+
+.cycle-stage p {
+  position: relative;
+  margin: 0.5rem auto 0;
+  max-width: 30rem;
+  font-size: 0.92rem;
+  color: var(--foreground-secondary);
+}
+
+.cycle-stage__actions {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
+}
+
+.cycle-mosaic {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  padding: 0.5rem 0.85rem 2.5rem;
+  max-width: 56rem;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .cycle-mosaic {
+    gap: 0.85rem;
+    padding: 0.5rem 1rem 2.5rem;
+  }
+}
+
+@media (min-width: 720px) {
+  .cycle-mosaic {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cycle-tile:first-child {
+    grid-column: span 2;
+  }
+}
+
+.cycle-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--cycle-blue) 14%, var(--border));
+  background: color-mix(in srgb, white 90%, transparent);
+  padding: 1rem 0.95rem 1rem 1.15rem;
+  box-shadow: 0 10px 28px rgba(10, 27, 58, 0.07);
+  backdrop-filter: blur(8px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .cycle-tile {
+    border-radius: 18px;
+    padding: 1.2rem 1.15rem 1.15rem 1.3rem;
+  }
+}
+
+.cycle-tile::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--cycle-blue), var(--cycle-navy));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cycle-tile:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 34px rgba(10, 27, 58, 0.12);
+  }
+}
+
+.cycle-tile__dose {
+  margin-top: 0.85rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.cycle-tile__dose div {
+  border-radius: 12px;
+  background: var(--cycle-mist);
+  padding: 0.55rem 0.7rem;
+}
+
+.cycle-tile__dose dt {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--foreground-secondary);
+}
+
+.cycle-tile__dose dd {
+  margin-top: 0.15rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--cycle-navy);
+}
+
+.cycle-empty {
+  margin: 1rem auto 2rem;
+  max-width: 36rem;
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: var(--foreground-secondary);
+  font-size: 0.92rem;
+}
+
+.cycle-item-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}

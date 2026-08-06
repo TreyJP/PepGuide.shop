@@ -7,6 +7,7 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   signOut as firebaseSignOut,
   updateProfile,
   type User,
@@ -137,10 +138,46 @@ export const firebaseAuthService = {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
-    // Popup is the reliable path on Safari/iOS with the default firebaseapp.com authDomain.
-    const credential = await signInWithPopup(auth, provider);
-    await credential.user.getIdToken(true);
-    return toProfile(credential.user);
+    try {
+      // Popup keeps context; COOP header same-origin-allow-popups helps on modern browsers.
+      const credential = await signInWithPopup(auth, provider);
+      await credential.user.getIdToken(true);
+      return toProfile(credential.user);
+    } catch (error) {
+      const code =
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        typeof (error as { code: unknown }).code === 'string'
+          ? (error as { code: string }).code
+          : '';
+
+      console.error('[PepGuide auth] Google popup failed', code, error);
+
+      // Don't redirect-loop on cancel / domain misconfig — surface those.
+      if (
+        code === 'auth/popup-closed-by-user' ||
+        code === 'auth/cancelled-popup-request' ||
+        code === 'auth/unauthorized-domain' ||
+        code === 'auth/operation-not-allowed' ||
+        code === 'auth/account-exists-with-different-credential'
+      ) {
+        throw error;
+      }
+
+      // Popup blocked / COOP / flaky mobile → full-page redirect.
+      if (
+        code === 'auth/popup-blocked' ||
+        code === 'auth/internal-error' ||
+        code === 'auth/network-request-failed' ||
+        !code
+      ) {
+        await signInWithRedirect(auth, provider);
+        return null;
+      }
+
+      throw error;
+    }
   },
 
   async signInWithApple(): Promise<UserProfile> {

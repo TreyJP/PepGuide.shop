@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 
+import { sortChatMessages } from '@/src/lib/chat-messages';
 import type {
   ChatMessage,
   ChatSummary,
@@ -54,15 +55,22 @@ export const useChatStore = create<ChatState>((set) => ({
   setActiveChatId: (chatId) => set({ activeChatId: chatId }),
   setMessages: (chatId, messages) =>
     set((state) => ({
-      messagesByChat: { ...state.messagesByChat, [chatId]: messages },
-    })),
-  appendMessage: (chatId, message) =>
-    set((state) => ({
       messagesByChat: {
         ...state.messagesByChat,
-        [chatId]: [...(state.messagesByChat[chatId] ?? []), message],
+        [chatId]: sortChatMessages(messages),
       },
     })),
+  appendMessage: (chatId, message) =>
+    set((state) => {
+      const current = state.messagesByChat[chatId] ?? [];
+      // Append-only during send keeps visual order; don't resort mid-stream.
+      return {
+        messagesByChat: {
+          ...state.messagesByChat,
+          [chatId]: [...current, message],
+        },
+      };
+    }),
   updateMessage: (chatId, messageId, patch) =>
     set((state) => ({
       messagesByChat: {

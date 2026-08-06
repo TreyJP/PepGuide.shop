@@ -53,9 +53,9 @@ const REFUSAL_ANSWERS: Partial<Record<string, string>> = {
   prompt_injection:
     'I can’t follow requests that try to override PepGuide’s research-only boundaries.',
   spam:
-    'That message doesn’t look like a PepGuide research question. Ask about peptides, mechanisms, evidence, or research goals.',
+    'That’s outside PepGuide’s scope. Please ask a question relevant to peptides — compounds, mechanisms, evidence, or research dosing ranges.\n\nRepeated off-topic messages can temporarily lock chat.',
   out_of_scope:
-    'I’m PepGuide — I only help with peptide research education (compounds, mechanisms, evidence, regulatory context, and research dosing ranges). Rephrase your question within that scope.',
+    'That’s outside PepGuide’s scope. Please return to peptide research — compounds, mechanisms, evidence, regulatory context, or research dosing ranges.\n\nRepeated off-topic messages can temporarily lock chat.',
   minor_user:
     'PepGuide is only for adults. If you are under 18, please stop and talk with a parent/guardian and a clinician.',
   acute_adverse_event:
@@ -644,6 +644,9 @@ function buildRefusalResponse(
   category: PepGuideAiResponse['classification'],
   safetyAction: PepGuideAiResponse['safetyAction'],
 ): PepGuideAiResponse {
+  const isSoftRedirect =
+    category === 'out_of_scope' || category === 'spam';
+
   return pepGuideResponseSchema.parse({
     answer:
       REFUSAL_ANSWERS[category] ??
@@ -652,11 +655,17 @@ function buildRefusalResponse(
     safetyAction,
     evidenceCards: [],
     citations: [],
-    suggestedQuestions: [
-      'Show me a weight-loss research tier list with dosing ranges',
-      'How does retatrutide differ from tirzepatide?',
-      'What evidence grades mean in PepGuide?',
-    ],
+    suggestedQuestions: isSoftRedirect
+      ? [
+          'Show me a weight-loss research tier list with dosing ranges',
+          'How does retatrutide differ from tirzepatide?',
+          'What is BPC-157 researched for?',
+        ]
+      : [
+          'Show me a weight-loss research tier list with dosing ranges',
+          'How does retatrutide differ from tirzepatide?',
+          'What evidence grades mean in PepGuide?',
+        ],
     peptideIds: [],
   });
 }
