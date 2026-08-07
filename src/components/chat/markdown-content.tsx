@@ -7,10 +7,15 @@ import { cn } from '@/src/lib/utils';
 export function MarkdownContent({
   content,
   className,
+  variant = 'chat',
 }: {
   content: string;
   className?: string;
+  /** Forum posts use larger section headers for guideline-style writing. */
+  variant?: 'chat' | 'forum';
 }) {
+  const forum = variant === 'forum';
+
   return (
     <div
       className={cn(
@@ -22,17 +27,32 @@ export function MarkdownContent({
       <ReactMarkdown
         components={{
           h1: ({ children }) => (
-            <h1 className="mb-3 mt-1 font-[family-name:var(--font-display)] text-lg font-semibold text-foreground">
+            <h1
+              className={cn(
+                'mb-3 font-[family-name:var(--font-display)] font-semibold tracking-tight text-foreground',
+                forum ? 'mt-5 text-lg sm:mt-6 sm:text-2xl' : 'mt-1 text-lg',
+              )}
+            >
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="mb-2.5 mt-4 font-[family-name:var(--font-display)] text-base font-semibold text-foreground">
+            <h2
+              className={cn(
+                'mb-2.5 font-[family-name:var(--font-display)] font-semibold text-foreground',
+                forum ? 'mt-5 text-lg' : 'mt-4 text-base',
+              )}
+            >
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="mb-2 mt-4 text-sm font-semibold text-foreground">
+            <h3
+              className={cn(
+                'mb-2 font-semibold text-foreground',
+                forum ? 'mt-4 text-base' : 'mt-4 text-sm',
+              )}
+            >
               {children}
             </h3>
           ),
@@ -44,6 +64,7 @@ export function MarkdownContent({
           strong: ({ children }) => (
             <strong className="font-semibold text-foreground">{children}</strong>
           ),
+          em: ({ children }) => <em className="italic">{children}</em>,
           ul: ({ children }) => (
             <ul className="mb-3 list-disc space-y-2 pl-5 text-sm text-foreground">
               {children}
@@ -58,6 +79,11 @@ export function MarkdownContent({
             <li className="leading-relaxed break-words marker:text-foreground-secondary">
               {children}
             </li>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="mb-3 border-l-2 border-accent/40 bg-surface-secondary/50 py-1 pl-3 pr-2 text-sm italic text-foreground-secondary">
+              {children}
+            </blockquote>
           ),
           a: ({ href, children }) => (
             <a
@@ -86,11 +112,28 @@ export function MarkdownContent({
               </table>
             </div>
           ),
-          hr: () => <hr className="my-4 border-border" />,
+          hr: () => <hr className={cn('border-border', forum ? 'my-6' : 'my-4')} />,
         }}
       >
         {content}
       </ReactMarkdown>
     </div>
   );
+}
+
+/** Plain-text preview for list cards (strips common markdown markers). */
+export function markdownToPreview(content: string, maxLength = 160): string {
+  const plain = content
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/^>\s?/gm, '')
+    .replace(/^---+$/gm, ' ')
+    .replace(/[*_~]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (plain.length <= maxLength) return plain;
+  return `${plain.slice(0, maxLength - 1).trimEnd()}…`;
 }

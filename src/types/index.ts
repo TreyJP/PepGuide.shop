@@ -103,6 +103,8 @@ export type UserProfile = {
   /** ISO timestamp; when set and in the future, chat sending is blocked. */
   chatBlockedUntil: string | null;
   abuseStrikeCount: number;
+  /** Total research chats created — used for Pro ranking. */
+  chatCount: number;
   researchInterests: ResearchInterest[];
   experienceLevel: ExperienceLevel | null;
   researchPreferences: ResearchPreference[];
@@ -110,6 +112,40 @@ export type UserProfile = {
   acceptedPrivacyVersion: string;
   acceptedResearchNoticeVersion: string;
   dataRetentionDays: number;
+};
+
+/** Public Pro ranking / forum identity card. */
+export type PublicProfile = {
+  id: string;
+  displayName: string;
+  photoURL: string | null;
+  chatCount: number;
+  isAdmin: boolean;
+  updatedAt: string;
+};
+
+export type ForumPost = {
+  id: string;
+  title: string;
+  body: string;
+  authorId: string;
+  authorDisplayName: string;
+  authorIsAdmin: boolean;
+  createdAt: string;
+  updatedAt: string;
+  replyCount: number;
+  searchText: string;
+  pinned: boolean;
+};
+
+export type ForumReply = {
+  id: string;
+  postId: string;
+  body: string;
+  authorId: string;
+  authorDisplayName: string;
+  authorIsAdmin: boolean;
+  createdAt: string;
 };
 
 export type ChatSummary = {

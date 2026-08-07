@@ -14,6 +14,19 @@ export const MESSAGE_LIMITS = {
   perHour: 60,
 } as const;
 
+/**
+ * When a thread gets this large, start a fresh chat automatically
+ * so prompts stay within a usable context window.
+ */
+export const CHAT_CONTEXT_LIMITS = {
+  /** Total stored messages (user + assistant) before auto-rotate. */
+  maxMessages: 20,
+  /** Rough token estimate (chars/4) across the thread before auto-rotate. */
+  maxEstimatedTokens: 14_000,
+  /** How many prior turns to carry into the new chat’s API history. */
+  carryHistoryTurns: 4,
+} as const;
+
 /** Marker answer — UI renders Top 3 picks instead of markdown. */
 export const PICKS_ONLY_ANSWER = '[[picks]]';
 

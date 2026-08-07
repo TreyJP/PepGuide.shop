@@ -27,6 +27,7 @@ function createMockUser(
     accountStatus: 'active',
     chatBlockedUntil: null,
     abuseStrikeCount: 0,
+    chatCount: 0,
     researchInterests: [],
     experienceLevel: null,
     researchPreferences: [],

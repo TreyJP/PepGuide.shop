@@ -9,19 +9,17 @@ export default function ProProtocolsPage() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <header className="border-b border-border px-4 py-4 sm:px-6 sm:py-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-foreground">
-            Protocols
-          </h1>
-        </div>
+      <header className="border-b border-border px-4 py-3.5 sm:px-6 sm:py-5">
+        <h1 className="font-[family-name:var(--font-display)] text-xl font-semibold text-foreground sm:text-2xl">
+          Protocols
+        </h1>
         <p className="mt-1 text-sm text-foreground-secondary">
           Goal-built peptide stacks for research planning.
         </p>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto max-w-5xl">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-3 pb-6 sm:p-6">
+        <div className="mx-auto w-full max-w-5xl">
           {loading ? (
             <p className="text-sm text-foreground-secondary">Loading…</p>
           ) : isPro ? (

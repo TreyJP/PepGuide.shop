@@ -18,11 +18,15 @@ import {
   deriveChatTitle,
   isDefaultChatTitle,
 } from '@/src/lib/chat-title';
+import { isEnvAdminEmail } from '@/src/lib/admin';
 import {
   getFirebaseAuth,
   getFirestoreDb,
   shouldUseMockServices,
 } from '@/src/services/firebase/config';
+import { partnersRepository } from '@/src/services/firestore/partners';
+import { publicProfileRepository } from '@/src/services/firestore/public-profiles';
+import { useAuthStore } from '@/src/stores/auth-store';
 import type {
   ChatMessage,
   ChatSummary,
@@ -30,6 +34,30 @@ import type {
   ResearchMode,
 } from '@/src/types';
 import { createId } from '@/src/utils/dates';
+
+async function resolveIsAdmin(email: string): Promise<boolean> {
+  if (isEnvAdminEmail(email)) return true;
+  try {
+    return await partnersRepository.isAllowlistedAdmin(email);
+  } catch {
+    return false;
+  }
+}
+
+async function bumpRankingForNewChat() {
+  const user = useAuthStore.getState().user;
+  if (!user) return;
+  try {
+    const isAdmin = await resolveIsAdmin(user.email);
+    await publicProfileRepository.recordChatCreated({
+      displayName: user.displayName || 'Researcher',
+      photoURL: user.photoURL,
+      isAdmin,
+    });
+  } catch (error) {
+    console.warn('[PepGuide] Failed to update chat ranking count', error);
+  }
+}
 
 const mockChats = new Map<string, ChatSummary>();
 const mockMessages = new Map<string, ChatMessage[]>();
@@ -132,6 +160,7 @@ const mockRepository = {
     };
     mockChats.set(chat.id, chat);
     mockMessages.set(chat.id, []);
+    void bumpRankingForNewChat();
     return chat;
   },
   async updateChat(chatId: string, patch: Partial<ChatSummary>) {
@@ -148,6 +177,7 @@ const mockRepository = {
   async deleteChat(chatId: string) {
     mockChats.delete(chatId);
     mockMessages.delete(chatId);
+    void publicProfileRepository.recordChatDeleted().catch(() => undefined);
   },
   async listMessages(chatId: string, options?: { limit?: number }) {
     const all = mockMessages.get(chatId) ?? [];
@@ -215,6 +245,7 @@ const firestoreRepository = {
       safetyStatus: 'allow',
     };
     await setDoc(ref, chat);
+    void bumpRankingForNewChat();
     return chat;
   },
 
@@ -236,6 +267,7 @@ const firestoreRepository = {
     const messagesSnap = await getDocs(messagesCol(uid, chatId));
     await Promise.all(messagesSnap.docs.map((item) => deleteDoc(item.ref)));
     await deleteDoc(doc(requireDb(), 'users', uid, 'chats', chatId));
+    void publicProfileRepository.recordChatDeleted().catch(() => undefined);
   },
 
   async listMessages(chatId: string, options?: { limit?: number }) {

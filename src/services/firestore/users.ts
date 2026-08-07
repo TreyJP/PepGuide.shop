@@ -37,6 +37,7 @@ function mapUser(id: string, data: Record<string, unknown>): UserProfile {
         ? data.chatBlockedUntil
         : null,
     abuseStrikeCount: Number(data.abuseStrikeCount ?? 0),
+    chatCount: Number(data.chatCount ?? 0),
     researchInterests: Array.isArray(data.researchInterests)
       ? (data.researchInterests as UserProfile['researchInterests'])
       : [],
@@ -85,6 +86,7 @@ export const userRepository = {
       accountStatus: 'active',
       chatBlockedUntil: null,
       abuseStrikeCount: 0,
+      chatCount: 0,
       researchInterests: [],
       experienceLevel: null,
       researchPreferences: [],

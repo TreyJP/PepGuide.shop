@@ -14,7 +14,11 @@ import {
   DEFAULT_RESEARCH_MODE,
   PEP_GUIDE_MODEL,
 } from '@/src/constants/ai';
-import { PICKS_ONLY_ANSWER, PRO_UNLOCK_ANSWER } from '@/src/constants/chat';
+import {
+  CHAT_CONTEXT_LIMITS,
+  PICKS_ONLY_ANSWER,
+  PRO_UNLOCK_ANSWER,
+} from '@/src/constants/chat';
 import { useProAccess } from '@/src/hooks/use-pro-access';
 import { chatBlockMessage, isChatSendingBlocked } from '@/src/lib/chat-access';
 import { mergeChatMessages } from '@/src/lib/chat-messages';
@@ -35,6 +39,40 @@ import { createId } from '@/src/utils/dates';
 export type ChatWorkspaceProps = {
   chatId?: string;
 };
+
+function estimateThreadTokens(messages: ChatMessage[]): number {
+  const chars = messages.reduce(
+    (sum, message) => sum + (message.content?.length ?? 0),
+    0,
+  );
+  return Math.ceil(chars / 4);
+}
+
+function shouldRotateChatContext(messages: ChatMessage[]): boolean {
+  if (messages.length >= CHAT_CONTEXT_LIMITS.maxMessages) return true;
+  return (
+    estimateThreadTokens(messages) >= CHAT_CONTEXT_LIMITS.maxEstimatedTokens
+  );
+}
+
+function toApiHistoryTurns(messages: ChatMessage[]) {
+  return messages
+    .filter(
+      (message) =>
+        (message.role === 'user' || message.role === 'assistant') &&
+        message.status === 'complete' &&
+        Boolean(message.content?.trim()),
+    )
+    .map((message) => ({
+      role: message.role as 'user' | 'assistant',
+      content:
+        message.content === PICKS_ONLY_ANSWER
+          ? '[Presented top research picks with dosing guide.]'
+          : message.content === PRO_UNLOCK_ANSWER
+            ? '[Presented PepGuide Pro unlock card.]'
+            : message.content,
+    }));
+}
 
 function formatChatError(error: unknown): string {
   if (error instanceof ChatApiError) {
@@ -216,6 +254,8 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
       let assistantId = '';
       let assistantMessage: ChatMessage | null = null;
       let currentChatId: string | null = resolvedChatId;
+      let carriedHistory: Array<{ role: 'user' | 'assistant'; content: string }> =
+        [];
 
       try {
         if (!currentChatId) {
@@ -234,6 +274,45 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         if (!currentChatId) {
           throw new Error('Chat id missing after create.');
         }
+
+        // Auto-rotate when the thread is too long for a reliable context window.
+        const existingThread =
+          useChatStore.getState().messagesByChat[currentChatId] ?? [];
+        if (shouldRotateChatContext(existingThread)) {
+          const previousChatId = currentChatId;
+          const previousChat = useChatStore
+            .getState()
+            .chats.find((chat) => chat.id === previousChatId);
+          carriedHistory = toApiHistoryTurns(existingThread).slice(
+            -CHAT_CONTEXT_LIMITS.carryHistoryTurns,
+          );
+
+          const nextChat = await chatRepository.createChat({
+            researchMode: DEFAULT_RESEARCH_MODE,
+            evidenceDepth: DEFAULT_EVIDENCE_DEPTH,
+          });
+          const continuedTitle = previousChat?.title
+            ? `Continued: ${previousChat.title.replace(/^Continued:\s*/i, '').slice(0, 48)}`
+            : 'Continued chat';
+
+          upsertChat({
+            ...nextChat,
+            title: continuedTitle,
+            lastMessagePreview: content.slice(0, 120),
+          });
+          setActiveChatId(nextChat.id);
+          setMessages(nextChat.id, []);
+          currentChatId = nextChat.id;
+          shouldOpenChatRoute = true;
+
+          console.info('[PepGuide chat] Rotated chat for context limits', {
+            previousChatId,
+            nextChatId: nextChat.id,
+            priorMessages: existingThread.length,
+            estimatedTokens: estimateThreadTokens(existingThread),
+          });
+        }
+
         const activeChatIdForSend = currentChatId;
 
         const sentAt = Date.now();
@@ -293,25 +372,16 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
 
         const priorMessages =
           useChatStore.getState().messagesByChat[activeChatIdForSend] ?? [];
-        const history = priorMessages
-          .filter(
-            (message) =>
-              message.id !== userMessage.id &&
-              message.id !== assistantId &&
-              (message.role === 'user' || message.role === 'assistant') &&
-              message.status === 'complete' &&
-              Boolean(message.content?.trim()),
-          )
-          .slice(-12)
-          .map((message) => ({
-            role: message.role as 'user' | 'assistant',
-            content:
-              message.content === PICKS_ONLY_ANSWER
-                ? '[Presented top research picks: retatrutide, tirzepatide, semaglutide with dosing guide.]'
-                : message.content === PRO_UNLOCK_ANSWER
-                  ? '[Presented PepGuide Pro unlock card for Guides and Protocols.]'
-                  : message.content,
-          }));
+        const history =
+          carriedHistory.length > 0
+            ? carriedHistory
+            : toApiHistoryTurns(
+                priorMessages.filter(
+                  (message) =>
+                    message.id !== userMessage.id &&
+                    message.id !== assistantId,
+                ),
+              ).slice(-12);
 
         console.info('[PepGuide chat] Sending message', {
           chatId: activeChatIdForSend,
@@ -475,6 +545,14 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
                   status={message.status}
                   createdAt={message.createdAt}
                   peptideIds={message.peptideIds}
+                  suggestedQuestions={
+                    message.id === messages[messages.length - 1]?.id
+                      ? message.suggestedQuestions
+                      : undefined
+                  }
+                  onSelectQuestion={
+                    chatBlocked || isStreaming ? undefined : handleSend
+                  }
                 />
               ),
             )}

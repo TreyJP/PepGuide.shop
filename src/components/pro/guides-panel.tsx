@@ -70,9 +70,9 @@ export function GuidesPanel() {
   }, [level]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <div
-        className="flex flex-wrap gap-1.5"
+        className="-mx-0.5 flex flex-nowrap gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible sm:pb-0"
         role="tablist"
         aria-label="Filter guides by level"
       >
@@ -92,7 +92,7 @@ export function GuidesPanel() {
               aria-selected={selected}
               onClick={() => setLevel(option)}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors',
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors',
                 selected
                   ? 'bg-accent text-white'
                   : 'bg-surface-secondary text-foreground-secondary hover:text-foreground',
@@ -123,7 +123,7 @@ export function GuidesPanel() {
               <div className="flex flex-wrap items-end justify-between gap-2 px-0.5">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-[family-name:var(--font-display)] text-xl font-semibold text-foreground">
+                    <h3 className="font-[family-name:var(--font-display)] text-lg font-semibold text-foreground sm:text-xl">
                       {course.title}
                     </h3>
                     <Badge variant="accent">{course.level}</Badge>

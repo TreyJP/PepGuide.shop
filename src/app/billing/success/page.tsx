@@ -63,7 +63,9 @@ function BillingSuccessContent() {
 
         if (!cancelled) {
           setStatus('ready');
-          setMessage('PepGuide Pro is active. Guides and Protocols are unlocked.');
+          setMessage(
+            'PepGuide Pro is active. Education & Research, Protocols, and Questions & Discussion are unlocked.',
+          );
         }
       } catch (error) {
         if (!cancelled) {
@@ -94,7 +96,9 @@ function BillingSuccessContent() {
         </h1>
         <p className="mt-2 text-sm text-foreground-secondary">{message}</p>
         <div className="mt-6 flex flex-col gap-2">
-          <Button onClick={() => router.push('/pro/guides')}>Open Guides</Button>
+          <Button onClick={() => router.push('/pro/guides')}>
+            Open Education & Research
+          </Button>
           <Button variant="secondary" onClick={() => router.push('/pro/protocols')}>
             Open Protocols
           </Button>

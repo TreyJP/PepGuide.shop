@@ -1,0 +1,25 @@
+/* Forum thread — Strand (locked) */
+
+.fth-strand-post {
+  border-radius: 20px;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+}
+
+.fth-strand-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.fth-strand-reply {
+  border-radius: 16px;
+  padding: 0.85rem 0.95rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.fth-strand-reply--admin {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+}

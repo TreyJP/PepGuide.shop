@@ -7,6 +7,7 @@ import {
   Library,
   Lock,
   MessageSquare,
+  MessagesSquare,
   RefreshCw,
   Settings,
   Shield,
@@ -34,8 +35,9 @@ const MAIN_NAV = [
 ] as const;
 
 const PRO_NAV = [
-  { href: '/pro/guides', label: 'Guides', icon: BookOpen },
+  { href: '/pro/guides', label: 'Education & Research', icon: BookOpen },
   { href: '/pro/protocols', label: 'Protocols', icon: FlaskConical },
+  { href: '/pro/forum', label: 'Questions & Discussion', icon: MessagesSquare },
 ] as const;
 
 function NavLink({

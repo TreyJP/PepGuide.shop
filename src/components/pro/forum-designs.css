@@ -1,0 +1,141 @@
+/* Forum Agora — PepGuide #0057FF / #0A1B3A */
+
+.forum-root {
+  --forum-navy: #0a1b3a;
+  --forum-blue: #0057ff;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .forum-root {
+    gap: 1.25rem;
+  }
+}
+
+.forum-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+@media (min-width: 640px) {
+  .forum-toolbar {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+}
+
+.forum-toolbar__search {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .forum-toolbar__search {
+    max-width: 28rem;
+  }
+}
+
+.forum-agora-shell {
+  border-radius: 18px;
+  padding: 0.65rem;
+  background:
+    radial-gradient(
+      120% 80% at 0% 0%,
+      color-mix(in srgb, var(--accent) 12%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--forum-navy) 6%, var(--surface)),
+      var(--surface) 55%
+    );
+  border: 1px solid color-mix(in srgb, var(--forum-navy) 12%, var(--border));
+}
+
+@media (min-width: 640px) {
+  .forum-agora-shell {
+    border-radius: 22px;
+    padding: 0.85rem;
+  }
+}
+
+.forum-agora-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+@media (min-width: 720px) {
+  .forum-agora-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .forum-agora-list > li.is-pinned {
+    grid-column: 1 / -1;
+  }
+}
+
+.forum-agora-tile {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  border-radius: 16px;
+  padding: 0.85rem;
+  background: color-mix(in srgb, var(--surface) 92%, white);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  box-shadow: 0 8px 24px rgba(10, 27, 58, 0.05);
+  transition: border-color 160ms ease;
+}
+
+@media (min-width: 640px) {
+  .forum-agora-tile {
+    gap: 0.65rem;
+    border-radius: 18px;
+    padding: 1rem;
+    transition: transform 160ms ease, border-color 160ms ease;
+  }
+
+  .forum-agora-tile:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  }
+}
+
+.forum-agora-tile.is-pinned {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
+
+.forum-agora-title {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--forum-navy);
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+  .forum-agora-title {
+    font-size: 1.125rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forum-agora-tile,
+  .forum-agora-tile:hover {
+    transition: none;
+    transform: none;
+  }
+}

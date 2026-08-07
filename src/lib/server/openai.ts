@@ -20,6 +20,10 @@ import {
   classifyMessage,
   isProContentInquiry,
 } from '@/src/lib/server/classify';
+import {
+  summarizeResearchIntent,
+  type ResearchIntent,
+} from '@/src/lib/server/research-intent';
 import { pepGuideResponseSchema } from '@/src/schemas/ai';
 import type { PepGuideAiResponse } from '@/src/types';
 
@@ -36,6 +40,91 @@ export type ResearchGenerationResult = PepGuideAiResponse & {
 function estimateTokens(text: string): number {
   if (!text) return 0;
   return Math.max(1, Math.ceil(text.length / 4));
+}
+
+function mergeUsage(
+  a?: TokenUsage,
+  b?: TokenUsage,
+): TokenUsage | undefined {
+  if (!a && !b) return undefined;
+  return {
+    inputTokens: (a?.inputTokens ?? 0) + (b?.inputTokens ?? 0),
+    outputTokens: (a?.outputTokens ?? 0) + (b?.outputTokens ?? 0),
+  };
+}
+
+function withUsage(
+  response: PepGuideAiResponse,
+  usage?: TokenUsage,
+): ResearchGenerationResult {
+  return usage ? { ...response, usage } : response;
+}
+
+function lastDiscoveryGuidanceContent(
+  history: ResearchChatTurn[],
+): string | null {
+  const turn = [...history]
+    .reverse()
+    .find(
+      (item) => item.role === 'assistant' && isDiscoveryGuidanceTurn(item.content),
+    );
+  return turn?.content ?? null;
+}
+
+/** Prefer LLM-normalized intent; fall back to keyword heuristics. */
+function routeFromIntent(
+  intent: ResearchIntent,
+  userMessage: string,
+  history: ResearchChatTurn[],
+): PepGuideAiResponse | null {
+  // Cap the quiz: guidance once, then deliver options (≤2–3 total replies).
+  const deliverResult = shouldDeliverDiscoveryResult(history, userMessage);
+  const priorGuidance = lastDiscoveryGuidanceContent(history);
+  const priorWasMuscle =
+    Boolean(priorGuidance) &&
+    /\b(adding size|GH-related|lean mass|recovery between training)\b/i.test(
+      priorGuidance!,
+    );
+  const priorWasWeight =
+    Boolean(priorGuidance) &&
+    /\b(fat loss|metabolism peptides|GLP-1)\b/i.test(priorGuidance!);
+
+  switch (intent.goal) {
+    case 'dual_weight_muscle':
+      return buildDualGoalResponse();
+    case 'muscle':
+      return deliverResult
+        ? buildMusclePicksResponse('research_goal_exploration', userMessage)
+        : buildMuscleGuidanceResponse();
+    case 'weight_loss':
+      return deliverResult
+        ? buildWeightLossPicksResponse(userMessage)
+        : buildWeightLossGuidanceResponse();
+    case 'appetite_complement':
+      // Don't let a hunger chip restart a new lane mid fat-loss discovery.
+      if (deliverResult && priorWasWeight) {
+        return buildWeightLossPicksResponse(userMessage);
+      }
+      if (deliverResult && priorWasMuscle) {
+        return buildMusclePicksResponse(
+          'research_goal_exploration',
+          userMessage,
+        );
+      }
+      return buildAppetiteComplementResponse(userMessage, history);
+    default:
+      // Finish the open discovery arc even if intent drifts to "general".
+      if (deliverResult && priorWasWeight) {
+        return buildWeightLossPicksResponse(userMessage);
+      }
+      if (deliverResult && priorWasMuscle) {
+        return buildMusclePicksResponse(
+          'research_goal_exploration',
+          userMessage,
+        );
+      }
+      return null;
+  }
 }
 
 export type ResearchChatTurn = {
@@ -80,15 +169,42 @@ const REFUSAL_ANSWERS: Partial<Record<string, string>> = {
 };
 
 function isWeightLossQuery(text: string): boolean {
-  return /\b(weight|lose|loss|fat|obesity|obese|glp-?1|incretin|retatrutide|semaglutide|tirzepatide|slim|appetite|hunger|hungry|satiety|craving)\b/i.test(
+  // Avoid bare "weight" alone — "weight training" / "add weight" are often muscle goals.
+  if (
+    /\b(weight\s*train(?:ing)?|train(?:ing)?\s+weight|add\s+weight|put\s+on\s+weight|gain\s+weight|weight\s+gain)\b/i.test(
+      text,
+    )
+  ) {
+    return false;
+  }
+  return /\b(lose\s+weight|weight\s*loss|losing\s+weight|fat\s*loss|lose\s+fat|obesity|obese|overweight|glp-?1|incretin|retatrutide|semaglutide|tirzepatide|slim\s+down|appetite|hunger|hungry|satiety|craving|burn\s+fat|cut\s+fat|belly\s*fat)\b/i.test(
     text,
   );
 }
 
 function isMuscleQuery(text: string): boolean {
-  return /\b(muscle|hypertrophy|anabolic|lean mass|build muscle|gain(?:ing)? muscle|muscle gain|gains?|secretagogue|growth hormone|\bgh\b|igf(?:-?1)?|ipamorelin|cjc|sermorelin)\b/i.test(
+  return /\b(muscle|hypertrophy|anabolic|lean\s*mass|build\s+muscle|gain(?:ing)?\s+muscle|muscle\s+gain|gains?|secretagogue|growth\s+hormone|\bgh\b|igf(?:-?1)?|ipamorelin|cjc|sermorelin|add\s+size|gain\s+size|put\s+on\s+size|pack\s+on\s+(?:size|mass|muscle)|get\s+bigger|bulk(?:ing)?|mass\s+gain|put\s+on\s+mass|add\s+mass|get\s+stronger|strength\s+gain|weight\s*train(?:ing)?|gain\s+weight|weight\s+gain|put\s+on\s+weight)\b/i.test(
     text,
   );
+}
+
+/** Discovery ask for muscle / size / GH-axis picks (not a deep dive). */
+function shouldReturnMusclePicks(userMessage: string): boolean {
+  if (!isMuscleQuery(userMessage)) return false;
+  if (isDualWeightMuscleQuery(userMessage)) return false;
+  if (isWeightLossQuery(userMessage)) return false;
+
+  // Deep dives on a named muscle compound → full research answer.
+  if (
+    /\b(ipamorelin|cjc|sermorelin|igf|mgf|mk-?677)\b/i.test(userMessage) &&
+    /\b(how|why|mechanism|evidence|risk|side effect|compare|vs\.?|versus|differ|trial|study)\b/i.test(
+      userMessage,
+    )
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 /** User asked for both fat-loss and muscle / lean-mass research in one message. */
@@ -314,60 +430,58 @@ function buildSystemPrompt(
     '  "suggestedQuestions": string[],',
     '  "peptideIds": string[]',
     '}',
-    'FORMATTING RULES FOR answer:',
-    '- Keep answers SHORT. Default max ~120–180 words unless the user asks for depth.',
-    '- Use clean Markdown: short bullets, minimal bold, no long essays.',
-    '- No multi-paragraph intros, no repeated disclaimers, no filler.',
-    '- Prefer 4–8 tight bullets over paragraphs.',
+    'VOICE (strict):',
+    '- Sound like a sharp research buddy in chat — natural, direct, human.',
+    '- Keep answers SHORT: ~40–90 words by default. Only go longer if the user asks for detail.',
+    '- SURFACE LEVEL: explain like you’re talking to a smart friend, not a journal club.',
+    '- No dense mechanisms, trial jargon, evidence-grade dumps, or long risk lists unless asked.',
+    '- Lead with the takeaway in 1–2 sentences, then at most 2–3 short bullets.',
+    '- No essay intros, no textbook tone, no stacking disclaimers.',
+    '- Skip phrases like “Based on PepGuide’s research knowledge base” or “educational overview”.',
+    '- One light research-only note at the end is enough (e.g. “Research framing only.”).',
+    'FOLLOW-UP RULES (strict — no rabbit holes):',
+    '- Discovery arc max: 1 clarifying reply, then options. Never quiz more than once on the same goal.',
+    '- Reply #1 (broad ask): short overview + ONE clarifying question + suggestedQuestions chips.',
+    '- Reply #2: deliver concrete peptide options (peptideIds) and STOP asking to narrow.',
+    '- If options were already shown, answer the new question directly — do not restart the quiz.',
+    '- Prefer results within 2 assistant replies (3 max).',
     'CONVERSATION RULES:',
     '- Prioritize the CURRENT user question over older turns.',
     '- If the user pivots to a new research goal (e.g. muscle after weight loss), answer that new goal.',
     '- Do NOT keep recommending weight-loss / GLP-1 compounds unless the user asks to combine goals.',
     '- Use prior turns only when the user is clearly continuing the same topic.',
-    '- Stay educational / research framing — compare mechanisms and evidence, do not prescribe a personal protocol.',
+    '- Stay educational — compare options, do not prescribe a personal protocol.',
     dualQuery
       ? [
           'DUAL GOAL ANSWER RULES (strict — weight loss + muscle):',
-          '- User asked for BOTH fat/weight loss AND muscle / lean-mass research.',
-          '- Recommend exactly ONE primary metabolic / weight-loss peptide (prefer retatrutide) AND exactly ONE primary muscle peptide (prefer ipamorelin).',
-          '- Structure the answer with two clear headings: **Weight loss** and **Muscle / lean mass**.',
-          '- Briefly note they address different pathways — not a personal combined protocol.',
-          '- peptideIds MUST start with those two primaries, then optional extras from each category.',
-          '- Do NOT collapse into a weight-only or muscle-only list.',
+          '- One metabolic pick (prefer retatrutide) + one muscle pick (prefer ipamorelin).',
+          '- Two short lines/bullets total — not two essays.',
+          '- peptideIds MUST start with those two primaries.',
         ].join('\n')
       : muscleQuery
         ? [
             'MUSCLE / LEAN-MASS ANSWER RULES (strict):',
-            '- Focus on GH secretagogue / muscle-research PEPTIDES only (e.g. ipamorelin, CJC-1295, sermorelin, IGF analogs).',
-            '- Do NOT recommend retatrutide, tirzepatide, semaglutide, or other weight-loss incretins unless the user explicitly asks about both goals.',
-            '- Cover evidence quality and key risks briefly.',
-            '- Include peptideIds for the top muscle-relevant peptides discussed.',
+            '- GH secretagogue / muscle peptides only (ipamorelin, CJC-1295, sermorelin, IGF analogs).',
+            '- No weight-loss incretins unless they asked for both goals.',
+            '- Name 2–3 top options briefly; put the rest in peptideIds.',
           ].join('\n')
         : appetiteFollowUp
           ? [
               'APPETITE / COMPLEMENT FOLLOW-UP RULES (strict):',
-              '- User still has hunger/appetite concerns on an incretin (e.g. retatrutide).',
-              '- Recommend researched complementary PEPTIDES that target appetite/satiety via a different pathway (prefer amylin: cagrilintide; also amycretin).',
-              '- Explain briefly WHY it can add appetite suppression on top of a GLP-1/triple agonist (different satiety pathway).',
-              '- Include 1–2 peptideIds for the best complements (cagrilintide first).',
-              '- Do NOT re-list retatrutide/tirzepatide/semaglutide as the main answer unless comparing.',
-              '- One short research-only disclaimer.',
+              '- Prefer cagrilintide (amylin path) as the main complement.',
+              '- 2–3 short sentences + peptideIds. No long mechanism essay.',
             ].join('\n')
           : weightQuery
             ? [
                 'WEIGHT-LOSS ANSWER RULES:',
-                '- Talk ONLY about weight-loss / obesity / metabolic PEPTIDES.',
-                '- Do NOT mention hair, healing, cosmetic, sexual, sleep, or unrelated peptides.',
-                '- Prefer peptides from the knowledge context / dosing guide.',
+                '- Metabolic / fat-loss peptides only.',
+                '- Name the top 1–3 options briefly; details live in the cards.',
               ].join('\n')
             : '',
     'CONTENT RULES:',
-    '- PEPTIDES ONLY: never recommend or list non-peptides (no MK-677, orforglipron, tesofensine, tadalafil, SR9009, noopept, small molecules, etc.).',
-    '- Use ONLY peptides from the knowledge context / dosing guide.',
-    '- When recommending peptides, reference their Main effects from the knowledge context.',
-    '- Always return peptideIds for the peptides you recommend (include up to 6–8 relevant peptides when several fit) so the UI can show dosing/price cards and a View more list.',
-    '- Stay on the user’s CURRENT research goal; do not drift to unrelated categories.',
-    '- Research dosing: start low, increase only if effects are still limited.',
+    '- PEPTIDES ONLY from the knowledge context / dosing guide.',
+    '- Always return peptideIds for recommended peptides (up to 6–8) for UI cards.',
+    '- Stay on the user’s CURRENT research goal.',
     '- Never invent personal prescriptions or injection technique steps.',
     '',
     'KNOWLEDGE BASE CONTEXT:',
@@ -381,14 +495,138 @@ function buildSystemPrompt(
     .join('\n');
 }
 
-function buildWeightLossPicksResponse(): PepGuideAiResponse {
+function wantsImmediatePicks(text: string): boolean {
+  return /\b(show me (the )?(options|peptides|picks|list)|just (show|give|list)|give me (the )?(options|peptides|list|picks)|what are the (top|best) (3|three|options|peptides)|skip (the )?(questions|quiz))\b/i.test(
+    text,
+  );
+}
+
+function isDiscoveryGuidanceTurn(content: string): boolean {
+  return /\b(narrow|quick check|quick question|tap a question|which matters more|help me point you|want me to narrow|one quick question)\b/i.test(
+    content,
+  );
+}
+
+function isDiscoveryResultTurn(content: string): boolean {
+  return (
+    content === PICKS_ONLY_ANSWER ||
+    /\b(here are the (top|main)|options people (compare|start)|shortlist to start|cards below)\b/i.test(
+      content,
+    )
+  );
+}
+
+function countDiscoveryGuidanceTurns(history: ResearchChatTurn[]): number {
+  return history.filter(
+    (turn) => turn.role === 'assistant' && isDiscoveryGuidanceTurn(turn.content),
+  ).length;
+}
+
+/**
+ * Deliver concrete options once we've already asked (or the user skips ahead).
+ * Keeps discovery to ~2 assistant replies — no infinite quiz.
+ */
+function shouldDeliverDiscoveryResult(
+  history: ResearchChatTurn[],
+  userMessage: string,
+): boolean {
+  if (wantsImmediatePicks(userMessage)) return true;
+  if (countDiscoveryGuidanceTurns(history) >= 1) return true;
+  if (history.some((turn) => turn.role === 'assistant' && isDiscoveryResultTurn(turn.content))) {
+    return true;
+  }
+  // 2nd+ user message in the thread → stop clarifying, show options.
+  const userTurns = history.filter((turn) => turn.role === 'user').length;
+  if (userTurns >= 1 && isDiscoveryNarrowingFollowUp(history, userMessage)) {
+    return true;
+  }
+  if (userTurns >= 2) return true;
+  return false;
+}
+
+/** True when the user is answering a prior discovery follow-up. */
+function isDiscoveryNarrowingFollowUp(
+  history: ResearchChatTurn[],
+  userMessage: string,
+): boolean {
+  if (wantsImmediatePicks(userMessage)) return true;
+  const lastAssistant = [...history]
+    .reverse()
+    .find((turn) => turn.role === 'assistant');
+  if (!lastAssistant || !isDiscoveryGuidanceTurn(lastAssistant.content)) {
+    return false;
+  }
+  return userMessage.trim().length > 0;
+}
+
+function buildWeightLossGuidanceResponse(): PepGuideAiResponse {
+  return pepGuideResponseSchema.parse({
+    answer: [
+      'For fat loss, research mostly looks at **appetite / metabolism peptides** (the GLP-1 style group).',
+      '',
+      'One quick question so I can show you the right shortlist: is **hunger** your main issue, or overall fat-loss results?',
+      '',
+      'Tap below — next reply I’ll give you options.',
+    ].join('\n'),
+    classification: 'research_goal_exploration',
+    safetyAction: 'allow',
+    evidenceCards: [],
+    citations: [],
+    suggestedQuestions: [
+      'Hunger is my main issue',
+      'Overall fat-loss results',
+      'Just show me the top options',
+    ],
+    peptideIds: [],
+  });
+}
+
+function buildMuscleGuidanceResponse(
+  classification: PepGuideAiResponse['classification'] = 'research_goal_exploration',
+): PepGuideAiResponse {
+  return pepGuideResponseSchema.parse({
+    answer: [
+      'For adding size, research usually points at **GH-related peptides** for recovery and lean mass — not fat-loss shots.',
+      '',
+      'One quick question: care more about **recovery between training**, or **lean mass / size**?',
+      '',
+      'Tap below — next reply I’ll give you options.',
+    ].join('\n'),
+    classification,
+    safetyAction: 'allow',
+    evidenceCards: [],
+    citations: [],
+    suggestedQuestions: [
+      'Recovery between training',
+      'Lean mass / size',
+      'Just show me the top options',
+    ],
+    peptideIds: [],
+  });
+}
+
+function buildWeightLossPicksResponse(
+  userMessage = '',
+): PepGuideAiResponse {
+  const appetiteFocus = /\b(hunger|hungry|appetite|craving|satiety)\b/i.test(
+    userMessage,
+  );
+  const simpleStart =
+    /\b(simple|starter|starting|beginner|milder|easier)\b/i.test(userMessage);
   const peptideIds = getWeightLossGuideIds(8);
+  // Keep order from guide; light intro copy only.
   const cardSource = peptideIds
     .map((id) => getCompoundById(id))
     .filter((compound): compound is NonNullable<typeof compound> => Boolean(compound));
 
+  const lead = appetiteFocus
+    ? 'Got it — if hunger is the main issue, these are the fat-loss research options people usually start comparing:'
+    : simpleStart
+      ? 'Cool — here’s a simple shortlist to start with. Cards below have the research ranges:'
+      : 'Here are the top fat-loss research options to compare. Keep it simple — cards below have the ranges:';
+
   return pepGuideResponseSchema.parse({
-    answer: PICKS_ONLY_ANSWER,
+    answer: `${lead}\n\nResearch framing only.`,
     classification: 'research_goal_exploration',
     safetyAction: 'allow',
     evidenceCards: cardSource.map((compound) => ({
@@ -408,9 +646,55 @@ function buildWeightLossPicksResponse(): PepGuideAiResponse {
       lastReviewedAt: compound.lastReviewedAt,
     })),
     citations: cardSource.flatMap((compound) => compound.references),
+    // Terminal prompts — don’t reopen the discovery quiz.
     suggestedQuestions: [
-      'I tried retatrutide but still feel hungry — what complements appetite research?',
-      'How does cagrilintide differ from GLP-1 agonists?',
+      'Explain the #1 option in plain English',
+      'What if I’m still hungry on the top option?',
+    ],
+    peptideIds,
+  });
+}
+
+function buildMusclePicksResponse(
+  classification: PepGuideAiResponse['classification'] = 'research_goal_exploration',
+  userMessage = '',
+): PepGuideAiResponse {
+  const recoveryFocus = /\b(recover(?:y|ing)?|sore|training)\b/i.test(
+    userMessage,
+  );
+  const peptideIds = getMuscleTopIds(6);
+  const compounds = peptideIds
+    .map((id) => getCompoundById(id))
+    .filter((compound): compound is NonNullable<typeof compound> => Boolean(compound));
+
+  const lead = recoveryFocus
+    ? 'If recovery is the focus, these GH-axis options come up most often:'
+    : 'Here are the main size / lean-mass research options people compare:';
+
+  return pepGuideResponseSchema.parse({
+    answer: `${lead}\n\nResearch framing only.`,
+    classification,
+    safetyAction: 'allow',
+    evidenceCards: compounds.map((compound) => ({
+      peptideId: compound.id,
+      name: compound.name,
+      aliases: compound.aliases,
+      researchCategory: compound.researchAreas[0] ?? 'Muscle research',
+      relevanceSummary: compound.summary,
+      proposedMechanism: compound.proposedMechanism,
+      humanEvidenceGrade: compound.humanEvidenceGrade,
+      preclinicalEvidenceGrade: compound.preclinicalEvidenceGrade,
+      regulatoryStatus: compound.regulatoryStatus,
+      regulatoryDetail: compound.regulatoryDetail,
+      knownRisks: compound.risks,
+      uncertainties: compound.uncertainties,
+      citationCount: compound.references.length,
+      lastReviewedAt: compound.lastReviewedAt,
+    })),
+    citations: compounds.flatMap((compound) => compound.references),
+    suggestedQuestions: [
+      'Explain ipamorelin in plain English',
+      'How do ipamorelin and CJC-1295 differ?',
     ],
     peptideIds,
   });
@@ -435,19 +719,12 @@ function buildDualGoalResponse(): PepGuideAiResponse {
 
   return pepGuideResponseSchema.parse({
     answer: [
-      'You’re aiming at **two research goals** — here’s one strong option for each (educational only, not a personal protocol):',
+      'You’re chasing two goals, so research usually splits them:',
       '',
-      '**Weight loss**',
-      weight
-        ? `- **${weight.name}** — ${weight.summary}`
-        : '- **Retatrutide** — leading metabolic / fat-loss research signal.',
+      `- **Fat loss:** ${weight?.name ?? 'Retatrutide'}`,
+      `- **Size / lean mass:** ${muscle?.name ?? 'Ipamorelin'}`,
       '',
-      '**Muscle / lean mass**',
-      muscle
-        ? `- **${muscle.name}** — ${muscle.summary}`
-        : '- **Ipamorelin** — selective GH secretagogue often discussed for lean-mass research.',
-      '',
-      'Different pathways — combining them is not a prescription. Use the dosing cards below for research ranges and partner prices.',
+      'Different jobs — not one magic stack. Want me to narrow either side?',
     ].join('\n'),
     classification: 'research_goal_exploration',
     safetyAction: 'allow',
@@ -503,15 +780,12 @@ function buildAppetiteComplementResponse(
 
   return pepGuideResponseSchema.parse({
     answer: [
-      `Since appetite is still an issue on **${triedLabel}**, research often looks at a **different satiety pathway** rather than swapping the whole incretin.`,
+      `If appetite is still loud on **${triedLabel}**, research usually looks at a different satiety path — not another GLP-1.`,
       '',
-      primary
-        ? `- **${primary.name}** — ${primary.summary} Researchers have studied amylin agonism alone and with GLP-1s (e.g. CagriSema) for added appetite/satiety effect.`
-        : '',
-      secondary
-        ? `- **${secondary.name}** — ${secondary.summary}`
-        : '',
-      '- Educational framing only — not a personal stack or prescription. Ask a clinician before combining agents.',
+      primary ? `- **${primary.name}** (amylin) is the common add-on discussed.` : '',
+      secondary ? `- **${secondary.name}** is another option in that lane.` : '',
+      '',
+      'Research framing only.',
     ]
       .filter(Boolean)
       .join('\n'),
@@ -553,7 +827,9 @@ function buildFallbackFromKnowledge(
   }
 
   if (shouldReturnWeightLossPicks(userMessage, history)) {
-    return buildWeightLossPicksResponse();
+    return shouldDeliverDiscoveryResult(history, userMessage)
+      ? buildWeightLossPicksResponse(userMessage)
+      : buildWeightLossGuidanceResponse();
   }
 
   if (
@@ -563,47 +839,10 @@ function buildFallbackFromKnowledge(
     return buildAppetiteComplementResponse(userMessage, history);
   }
 
-  if (isMuscleQuery(userMessage) && !isWeightLossQuery(userMessage)) {
-    const peptideIds = getMuscleTopIds(6);
-    const compounds = peptideIds
-      .map((id) => getCompoundById(id))
-      .filter((compound): compound is NonNullable<typeof compound> => Boolean(compound));
-
-    return pepGuideResponseSchema.parse({
-      answer: [
-        'For muscle / lean-mass research, these GH-axis options come up most often (educational only — not a personal protocol):',
-        '',
-        ...compounds.map(
-          (compound) => `- **${compound.name}** — ${compound.summary}`,
-        ),
-        '',
-        'Click a dosing card below to compare partner price slots.',
-      ].join('\n'),
-      classification,
-      safetyAction: 'allow',
-      evidenceCards: compounds.map((compound) => ({
-        peptideId: compound.id,
-        name: compound.name,
-        aliases: compound.aliases,
-        researchCategory: compound.researchAreas[0] ?? 'Muscle research',
-        relevanceSummary: compound.summary,
-        proposedMechanism: compound.proposedMechanism,
-        humanEvidenceGrade: compound.humanEvidenceGrade,
-        preclinicalEvidenceGrade: compound.preclinicalEvidenceGrade,
-        regulatoryStatus: compound.regulatoryStatus,
-        regulatoryDetail: compound.regulatoryDetail,
-        knownRisks: compound.risks,
-        uncertainties: compound.uncertainties,
-        citationCount: compound.references.length,
-        lastReviewedAt: compound.lastReviewedAt,
-      })),
-      citations: compounds.flatMap((compound) => compound.references),
-      suggestedQuestions: [
-        'How do ipamorelin and CJC-1295 differ?',
-        'What are the main risks of IGF-1 LR3?',
-      ],
-      peptideIds,
-    });
+  if (shouldReturnMusclePicks(userMessage)) {
+    return shouldDeliverDiscoveryResult(history, userMessage)
+      ? buildMusclePicksResponse(classification, userMessage)
+      : buildMuscleGuidanceResponse(classification);
   }
 
   const groundingQuery = buildGroundingQuery(
@@ -616,17 +855,18 @@ function buildFallbackFromKnowledge(
 
   return pepGuideResponseSchema.parse({
     answer: [
-      'Based on PepGuide’s research knowledge base, here is an educational overview. This is not a personal treatment recommendation.',
+      compounds.length > 0
+        ? 'Here’s what usually comes up for that:'
+        : 'Not seeing a clean peptide match — try naming a compound or goal (fat loss, size, recovery).',
       '',
-      '## Relevant compounds',
-      '',
-      ...compounds.map(
-        (compound) =>
-          `- **${compound.name}** — ${compound.summary}\n  - Evidence: ${compound.humanEvidenceGrade.replace(/_/g, ' ')}\n  - Regulatory: ${compound.regulatoryDetail ?? compound.regulatoryStatus.replace(/_/g, ' ')}`,
+      ...compounds.slice(0, 4).map(
+        (compound) => `- **${compound.name}** — ${compound.summary}`,
       ),
       '',
-      'I can go deeper on mechanisms, evidence quality, or research dosing ranges for any of these.',
-    ].join('\n'),
+      compounds.length > 0 ? 'Want the short version on any of these?' : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
     classification,
     safetyAction: 'allow',
     evidenceCards: compounds.map((compound) => ({
@@ -689,7 +929,7 @@ function buildProUnlockResponse(isPro: boolean): PepGuideAiResponse {
   if (isPro) {
     return pepGuideResponseSchema.parse({
       answer:
-        'Guides and Protocols are already unlocked with your PepGuide Pro access. Open **Guides** for Skool-style video lessons by level, or **Protocols** for goal-built peptide stacks — both are in the PepGuide Pro section of the sidebar.',
+        'PepGuide Pro is already unlocked. Open **Education & Research** for video lessons, **Protocols** for goal-built stacks, and **Questions & Discussion** for the member community — all under PepGuide Pro in the sidebar.',
       classification: 'pro_content_inquiry',
       safetyAction: 'allow',
       evidenceCards: [],
@@ -733,38 +973,52 @@ export async function generateResearchResponse(
     return buildProUnlockResponse(Boolean(options.isPro));
   }
 
+  const softRedirectCategories = new Set([
+    'personalized_dosing_request',
+    'cycle_or_stack_construction',
+    'out_of_scope',
+  ]);
+  const isHardRefuse =
+    (classification.safetyAction === 'refuse' ||
+      classification.safetyAction === 'urgent_warning') &&
+    !softRedirectCategories.has(classification.category);
+
+  if (isHardRefuse) {
+    return buildRefusalResponse(
+      classification.category,
+      classification.safetyAction,
+    );
+  }
+
+  // Normalize slang / natural language into PepGuide goals before answering.
+  const { intent, usage: intentUsage } =
+    await summarizeResearchIntent(userMessage);
+
   if (
     classification.safetyAction === 'refuse' ||
     classification.safetyAction === 'urgent_warning'
   ) {
-    // Soft redirect: research goals / weight discovery still get educational picks.
-    if (
-      (classification.category === 'personalized_dosing_request' ||
-        classification.category === 'cycle_or_stack_construction' ||
-        classification.category === 'out_of_scope') &&
-      isDualWeightMuscleQuery(userMessage)
-    ) {
-      return buildDualGoalResponse();
+    const soft = routeFromIntent(intent, userMessage, priorTurns);
+    if (soft) {
+      return withUsage(soft, intentUsage);
     }
     if (
-      (classification.category === 'personalized_dosing_request' ||
-        classification.category === 'out_of_scope') &&
-      shouldReturnWeightLossPicks(userMessage, priorTurns)
-    ) {
-      return buildWeightLossPicksResponse();
-    }
-    if (
-      (classification.category === 'personalized_dosing_request' ||
-        classification.category === 'out_of_scope') &&
-      (isAppetiteComplementQuery(userMessage) ||
+      intent.goal !== 'off_topic' &&
+      (isDualWeightMuscleQuery(userMessage) ||
+        shouldReturnWeightLossPicks(userMessage, priorTurns) ||
+        shouldReturnMusclePicks(userMessage) ||
+        isAppetiteComplementQuery(userMessage) ||
         isMetabolicFollowUp(userMessage) ||
         isMuscleQuery(userMessage))
     ) {
-      return buildFallbackFromKnowledge(
-        userMessage,
-        classification.retrievalQuery,
-        'research_goal_exploration',
-        priorTurns,
+      return withUsage(
+        buildFallbackFromKnowledge(
+          userMessage,
+          intent.retrievalQuery || classification.retrievalQuery,
+          'research_goal_exploration',
+          priorTurns,
+        ),
+        intentUsage,
       );
     }
     return buildRefusalResponse(
@@ -773,35 +1027,60 @@ export async function generateResearchResponse(
     );
   }
 
-  const retrievalQuery = classification.retrievalQuery;
-
-  // Dual goals: one metabolic pick + one muscle pick (with dosing cards).
-  if (isDualWeightMuscleQuery(userMessage)) {
-    return buildDualGoalResponse();
+  if (intent.goal === 'off_topic') {
+    return withUsage(
+      buildRefusalResponse('out_of_scope', 'refuse'),
+      intentUsage,
+    );
   }
 
-  // Weight/fat-loss discovery: compact top 3 picks UI (including mid-chat).
-  if (shouldReturnWeightLossPicks(userMessage, priorTurns)) {
-    return buildWeightLossPicksResponse();
+  const retrievalQuery =
+    intent.retrievalQuery || classification.retrievalQuery;
+
+  // Route discovery asks from normalized intent (then keyword fallback).
+  const deliverResult = shouldDeliverDiscoveryResult(priorTurns, userMessage);
+  const routed =
+    routeFromIntent(intent, userMessage, priorTurns) ??
+    (isDualWeightMuscleQuery(userMessage)
+      ? buildDualGoalResponse()
+      : shouldReturnMusclePicks(userMessage)
+        ? deliverResult
+          ? buildMusclePicksResponse(classification.category, userMessage)
+          : buildMuscleGuidanceResponse(classification.category)
+        : shouldReturnWeightLossPicks(userMessage, priorTurns)
+          ? deliverResult
+            ? buildWeightLossPicksResponse(userMessage)
+            : buildWeightLossGuidanceResponse()
+          : null);
+
+  if (routed) {
+    return withUsage(routed, intentUsage);
   }
 
   const groundingQuery = buildGroundingQuery(
     userMessage,
-    retrievalQuery,
+    `${retrievalQuery} ${intent.keywords.join(' ')}`.trim(),
     priorTurns,
   );
 
   const apiKey = getOpenAiKey();
   if (!apiKey) {
-    return buildFallbackFromKnowledge(
-      userMessage,
-      retrievalQuery,
-      classification.category,
-      priorTurns,
+    return withUsage(
+      buildFallbackFromKnowledge(
+        userMessage,
+        retrievalQuery,
+        classification.category,
+        priorTurns,
+      ),
+      intentUsage,
     );
   }
 
-  const topicPivot = isTopicPivot(userMessage);
+  const topicPivot =
+    isTopicPivot(userMessage) ||
+    intent.goal === 'muscle' ||
+    intent.goal === 'recovery' ||
+    intent.goal === 'sleep';
   // On a clear topic change, don't feed the old weight-loss thread into the model.
   const historyForModel = topicPivot
     ? ([
@@ -814,18 +1093,21 @@ export async function generateResearchResponse(
     : priorTurns;
 
   let parsedContent: unknown;
-  let usage: TokenUsage | undefined;
+  let usage: TokenUsage | undefined = intentUsage;
   try {
     const client = new OpenAI({ apiKey });
-    const systemPrompt = buildSystemPrompt(
-      userMessage,
-      retrievalQuery,
-      priorTurns,
-    );
+    const systemPrompt = [
+      buildSystemPrompt(userMessage, retrievalQuery, priorTurns),
+      '',
+      'NORMALIZED USER INTENT (from classifier — follow this goal):',
+      `- Goal: ${intent.goal}`,
+      `- Summary: ${intent.summary}`,
+      `- Keywords: ${intent.keywords.join(', ')}`,
+    ].join('\n');
     const completion = await client.chat.completions.create({
       model: PEP_GUIDE_MODEL,
       temperature: 0.2,
-      max_tokens: 800,
+      max_tokens: 320,
       response_format: { type: 'json_object' },
       messages: [
         {
@@ -842,28 +1124,24 @@ export async function generateResearchResponse(
 
     const promptTokens = completion.usage?.prompt_tokens;
     const completionTokens = completion.usage?.completion_tokens;
-    if (
-      typeof promptTokens === 'number' ||
-      typeof completionTokens === 'number'
-    ) {
-      usage = {
-        inputTokens: promptTokens ?? 0,
-        outputTokens: completionTokens ?? 0,
-      };
-    } else {
-      const historyChars = historyForModel.reduce(
-        (sum, turn) => sum + turn.content.length,
-        0,
-      );
-      usage = {
-        inputTokens: estimateTokens(
-          `${systemPrompt}${userMessage}${historyChars}`,
-        ),
-        outputTokens: estimateTokens(
-          completion.choices[0]?.message?.content ?? '',
-        ),
-      };
-    }
+    const completionUsage: TokenUsage =
+      typeof promptTokens === 'number' || typeof completionTokens === 'number'
+        ? {
+            inputTokens: promptTokens ?? 0,
+            outputTokens: completionTokens ?? 0,
+          }
+        : {
+            inputTokens: estimateTokens(
+              `${systemPrompt}${userMessage}${historyForModel.reduce(
+                (sum, turn) => sum + turn.content.length,
+                0,
+              )}`,
+            ),
+            outputTokens: estimateTokens(
+              completion.choices[0]?.message?.content ?? '',
+            ),
+          };
+    usage = mergeUsage(intentUsage, completionUsage);
 
     const content = completion.choices[0]?.message?.content;
     if (!content) {
@@ -880,21 +1158,27 @@ export async function generateResearchResponse(
     parsedContent = JSON.parse(content);
   } catch (error) {
     console.error('OpenAI research generation failed', error);
-    return buildFallbackFromKnowledge(
-      userMessage,
-      retrievalQuery,
-      classification.category,
-      priorTurns,
+    return withUsage(
+      buildFallbackFromKnowledge(
+        userMessage,
+        retrievalQuery,
+        classification.category,
+        priorTurns,
+      ),
+      intentUsage,
     );
   }
 
   const parsed = pepGuideResponseSchema.safeParse(parsedContent);
   if (!parsed.success) {
-    return buildFallbackFromKnowledge(
-      userMessage,
-      retrievalQuery,
-      classification.category,
-      priorTurns,
+    return withUsage(
+      buildFallbackFromKnowledge(
+        userMessage,
+        retrievalQuery,
+        classification.category,
+        priorTurns,
+      ),
+      intentUsage,
     );
   }
 

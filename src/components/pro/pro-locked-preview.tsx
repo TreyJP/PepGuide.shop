@@ -7,8 +7,15 @@ import { PRO_BILLING } from '@/src/constants/billing';
 import { useUiStore } from '@/src/stores/ui-store';
 import { cn } from '@/src/lib/utils';
 
+export type ProFeatureName =
+  | 'Education & Research'
+  | 'Guides'
+  | 'Protocols'
+  | 'Forum'
+  | 'Questions & Discussion';
+
 export type ProLockedPreviewProps = {
-  feature: 'Guides' | 'Protocols';
+  feature: ProFeatureName;
   children: ReactNode;
   className?: string;
 };

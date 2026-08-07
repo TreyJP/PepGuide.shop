@@ -49,11 +49,11 @@ export function WeightLossReply({ peptideIds }: WeightLossReplyProps) {
         goalLabels={
           dualGoal ? ['Weight loss', 'Muscle / lean mass'] : undefined
         }
-        title={dualGoal ? 'One pick per goal' : 'Start low, then increase'}
+        title={dualGoal ? 'One pick per goal' : 'Options to compare'}
         subtitle={
           dualGoal
-            ? 'Primary research option for fat loss and for lean mass — educational ranges only, not a personal protocol.'
-            : undefined
+            ? 'Simple split: one fat-loss option and one size option. Research ranges only.'
+            : 'Plain research ranges — not a personal plan. Tap one for prices or add it to your cycle log.'
         }
         onSelect={openPrices}
         onAddToCycle={setCycleId}

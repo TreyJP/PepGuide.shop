@@ -19,11 +19,11 @@ export function ProUnlockCard() {
           PepGuide Pro
         </div>
         <h3 className="mt-3 font-[family-name:var(--font-display)] text-xl font-semibold tracking-tight text-foreground">
-          Unlock Guides & Protocols
+          Unlock PepGuide Pro
         </h3>
         <p className="mt-1.5 text-sm leading-relaxed text-foreground-secondary">
-          Those live inside PepGuide Pro — Skool-style video Guides and
-          goal-built Protocol stacks. Subscribe to open the full library.
+          Education & Research lessons, Protocol stacks, and Questions &
+          Discussion. Subscribe to open the full Pro library.
         </p>
       </div>
 
@@ -34,7 +34,7 @@ export function ProUnlockCard() {
               <BookOpen className="size-3.5" />
             </span>
             <span>
-              <span className="font-semibold">Guides</span>
+              <span className="font-semibold">Education & Research</span>
               <span className="text-foreground-secondary">
                 {' '}
                 — video lessons that teach the research workflow
@@ -76,7 +76,7 @@ export function ProUnlockCard() {
             </p>
           </div>
           <Button
-            onClick={() => openProSubscribeModal('Guides & Protocols')}
+            onClick={() => openProSubscribeModal('PepGuide Pro')}
             className="w-full sm:w-auto sm:min-w-[160px]"
           >
             Subscribe — {PRO_BILLING.priceLabel}

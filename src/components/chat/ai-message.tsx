@@ -17,6 +17,8 @@ export type AiMessageProps = {
   status?: MessageStatus;
   createdAt?: string;
   peptideIds?: string[];
+  suggestedQuestions?: string[];
+  onSelectQuestion?: (question: string) => void;
   onCopy?: () => void;
   onSave?: () => void;
   saved?: boolean;
@@ -43,6 +45,8 @@ export function AiMessage({
   status = 'complete',
   createdAt,
   peptideIds = [],
+  suggestedQuestions = [],
+  onSelectQuestion,
   onCopy,
   onSave,
   saved = false,
@@ -124,7 +128,8 @@ export function AiMessage({
         <div className="space-y-3">
           <div className="chat-ai-bubble px-4 py-3">
             <p className="text-sm leading-relaxed text-foreground">
-              Guides and Protocols are part of{' '}
+              Education & Research, Protocols, and Questions & Discussion are
+              part of{' '}
               <span className="font-semibold text-accent">PepGuide Pro</span>.
               Unlock them below to browse video lessons and goal-built stacks —
               or keep using free Chat and Library anytime.
@@ -153,6 +158,22 @@ export function AiMessage({
           </div>
           {!isStreaming && peptideIds.length > 0 ? (
             <WeightLossReply peptideIds={peptideIds} />
+          ) : null}
+          {!isStreaming &&
+          suggestedQuestions.length > 0 &&
+          onSelectQuestion ? (
+            <div className="flex flex-wrap gap-2">
+              {suggestedQuestions.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  onClick={() => onSelectQuestion(question)}
+                  className="rounded-full border border-accent/25 bg-accent-muted/40 px-3 py-1.5 text-left text-xs font-medium text-accent transition-colors hover:bg-accent-muted"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
           ) : null}
           {!isStreaming ? (
             <div className="flex items-center gap-1">

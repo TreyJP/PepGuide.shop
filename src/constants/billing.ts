@@ -3,11 +3,12 @@ export const PRO_BILLING = {
   priceUsd: 20,
   interval: 'month' as const,
   priceLabel: '$20/mo',
-  tagline: 'Video guides + goal-built peptide stacks',
+  tagline: 'Education, protocols, questions & discussion, and member ranking',
   features: [
-    'Skool-style video Guides by level',
+    'Education & Research video lessons',
     'Goal-built Protocol stacks',
-    'Library links from every stack',
+    'Questions & Discussion (post, search, reply)',
+    'Member activity ranks from chat count',
     'Cancel anytime',
   ],
 } as const;
