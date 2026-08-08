@@ -34,7 +34,7 @@ export const KNOWLEDGE_COMPOUNDS: KnowledgeCompound[] = [
   {
     id: 'cagrilintide',
     name: 'Cagrilintide',
-    aliases: ['AM833', 'Long-acting amylin analog'],
+    aliases: ['Cag', 'AM833', 'Long-acting amylin analog'],
     isPeptide: true,
     classification: 'Long-acting amylin receptor agonist peptide',
     categories: ['metabolic_weight'],

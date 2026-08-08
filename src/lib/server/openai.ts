@@ -4,17 +4,21 @@ import { PEP_GUIDE_MODEL } from '@/src/constants/ai';
 import {
   buildKnowledgeContext,
   filterPeptideIds,
+  findMentionedCompoundIds,
   getCompoundById,
+  getCompoundsByCategory,
   searchKnowledge,
 } from '@/src/data/knowledge';
 import { PICKS_ONLY_ANSWER, PRO_UNLOCK_ANSWER } from '@/src/constants/chat';
 import {
   findMentionedMetabolicIds,
   getAppetiteComplementIds,
+  getHungerGuideIds,
   getWeightLossGuideIds,
   METABOLIC_TIER_GUIDE,
 } from '@/src/data/knowledge/metabolic-guide';
 import { getMuscleTopIds } from '@/src/data/knowledge/muscle-guide';
+import type { KnowledgeCategory, KnowledgeCompound } from '@/src/data/knowledge/types';
 import { PEP_GUIDE_KNOWLEDGE_PREAMBLE } from '@/src/data/knowledge/system-context';
 import {
   classifyMessage,
@@ -89,6 +93,11 @@ function routeFromIntent(
     Boolean(priorGuidance) &&
     /\b(fat loss|metabolism peptides|GLP-1)\b/i.test(priorGuidance!);
 
+  // Already tried a peptide that wasn’t enough → next/add-on options, never repeat it.
+  if (isTriedCompoundFollowUp(userMessage, history)) {
+    return buildTriedCompoundFollowUpResponse(userMessage, history);
+  }
+
   switch (intent.goal) {
     case 'dual_weight_muscle':
       return buildDualGoalResponse();
@@ -101,8 +110,9 @@ function routeFromIntent(
         ? buildWeightLossPicksResponse(userMessage)
         : buildWeightLossGuidanceResponse();
     case 'appetite_complement':
-      // Don't let a hunger chip restart a new lane mid fat-loss discovery.
-      if (deliverResult && priorWasWeight) {
+      // Mid-discovery chip ("Hunger is my main issue") → appetite-focused picks.
+      // Post-trial hunger is handled above and never reaches here.
+      if (deliverResult && priorWasWeight && isDiscoveryHungerChip(userMessage)) {
         return buildWeightLossPicksResponse(userMessage);
       }
       if (deliverResult && priorWasMuscle) {
@@ -221,18 +231,134 @@ function isAppetiteComplementQuery(text: string): boolean {
   );
 }
 
+/** Discovery chips — not “I already tried X”. */
+function isDiscoveryHungerChip(text: string): boolean {
+  return /^(hunger is my main issue|overall fat-loss results|just show me the top options)\.?$/i.test(
+    text.trim(),
+  );
+}
+
+const DISSATISFACTION_RE =
+  /\b(still|not enough|wasn'?t enough|didn'?t (work|help|cut it|do (?:much|it|enough))|doesn'?t work|isn'?t (working|helping)|wasn'?t (working|helping)|need(?:s|ed)? more|add[- ]?on|on top|alongside|combine|hungry|sore|in pain|no (?:real )?gains?|no results?|barely (?:helped|working)|left me)\b/i;
+
+const TRIED_LANGUAGE_RE =
+  /\b(took|taking|tried|try(?:ing)?|been on|i'?m on|was on|using|used|ran|running)\b/i;
+
+/**
+ * User already tried any peptide and it wasn’t enough —
+ * suggest next / add-on options; never re-pitch the same compound.
+ */
+function isTriedCompoundFollowUp(
+  userMessage: string,
+  history: ResearchChatTurn[] = [],
+): boolean {
+  if (isDiscoveryHungerChip(userMessage)) return false;
+
+  // Pure explain/compare questions are not “tried and failed” follow-ups.
+  if (
+    /\b(how|why|mechanism|evidence|risk|side effect|compare|vs\.?|versus|differ|trial|study|what is)\b/i.test(
+      userMessage,
+    ) &&
+    !DISSATISFACTION_RE.test(userMessage)
+  ) {
+    return false;
+  }
+
+  const corpus = `${userMessage} ${history.map((turn) => turn.content).join(' ')}`;
+  const mentionedNow = findMentionedCompoundIds(userMessage);
+  const mentionedAny = findMentionedCompoundIds(corpus);
+  const dissatisfied = DISSATISFACTION_RE.test(userMessage);
+  const triedLanguage = TRIED_LANGUAGE_RE.test(userMessage);
+
+  if (mentionedNow.length > 0 && dissatisfied) return true;
+  if (triedLanguage && dissatisfied && mentionedAny.length > 0) return true;
+  if (
+    dissatisfied &&
+    (triedLanguage || /\bstill\b/i.test(userMessage)) &&
+    history.some(
+      (turn) => turn.role === 'assistant' && isDiscoveryResultTurn(turn.content),
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function collectTriedCompoundIds(
+  userMessage: string,
+  history: ResearchChatTurn[] = [],
+): string[] {
+  const fromMessage = findMentionedCompoundIds(userMessage);
+  if (fromMessage.length > 0) return fromMessage;
+  return findMentionedCompoundIds(
+    history.map((turn) => turn.content).join(' '),
+  );
+}
+
+function alternativesForTriedCompounds(
+  triedIds: string[],
+  userMessage: string,
+  limit = 4,
+): KnowledgeCompound[] {
+  const tried = new Set(triedIds);
+  const categories = new Set<KnowledgeCategory>();
+  for (const id of triedIds) {
+    getCompoundById(id)?.categories.forEach((category) =>
+      categories.add(category),
+    );
+  }
+
+  const orderedIds: string[] = [];
+
+  // Metabolic + residual appetite → amylin add-ons first (not another GLP-1).
+  if (
+    categories.has('metabolic_weight') &&
+    isAppetiteComplementQuery(userMessage)
+  ) {
+    orderedIds.push(...getAppetiteComplementIds(3));
+  } else if (categories.has('metabolic_weight')) {
+    orderedIds.push(...getWeightLossGuideIds(8));
+  }
+
+  if (
+    categories.has('gh_secretagogues') ||
+    isMuscleQuery(userMessage) ||
+    triedIds.some((id) => getMuscleTopIds(8).includes(id))
+  ) {
+    orderedIds.push(...getMuscleTopIds(8));
+  }
+
+  for (const category of categories) {
+    for (const compound of getCompoundsByCategory(category)) {
+      orderedIds.push(compound.id);
+    }
+  }
+
+  // Soft fallback from knowledge search using the complaint + lane.
+  for (const compound of searchKnowledge(userMessage, 10)) {
+    orderedIds.push(compound.id);
+  }
+
+  const unique = filterPeptideIds(orderedIds).filter((id) => !tried.has(id));
+  return unique
+    .map((id) => getCompoundById(id))
+    .filter((compound): compound is KnowledgeCompound => Boolean(compound))
+    .slice(0, limit);
+}
+
 /**
  * Weight/appetite follow-up on the CURRENT turn only.
  * Requires metabolic context so pivots like "build muscle instead" do not match.
  */
 function isMetabolicFollowUp(text: string): boolean {
   if (isMuscleQuery(text) && !isAppetiteComplementQuery(text)) return false;
+  if (isDiscoveryHungerChip(text)) return false;
 
   const metabolicContext =
     isWeightLossQuery(text) || findMentionedMetabolicIds(text).length > 0;
   if (!metabolicContext) return false;
 
-  return /\b(appetite|hunger|hungry|satiety|craving|still hungry|tried|add[- ]?on|alongside|on top|combine|combination|complement|pair(?:ed|ing)?(?:\s+with)?|not enough|didn'?t work|doesn'?t work|wasn'?t enough|left me|keep(?:s|ing)? me|residual)\b/i.test(
+  return /\b(appetite|hunger|hungry|satiety|craving|still hungry|took|taking|tried|add[- ]?on|alongside|on top|combine|combination|complement|pair(?:ed|ing)?(?:\s+with)?|not enough|didn'?t work|doesn'?t work|wasn'?t enough|left me|keep(?:s|ing)? me|residual)\b/i.test(
     text,
   );
 }
@@ -468,20 +594,26 @@ function buildSystemPrompt(
         : appetiteFollowUp
           ? [
               'APPETITE / COMPLEMENT FOLLOW-UP RULES (strict):',
-              '- Prefer cagrilintide (amylin path) as the main complement.',
-              '- 2–3 short sentences + peptideIds. No long mechanism essay.',
+              '- User already tried a metabolic option — acknowledge it by name.',
+              '- Lead with cagrilintide (cag) as the best hunger / satiety add-on (amylin path).',
+              '- NEVER tell them to take the same incretin again (reta/tirz/sema).',
+              '- Do not re-list the top GLP-1 tier list ahead of cag.',
+              '- 2–3 short sentences + peptideIds starting with cagrilintide.',
             ].join('\n')
           : weightQuery
             ? [
                 'WEIGHT-LOSS ANSWER RULES:',
                 '- Metabolic / fat-loss peptides only.',
+                '- If hunger / appetite is the main issue, lead with cagrilintide (cag).',
                 '- Name the top 1–3 options briefly; details live in the cards.',
+                '- If they say they already tried one and it was not enough, switch to an add-on path — do not repeat that compound.',
               ].join('\n')
             : '',
     'CONTENT RULES:',
     '- PEPTIDES ONLY from the knowledge context / dosing guide.',
     '- Always return peptideIds for recommended peptides (up to 6–8) for UI cards.',
     '- Stay on the user’s CURRENT research goal.',
+    '- TRIED-AND-NOT-ENOUGH (all peptides): if they already used a peptide and still have the problem, acknowledge it and suggest a next/add-on peer in the same lane. Never recommend the same peptide again as the answer (applies to reta, BPC, ipamorelin, TB-500, etc.).',
     '- Never invent personal prescriptions or injection technique steps.',
     '',
     'KNOWLEDGE BASE CONTEXT:',
@@ -613,14 +745,22 @@ function buildWeightLossPicksResponse(
   );
   const simpleStart =
     /\b(simple|starter|starting|beginner|milder|easier)\b/i.test(userMessage);
-  const peptideIds = getWeightLossGuideIds(8);
+  const tried = DISSATISFACTION_RE.test(userMessage)
+    ? findMentionedCompoundIds(userMessage)
+    : [];
+  const baseIds = appetiteFocus
+    ? getHungerGuideIds(8)
+    : getWeightLossGuideIds(8);
+  const peptideIds = tried.length
+    ? baseIds.filter((id) => !tried.includes(id))
+    : baseIds;
   // Keep order from guide; light intro copy only.
   const cardSource = peptideIds
     .map((id) => getCompoundById(id))
     .filter((compound): compound is NonNullable<typeof compound> => Boolean(compound));
 
   const lead = appetiteFocus
-    ? 'Got it — if hunger is the main issue, these are the fat-loss research options people usually start comparing:'
+    ? 'Got it — for **hunger**, research usually leads with **cagrilintide (cag)** on the satiety / amylin path. Peers to compare are below:'
     : simpleStart
       ? 'Cool — here’s a simple shortlist to start with. Cards below have the research ranges:'
       : 'Here are the top fat-loss research options to compare. Keep it simple — cards below have the ranges:';
@@ -647,10 +787,15 @@ function buildWeightLossPicksResponse(
     })),
     citations: cardSource.flatMap((compound) => compound.references),
     // Terminal prompts — don’t reopen the discovery quiz.
-    suggestedQuestions: [
-      'Explain the #1 option in plain English',
-      'What if I’m still hungry on the top option?',
-    ],
+    suggestedQuestions: appetiteFocus
+      ? [
+          'Tell me more about cagrilintide for hunger',
+          'How is cag researched with semaglutide?',
+        ]
+      : [
+          'Explain the #1 option in plain English',
+          'What if I’m still hungry on the top option?',
+        ],
     peptideIds,
   });
 }
@@ -662,7 +807,14 @@ function buildMusclePicksResponse(
   const recoveryFocus = /\b(recover(?:y|ing)?|sore|training)\b/i.test(
     userMessage,
   );
-  const peptideIds = getMuscleTopIds(6);
+  const tried = DISSATISFACTION_RE.test(userMessage)
+    ? findMentionedCompoundIds(userMessage)
+    : [];
+  const peptideIds = (
+    tried.length
+      ? getMuscleTopIds(6).filter((id) => !tried.includes(id))
+      : getMuscleTopIds(6)
+  );
   const compounds = peptideIds
     .map((id) => getCompoundById(id))
     .filter((compound): compound is NonNullable<typeof compound> => Boolean(compound));
@@ -753,39 +905,151 @@ function buildDualGoalResponse(): PepGuideAiResponse {
   });
 }
 
+function buildTriedCompoundFollowUpResponse(
+  userMessage: string,
+  history: ResearchChatTurn[],
+): PepGuideAiResponse {
+  const triedIds = collectTriedCompoundIds(userMessage, history);
+  const metabolicSet = new Set(getWeightLossGuideIds(20));
+  const triedMetabolic = triedIds.filter((id) => metabolicSet.has(id));
+
+  // Metabolic + appetite residual → specialized amylin add-on path.
+  if (
+    triedMetabolic.length > 0 &&
+    (isAppetiteComplementQuery(userMessage) ||
+      /\b(hungry|appetite|satiety|craving)\b/i.test(userMessage))
+  ) {
+    return buildAppetiteComplementResponse(userMessage, history);
+  }
+
+  const alternatives = alternativesForTriedCompounds(
+    triedIds,
+    userMessage,
+    4,
+  );
+  const triedLabel =
+    triedIds
+      .map((id) => getCompoundById(id)?.name)
+      .filter(Boolean)
+      .slice(0, 2)
+      .join(' / ') || 'that option';
+
+  if (alternatives.length === 0) {
+    return pepGuideResponseSchema.parse({
+      answer: [
+        `Got it — if **${triedLabel}** wasn’t enough, research usually looks at a **different option in the same lane**, not restarting with the same peptide.`,
+        '',
+        'Tell me the goal you’re still chasing (recovery, size, sleep, etc.) and I’ll shortlist peers.',
+        '',
+        'Research framing only.',
+      ].join('\n'),
+      classification: 'compound_comparison',
+      safetyAction: 'allow',
+      evidenceCards: [],
+      citations: [],
+      suggestedQuestions: [
+        'What recovery peptides are researched next after BPC-157?',
+        'What GH peptides pair with ipamorelin in research?',
+      ],
+      peptideIds: [],
+    });
+  }
+
+  const primary = alternatives[0];
+  const secondary = alternatives[1];
+  const peptideIds = filterPeptideIds(alternatives.map((c) => c.id));
+
+  return pepGuideResponseSchema.parse({
+    answer: [
+      `Got it — if **${triedLabel}** didn’t get you there, research usually looks at a **next / add-on option**, not the same peptide again.`,
+      '',
+      primary
+        ? `- **${primary.name}** is a common peer discussed next in that lane.`
+        : '',
+      secondary
+        ? `- **${secondary.name}** is another option people compare alongside it.`
+        : '',
+      '',
+      'Research framing only — not a personal stack plan.',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    classification: 'compound_comparison',
+    safetyAction: 'allow',
+    evidenceCards: alternatives.map((compound) => ({
+      peptideId: compound.id,
+      name: compound.name,
+      aliases: compound.aliases,
+      researchCategory: compound.researchAreas[0] ?? 'Research',
+      relevanceSummary: compound.summary,
+      proposedMechanism: compound.proposedMechanism,
+      humanEvidenceGrade: compound.humanEvidenceGrade,
+      preclinicalEvidenceGrade: compound.preclinicalEvidenceGrade,
+      regulatoryStatus: compound.regulatoryStatus,
+      regulatoryDetail: compound.regulatoryDetail,
+      knownRisks: compound.risks,
+      uncertainties: compound.uncertainties,
+      citationCount: compound.references.length,
+      lastReviewedAt: compound.lastReviewedAt,
+    })),
+    citations: alternatives.flatMap((compound) => compound.references),
+    suggestedQuestions: [
+      `How does ${primary.name} differ from ${triedLabel}?`,
+      'What risks should I compare next?',
+    ],
+    peptideIds,
+  });
+}
+
 function buildAppetiteComplementResponse(
   userMessage: string,
   history: ResearchChatTurn[],
 ): PepGuideAiResponse {
   const historyText = history.map((turn) => turn.content).join(' ');
-  const tried = findMentionedMetabolicIds(`${userMessage} ${historyText}`);
+  const tried = [
+    ...findMentionedCompoundIds(`${userMessage} ${historyText}`),
+    ...findMentionedMetabolicIds(`${userMessage} ${historyText}`),
+  ].filter((id, index, all) => all.indexOf(id) === index);
+  // Prefer compounds named in the current message (what they already tried).
+  const triedNow = findMentionedCompoundIds(userMessage);
+  const triedPrimary = triedNow[0] ?? tried[0];
   const triedLabel =
+    (triedPrimary ? getCompoundById(triedPrimary)?.name : null) ||
     tried
       .map((id) => getCompoundById(id)?.name)
       .filter(Boolean)
       .slice(0, 2)
-      .join(' / ') || 'an incretin agonist';
+      .join(' / ') ||
+    'that incretin';
 
-  const complementIds = getAppetiteComplementIds(2);
-  const peptideIds = filterPeptideIds([
-    ...complementIds,
-    ...getWeightLossGuideIds(8).filter((id) => !tried.includes(id)),
-  ]).slice(0, 8);
+  // Add-on path only — do not re-list GLP-1/GIP agonists they already tried.
+  const complementIds = getAppetiteComplementIds(2).filter(
+    (id) => !tried.includes(id),
+  );
+  const peptideIds = filterPeptideIds(complementIds).slice(0, 4);
   const compounds = peptideIds
     .map((id) => getCompoundById(id))
-    .filter((compound): compound is NonNullable<typeof compound> => Boolean(compound));
+    .filter((compound): compound is NonNullable<typeof compound> =>
+      Boolean(compound),
+    );
 
-  const primary = compounds.find((c) => c.id === complementIds[0]) ?? compounds[0];
-  const secondary = compounds.find((c) => c.id === complementIds[1]) ?? compounds[1];
+  const primary =
+    compounds.find((c) => c.id === complementIds[0]) ?? compounds[0];
+  const secondary =
+    compounds.find((c) => c.id === complementIds[1]) ?? compounds[1];
 
   return pepGuideResponseSchema.parse({
     answer: [
-      `If appetite is still loud on **${triedLabel}**, research usually looks at a different satiety path — not another GLP-1.`,
+      `Got it — if **${triedLabel}** still left appetite loud, the best researched hunger add-on is usually **cagrilintide (cag)** — amylin satiety path, not another GLP-1 restart.`,
       '',
-      primary ? `- **${primary.name}** (amylin) is the common add-on discussed.` : '',
-      secondary ? `- **${secondary.name}** is another option in that lane.` : '',
+      primary
+        ? `- **${primary.name}**${primary.id === 'cagrilintide' ? ' (cag)' : ''} is the top hunger / satiety complement discussed on top of an incretin.`
+        : '',
+      secondary
+        ? `- **${secondary.name}** is another option in that add-on lane.`
+        : '',
       '',
-      'Research framing only.',
+      'Research framing only — not a personal stack plan.',
     ]
       .filter(Boolean)
       .join('\n'),
@@ -824,6 +1088,10 @@ function buildFallbackFromKnowledge(
 ): PepGuideAiResponse {
   if (isDualWeightMuscleQuery(userMessage)) {
     return buildDualGoalResponse();
+  }
+
+  if (isTriedCompoundFollowUp(userMessage, history)) {
+    return buildTriedCompoundFollowUpResponse(userMessage, history);
   }
 
   if (shouldReturnWeightLossPicks(userMessage, history)) {

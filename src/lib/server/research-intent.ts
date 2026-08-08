@@ -50,7 +50,7 @@ Goal rules:
 - muscle: add size, bulk, gains, hypertrophy, lean mass, GH secretagogues, get bigger, put on mass
 - weight_loss: lose fat/weight, obesity, GLP-1/incretin metabolic fat loss
 - dual_weight_muscle: BOTH fat loss AND muscle/size in one ask, or recomp
-- appetite_complement: still hungry / need appetite add-on on an incretin
+- appetite_complement: already tried an incretin (reta/tirz/sema etc.) and still hungry / need an add-on ON TOP — not another GLP-1 restart
 - recovery: injury, healing, joints, BPC/TB-style recovery
 - sleep: sleep, circadian
 - cognitive: focus, memory, nootropics-as-peptides
@@ -60,7 +60,9 @@ Goal rules:
 - general: peptide research that does not fit above
 - off_topic: clearly unrelated (sports scores, coding homework, poems)
 
-Map slang to goals (e.g. "add size" → muscle; "get shredded" → weight_loss).
+Map slang to goals (e.g. "add size" → muscle; "get shredded" → weight_loss; "reta" → retatrutide; "bpc" → BPC-157; "ipa" → ipamorelin).
+If the user says they took/tried ANY peptide and it was not enough / still has the problem → keep the same research lane but recommend a NEXT or ADD-ON option. NEVER restart with the same compound as the answer.
+Examples: still hungry on reta → amylin add-on; tried BPC and still sore → TB-500 / related recovery peers; tried ipamorelin with weak results → CJC / sermorelin peers.
 Never invent personal dosing protocols.`;
 
 function isResearchGoal(value: unknown): value is ResearchGoal {
@@ -101,11 +103,21 @@ function heuristicIntent(userMessage: string): ResearchIntent {
       text,
     );
   const weight =
-    /\b(lose\s+weight|weight\s*loss|losing\s+weight|fat\s*loss|lose\s+fat|obesity|obese|overweight|glp-?1|retatrutide|semaglutide|tirzepatide|slim\s+down|burn\s+fat|cut\s+fat|get\s+shredded)\b/i.test(
+    /\b(lose\s+weight|weight\s*loss|losing\s+weight|fat\s*loss|lose\s+fat|obesity|obese|overweight|glp-?1|retatrutide|\breta\b|semaglutide|\bsema\b|tirzepatide|\btirz\b|slim\s+down|burn\s+fat|cut\s+fat|get\s+shredded)\b/i.test(
       text,
     );
   const appetite =
-    /\b(appetite|hunger|hungry|satiety|craving|still hungry)\b/i.test(text);
+    /\b(appetite|hunger|hungry|satiety|craving|still hungry|left me hungry)\b/i.test(
+      text,
+    );
+  const namedIncretin =
+    /\b(retatrutide|\breta\b|tirzepatide|\btirz\b|semaglutide|\bsema\b|ozempic|wegovy|mounjaro|zepbound)\b/i.test(
+      text,
+    );
+  const triedNotEnough =
+    /\b(took|taking|tried|been on|i'?m on|was on|using|used|not enough|wasn'?t enough|didn'?t (work|help)|still|on top|add[- ]?on|alongside)\b/i.test(
+      text,
+    );
   const recomp = /\b(recomp|recompos(?:e|ition)|body\s*recomp)\b/i.test(text);
 
   if (recomp || (muscle && weight)) {
@@ -117,12 +129,14 @@ function heuristicIntent(userMessage: string): ResearchIntent {
         'weight loss muscle lean mass retatrutide ipamorelin cjc-1295',
     };
   }
-  if (appetite && (weight || /\b(retatrutide|tirzepatide|semaglutide)\b/i.test(text))) {
+  // Tried an incretin / still hungry → add-on path (not another GLP-1 restart).
+  if (appetite && (namedIncretin || (weight && triedNotEnough))) {
     return {
       goal: 'appetite_complement',
-      keywords: ['appetite', 'satiety', 'cagrilintide', 'amylin'],
-      summary: 'User wants appetite-complement peptide research.',
-      retrievalQuery: 'appetite satiety cagrilintide amylin complement',
+      keywords: ['appetite', 'satiety', 'cagrilintide', 'amylin', 'add-on'],
+      summary:
+        'User already tried a metabolic option and needs an appetite add-on path.',
+      retrievalQuery: 'appetite satiety cagrilintide amylin complement add-on',
     };
   }
   if (muscle) {

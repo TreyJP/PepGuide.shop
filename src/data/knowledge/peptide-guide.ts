@@ -27,7 +27,7 @@ export const PEPTIDE_GUIDE: PeptideGuideEntry[] = [
     id: "cagrilintide",
     name: "Cagrilintide",
     mainEffects: ["Appetite suppression", "Satiety", "Weight loss (esp. with GLP-1)"],
-    why: "Amylin analog; strong in combo (CagriSema).",
+    why: "Best hunger / satiety-path peptide (amylin); strong alone and in combo (CagriSema).",
     researchDosing: "Start low weekly → raise only if needed (trials often → ~2.4 mg).",
     evidenceNote: "Moderate human",
     categories: ["metabolic_weight"],

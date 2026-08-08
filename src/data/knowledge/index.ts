@@ -19,6 +19,7 @@ export {
   getPeptideGuideById,
   getPeptideGuideByIds,
 } from './peptide-guide';
+export { findMentionedCompoundIds } from './mentions';
 
 const CATEGORY_LABELS: Record<KnowledgeCategory, string> = {
   metabolic_weight: 'Metabolic / weight research',
@@ -342,9 +343,11 @@ function scoreCompound(compound: KnowledgeCompound, query: string): number {
             q,
           );
         if (appetiteFocus) {
-          // Prefer amylin / satiety complements over re-ranking the same top incretins.
-          if (compound.id === 'cagrilintide' || compound.id === 'amycretin') {
-            score += 55;
+          // Cagrilintide (cag) is the top hunger / satiety pick.
+          if (compound.id === 'cagrilintide') {
+            score += 80;
+          } else if (compound.id === 'amycretin') {
+            score += 45;
           } else if (METABOLIC_SECONDARY.has(compound.id)) {
             score += 25;
           } else if (METABOLIC_PRIMARY.has(compound.id)) {

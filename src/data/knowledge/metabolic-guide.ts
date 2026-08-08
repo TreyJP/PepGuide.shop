@@ -1,3 +1,5 @@
+import { findMentionedCompoundIds } from './mentions';
+
 export type EfficacyTier = 'S' | 'A' | 'B' | 'C';
 
 export type MetabolicGuideEntry = {
@@ -43,7 +45,7 @@ export const METABOLIC_TIER_GUIDE: MetabolicGuideEntry[] = [
     id: 'cagrilintide',
     name: 'Cagrilintide',
     tier: 'A',
-    why: 'Amylin analog; strong in combo (CagriSema).',
+    why: 'Best hunger / satiety-path peptide (amylin); strong alone and in combo (CagriSema).',
     researchDosing: 'Start low weekly → raise only if needed (trials often → ~2.4 mg).',
     evidenceNote: 'Moderate human',
   },
@@ -152,7 +154,7 @@ export function getWeightLossGuideIds(limit = 8): string[] {
     .map((entry) => entry.id);
 }
 
-/** Amylin / appetite-complement peptide options researched alongside incretins. */
+/** Amylin / appetite-complement peptide options — cagrilintide (cag) first for hunger. */
 export function getAppetiteComplementIds(limit = 3): string[] {
   const preferred = ['cagrilintide', 'amycretin'];
   return preferred
@@ -160,12 +162,21 @@ export function getAppetiteComplementIds(limit = 3): string[] {
     .slice(0, limit);
 }
 
-/** Match metabolic guide compounds mentioned in free text. */
+/**
+ * Hunger / satiety shortlist — cagrilintide leads; incretins follow as peers.
+ */
+export function getHungerGuideIds(limit = 8): string[] {
+  const hungerFirst = ['cagrilintide', 'amycretin'];
+  const rest = getWeightLossGuideIds(12).filter(
+    (id) => !hungerFirst.includes(id),
+  );
+  return [...hungerFirst, ...rest]
+    .filter((id) => METABOLIC_TIER_GUIDE.some((entry) => entry.id === id))
+    .slice(0, limit);
+}
+
+/** Match metabolic guide compounds mentioned in free text (incl. slang). */
 export function findMentionedMetabolicIds(text: string): string[] {
-  const lower = text.toLowerCase();
-  return METABOLIC_TIER_GUIDE.filter((entry) => {
-    if (lower.includes(entry.id)) return true;
-    if (lower.includes(entry.name.toLowerCase())) return true;
-    return false;
-  }).map((entry) => entry.id);
+  const metabolicIds = new Set(METABOLIC_TIER_GUIDE.map((entry) => entry.id));
+  return findMentionedCompoundIds(text).filter((id) => metabolicIds.has(id));
 }
