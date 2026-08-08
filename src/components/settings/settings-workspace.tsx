@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import '@/src/components/settings/settings-designs.css';
 import { SetDesignAtlas } from '@/src/components/settings/designs/set-design-atlas';
 import { BRAND } from '@/src/constants/brand';
+import { PRO_COMING_SOON } from '@/src/constants/billing';
 import { authService } from '@/src/services/auth';
 import { getFirebaseAuth } from '@/src/services/firebase/config';
 import { useAuthStore } from '@/src/stores/auth-store';
@@ -120,6 +121,7 @@ export function SettingsWorkspace() {
           deleting={deleting}
           billingBusy={billingBusy}
           billingError={billingError}
+          proComingSoon={PRO_COMING_SOON}
           onSignOut={() => void handleSignOut()}
           onDeleteAccount={() => void handleDeleteAccount()}
           onSubscribePro={() => openProSubscribeModal('PepGuide Pro')}

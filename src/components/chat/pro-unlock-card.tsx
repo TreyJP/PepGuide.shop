@@ -3,7 +3,7 @@
 import { BookOpen, Check, FlaskConical, Sparkles } from 'lucide-react';
 
 import { Button } from '@/src/components/ui/button';
-import { PRO_BILLING } from '@/src/constants/billing';
+import { PRO_BILLING, PRO_COMING_SOON } from '@/src/constants/billing';
 import { useUiStore } from '@/src/stores/ui-store';
 
 export function ProUnlockCard() {
@@ -19,11 +19,12 @@ export function ProUnlockCard() {
           PepGuide Pro
         </div>
         <h3 className="mt-3 font-[family-name:var(--font-display)] text-xl font-semibold tracking-tight text-foreground">
-          Unlock PepGuide Pro
+          {PRO_COMING_SOON ? 'PepGuide Pro is coming soon' : 'Unlock PepGuide Pro'}
         </h3>
         <p className="mt-1.5 text-sm leading-relaxed text-foreground-secondary">
-          Education & Research lessons and Protocol stacks. Subscribe to open
-          the full Pro library.
+          {PRO_COMING_SOON
+            ? 'Education & Research lessons and Protocol stacks are on the way. Free Chat, Questions & Discussion, and Library stay available now.'
+            : 'Education & Research lessons and Protocol stacks. Subscribe to open the full Pro library.'}
         </p>
       </div>
 
@@ -72,20 +73,27 @@ export function ProUnlockCard() {
               Membership
             </p>
             <p className="mt-0.5 font-[family-name:var(--font-display)] text-2xl font-semibold text-foreground">
-              {PRO_BILLING.priceLabel}
+              {PRO_COMING_SOON ? 'Soon' : PRO_BILLING.priceLabel}
             </p>
           </div>
-          <Button
-            onClick={() => openProSubscribeModal('PepGuide Pro')}
-            className="w-full sm:w-auto sm:min-w-[160px]"
-          >
-            Subscribe — {PRO_BILLING.priceLabel}
-          </Button>
+          {PRO_COMING_SOON ? (
+            <Button disabled className="w-full sm:w-auto sm:min-w-[160px]">
+              Coming soon
+            </Button>
+          ) : (
+            <Button
+              onClick={() => openProSubscribeModal('PepGuide Pro')}
+              className="w-full sm:w-auto sm:min-w-[160px]"
+            >
+              Subscribe — {PRO_BILLING.priceLabel}
+            </Button>
+          )}
         </div>
 
         <p className="text-xs text-foreground-secondary">
           Free Chat, Questions & Discussion, Library, Cycle, and Calculator stay
-          available. Cancel anytime.
+          available.
+          {PRO_COMING_SOON ? null : ' Cancel anytime.'}
         </p>
       </div>
     </div>

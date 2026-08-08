@@ -12,6 +12,7 @@ export function SetDesignAtlas({
   deleting,
   billingBusy,
   billingError,
+  proComingSoon,
   onSignOut,
   onDeleteAccount,
   onSubscribePro,
@@ -57,7 +58,11 @@ export function SetDesignAtlas({
               </li>
             </ul>
             <div className="set-atlas__billing">
-              {isPro ? (
+              {proComingSoon && !isPro ? (
+                <button type="button" className="set-btn set-btn--navy" disabled>
+                  PepGuide Pro — Coming soon
+                </button>
+              ) : isPro ? (
                 <button
                   type="button"
                   className="set-btn set-btn--navy"

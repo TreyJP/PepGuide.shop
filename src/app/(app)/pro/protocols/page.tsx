@@ -1,11 +1,18 @@
 'use client';
 
+import { ProComingSoon } from '@/src/components/pro/pro-coming-soon';
 import { ProtocolsPanel } from '@/src/components/pro/protocols-panel';
 import { ProLockedPreview } from '@/src/components/pro/pro-locked-preview';
+import { PRO_COMING_SOON } from '@/src/constants/billing';
+import { useAdminAccess } from '@/src/hooks/use-admin-access';
 import { useProAccess } from '@/src/hooks/use-pro-access';
 
 export default function ProProtocolsPage() {
   const { loading, isPro } = useProAccess();
+  const { isAdmin, loading: adminLoading } = useAdminAccess();
+  const waiting = loading || adminLoading;
+  const showComingSoon = PRO_COMING_SOON && !isAdmin;
+  const canAccess = isPro || isAdmin;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -20,9 +27,11 @@ export default function ProProtocolsPage() {
 
       <div className="flex-1 overflow-y-auto overscroll-contain p-4 pb-8 sm:p-6">
         <div className="mx-auto w-full max-w-5xl">
-          {loading ? (
+          {waiting ? (
             <p className="text-sm text-foreground-secondary">Loading…</p>
-          ) : isPro ? (
+          ) : showComingSoon ? (
+            <ProComingSoon feature="Protocols" />
+          ) : canAccess ? (
             <ProtocolsPanel />
           ) : (
             <ProLockedPreview feature="Protocols">

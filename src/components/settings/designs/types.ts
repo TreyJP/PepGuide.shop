@@ -6,6 +6,7 @@ export type SettingsDesignViewProps = {
   deleting: boolean;
   billingBusy: boolean;
   billingError: string | null;
+  proComingSoon: boolean;
   onSignOut: () => void;
   onDeleteAccount: () => void;
   onSubscribePro: () => void;

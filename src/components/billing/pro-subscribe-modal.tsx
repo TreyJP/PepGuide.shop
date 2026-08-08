@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { ProExplainerVideo } from '@/src/components/billing/pro-explainer-video';
 import { Button } from '@/src/components/ui/button';
-import { PRO_BILLING } from '@/src/constants/billing';
+import { PRO_BILLING, PRO_COMING_SOON } from '@/src/constants/billing';
 import { getFirebaseAuth } from '@/src/services/firebase/config';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useUiStore } from '@/src/stores/ui-store';
@@ -23,6 +23,10 @@ export function ProSubscribeModal() {
 
   useEffect(() => {
     if (!open) return;
+    if (PRO_COMING_SOON) {
+      closeProSubscribeModal();
+      return;
+    }
     setError(null);
     setLoading(false);
     const onKeyDown = (event: KeyboardEvent) => {
@@ -37,7 +41,7 @@ export function ProSubscribeModal() {
     };
   }, [open, closeProSubscribeModal]);
 
-  if (!open) return null;
+  if (!open || PRO_COMING_SOON) return null;
 
   const handleSubscribe = async () => {
     if (!user) {

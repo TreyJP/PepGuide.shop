@@ -21,6 +21,7 @@ import { useEffect } from 'react';
 import { Logo } from '@/src/components/brand/logo';
 import { ChatHistoryNav } from '@/src/components/layout/chat-history-nav';
 import { Button } from '@/src/components/ui/button';
+import { PRO_COMING_SOON } from '@/src/constants/billing';
 import { useAdminAccess } from '@/src/hooks/use-admin-access';
 import { useProAccess } from '@/src/hooks/use-pro-access';
 import { cn } from '@/src/lib/utils';
@@ -46,6 +47,7 @@ function NavLink({
   icon: Icon,
   active,
   locked,
+  comingSoon,
   onNavigate,
 }: {
   href: string;
@@ -53,16 +55,24 @@ function NavLink({
   icon: typeof MessageSquare;
   active: boolean;
   locked?: boolean;
+  comingSoon?: boolean;
   onNavigate?: () => void;
 }) {
+  const muted = locked || comingSoon;
   return (
     <Link
       href={href}
-      title={locked ? 'PepGuide Pro required' : undefined}
+      title={
+        comingSoon
+          ? 'Coming soon'
+          : locked
+            ? 'PepGuide Pro required'
+            : undefined
+      }
       onClick={onNavigate}
       className={cn(
         'flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium transition-colors',
-        locked
+        muted
           ? active
             ? 'bg-surface-secondary text-foreground-secondary/55'
             : 'text-foreground-secondary/45 hover:bg-surface-secondary/70 hover:text-foreground-secondary/60'
@@ -71,9 +81,15 @@ function NavLink({
             : 'text-foreground-secondary hover:bg-surface-secondary hover:text-foreground',
       )}
     >
-      <Icon className={cn('size-4 shrink-0', locked && 'opacity-60')} />
+      <Icon className={cn('size-4 shrink-0', muted && 'opacity-60')} />
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {locked ? <Lock className="size-3.5 shrink-0 opacity-70" /> : null}
+      {comingSoon ? (
+        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground-secondary/80">
+          Soon
+        </span>
+      ) : locked ? (
+        <Lock className="size-3.5 shrink-0 opacity-70" />
+      ) : null}
     </Link>
   );
 }
@@ -87,7 +103,8 @@ export function AppSidebar() {
   const closeSidebar = useUiStore((state) => state.closeSidebar);
   const { isAdmin } = useAdminAccess();
   const { isPro, loading: proLoading } = useProAccess();
-  const proLocked = !proLoading && !isPro;
+  const proComingSoon = PRO_COMING_SOON && !isAdmin;
+  const proLocked = !PRO_COMING_SOON && !proLoading && !isPro;
 
   useEffect(() => {
     closeSidebar();
@@ -162,6 +179,7 @@ export function AppSidebar() {
                   icon={icon}
                   active={active}
                   locked={proLocked}
+                  comingSoon={proComingSoon}
                   onNavigate={closeSidebar}
                 />
               );

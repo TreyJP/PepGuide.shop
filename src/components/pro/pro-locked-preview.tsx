@@ -3,7 +3,8 @@
 import { Lock } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 
-import { PRO_BILLING } from '@/src/constants/billing';
+import { ProComingSoon } from '@/src/components/pro/pro-coming-soon';
+import { PRO_BILLING, PRO_COMING_SOON } from '@/src/constants/billing';
 import { useUiStore } from '@/src/stores/ui-store';
 import { cn } from '@/src/lib/utils';
 
@@ -22,7 +23,7 @@ export type ProLockedPreviewProps = {
 
 /**
  * Shows Pro content as a greyed/blurred teaser. Interaction is blocked;
- * clicking anywhere re-opens the subscribe modal.
+ * clicking opens subscribe — or Coming soon while PRO_COMING_SOON is on.
  */
 export function ProLockedPreview({
   feature,
@@ -34,8 +35,17 @@ export function ProLockedPreview({
   );
 
   useEffect(() => {
+    if (PRO_COMING_SOON) return;
     openProSubscribeModal(feature);
   }, [feature, openProSubscribeModal]);
+
+  if (PRO_COMING_SOON) {
+    return (
+      <div className={className}>
+        <ProComingSoon feature={feature} />
+      </div>
+    );
+  }
 
   return (
     <div className={cn('relative isolate min-h-[320px] sm:min-h-[420px]', className)}>
