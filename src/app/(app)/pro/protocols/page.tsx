@@ -18,7 +18,7 @@ export default function ProProtocolsPage() {
         </p>
       </header>
 
-      <div className="flex-1 overflow-y-auto overscroll-contain p-3 pb-6 sm:p-6">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-4 pb-8 sm:p-6">
         <div className="mx-auto w-full max-w-5xl">
           {loading ? (
             <p className="text-sm text-foreground-secondary">Loading…</p>

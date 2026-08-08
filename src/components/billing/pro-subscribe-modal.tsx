@@ -3,6 +3,7 @@
 import { Check, Sparkles, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { ProExplainerVideo } from '@/src/components/billing/pro-explainer-video';
 import { Button } from '@/src/components/ui/button';
 import { PRO_BILLING } from '@/src/constants/billing';
 import { getFirebaseAuth } from '@/src/services/firebase/config';
@@ -42,7 +43,7 @@ export function ProSubscribeModal() {
     if (!user) {
       closeProSubscribeModal();
       openSignInModal(
-        'Sign in to subscribe to PepGuide Pro and unlock Education & Research, Protocols, and Questions & Discussion.',
+        'Sign in to subscribe to PepGuide Pro and unlock Education & Research and Protocols.',
       );
       return;
     }
@@ -87,14 +88,14 @@ export function ProSubscribeModal() {
       onClick={closeProSubscribeModal}
     >
       <div
-        className="relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-[22px] border border-border bg-surface shadow-xl"
+        className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[22px] border border-border bg-surface shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="bg-[linear-gradient(160deg,color-mix(in_srgb,var(--accent)_16%,transparent),transparent_70%)] px-6 pb-5 pt-6">
           <button
             type="button"
             onClick={closeProSubscribeModal}
-            className="absolute right-3 top-3 rounded-[10px] p-2 text-foreground-secondary hover:bg-surface-secondary hover:text-foreground"
+            className="absolute right-3 top-3 z-10 rounded-[10px] p-2 text-foreground-secondary hover:bg-surface-secondary hover:text-foreground"
             aria-label="Close"
           >
             <X className="size-4" />
@@ -106,14 +107,16 @@ export function ProSubscribeModal() {
           </div>
           <h2
             id="pro-subscribe-title"
-            className="mt-3 font-[family-name:var(--font-display)] text-2xl font-semibold text-foreground"
+            className="mt-3 pr-8 font-[family-name:var(--font-display)] text-2xl font-semibold text-foreground"
           >
             Unlock {feature}
           </h2>
           <p className="mt-1.5 text-sm text-foreground-secondary">
-            {PRO_BILLING.tagline}. Free Chat, Library, Cycle, and Calculator stay
-            available.
+            {PRO_BILLING.tagline}. Free Chat, Questions & Discussion, Library,
+            Cycle, and Calculator stay available.
           </p>
+
+          <ProExplainerVideo feature={feature} className="mt-5" />
 
           <div className="mt-5 flex items-end gap-1">
             <span className="font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight text-foreground">

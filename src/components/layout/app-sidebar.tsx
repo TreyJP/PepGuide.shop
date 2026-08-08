@@ -29,6 +29,7 @@ import { useUiStore } from '@/src/stores/ui-store';
 
 const MAIN_NAV = [
   { href: '/chat', label: 'Chat', icon: MessageSquare },
+  { href: '/pro/forum', label: 'Questions & Discussion', icon: MessagesSquare },
   { href: '/library', label: 'Library', icon: Library },
   { href: '/cycle', label: 'Cycle', icon: RefreshCw },
   { href: '/calculator', label: 'Calculator', icon: Calculator },
@@ -37,7 +38,6 @@ const MAIN_NAV = [
 const PRO_NAV = [
   { href: '/pro/guides', label: 'Education & Research', icon: BookOpen },
   { href: '/pro/protocols', label: 'Protocols', icon: FlaskConical },
-  { href: '/pro/forum', label: 'Questions & Discussion', icon: MessagesSquare },
 ] as const;
 
 function NavLink({

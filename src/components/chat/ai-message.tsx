@@ -128,11 +128,11 @@ export function AiMessage({
         <div className="space-y-3">
           <div className="chat-ai-bubble px-4 py-3">
             <p className="text-sm leading-relaxed text-foreground">
-              Education & Research, Protocols, and Questions & Discussion are
-              part of{' '}
+              Education & Research and Protocols are part of{' '}
               <span className="font-semibold text-accent">PepGuide Pro</span>.
               Unlock them below to browse video lessons and goal-built stacks —
-              or keep using free Chat and Library anytime.
+              or keep using free Chat, Questions & Discussion, and Library
+              anytime.
             </p>
           </div>
           <ProUnlockCard />

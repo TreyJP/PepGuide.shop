@@ -10,10 +10,15 @@ export function SetDesignAtlas({
   user,
   notice,
   deleting,
+  billingBusy,
+  billingError,
   onSignOut,
   onDeleteAccount,
+  onSubscribePro,
+  onManageBilling,
 }: SettingsDesignViewProps) {
   const access = user.subscriptionTier === 'pro' ? 'Pro' : 'Free';
+  const isPro = access === 'Pro';
 
   return (
     <div className="set-atlas">
@@ -48,9 +53,33 @@ export function SetDesignAtlas({
               </li>
               <li>
                 <span>Access tier</span>
-                <strong>{access === 'Pro' ? 'PepGuide Pro' : 'Free'}</strong>
+                <strong>{isPro ? 'PepGuide Pro' : 'Free'}</strong>
               </li>
             </ul>
+            <div className="set-atlas__billing">
+              {isPro ? (
+                <button
+                  type="button"
+                  className="set-btn set-btn--navy"
+                  disabled={billingBusy}
+                  onClick={onManageBilling}
+                >
+                  {billingBusy ? 'Opening…' : 'Manage billing'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="set-btn set-btn--navy"
+                  disabled={billingBusy}
+                  onClick={onSubscribePro}
+                >
+                  Upgrade to PepGuide Pro
+                </button>
+              )}
+              {billingError ? (
+                <p className="set-atlas__billing-error">{billingError}</p>
+              ) : null}
+            </div>
           </section>
 
           <section className="set-atlas__panel set-rise" style={{ animationDelay: '120ms' }}>

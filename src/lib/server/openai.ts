@@ -929,7 +929,7 @@ function buildProUnlockResponse(isPro: boolean): PepGuideAiResponse {
   if (isPro) {
     return pepGuideResponseSchema.parse({
       answer:
-        'PepGuide Pro is already unlocked. Open **Education & Research** for video lessons, **Protocols** for goal-built stacks, and **Questions & Discussion** for the member community — all under PepGuide Pro in the sidebar.',
+        'PepGuide Pro is already unlocked. Open **Education & Research** for video lessons and **Protocols** for goal-built stacks under PepGuide Pro in the sidebar. **Questions & Discussion** is free for everyone below Chat.',
       classification: 'pro_content_inquiry',
       safetyAction: 'allow',
       evidenceCards: [],

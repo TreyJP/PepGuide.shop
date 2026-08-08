@@ -22,8 +22,8 @@ export function ProUnlockCard() {
           Unlock PepGuide Pro
         </h3>
         <p className="mt-1.5 text-sm leading-relaxed text-foreground-secondary">
-          Education & Research lessons, Protocol stacks, and Questions &
-          Discussion. Subscribe to open the full Pro library.
+          Education & Research lessons and Protocol stacks. Subscribe to open
+          the full Pro library.
         </p>
       </div>
 
@@ -84,8 +84,8 @@ export function ProUnlockCard() {
         </div>
 
         <p className="text-xs text-foreground-secondary">
-          Free Chat, Library, Cycle, and Calculator stay available. Cancel
-          anytime.
+          Free Chat, Questions & Discussion, Library, Cycle, and Calculator stay
+          available. Cancel anytime.
         </p>
       </div>
     </div>

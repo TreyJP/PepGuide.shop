@@ -8,6 +8,7 @@ import '@/src/components/settings/settings-designs.css';
 import { SetDesignAtlas } from '@/src/components/settings/designs/set-design-atlas';
 import { BRAND } from '@/src/constants/brand';
 import { authService } from '@/src/services/auth';
+import { getFirebaseAuth } from '@/src/services/firebase/config';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useUiStore } from '@/src/stores/ui-store';
 
@@ -17,7 +18,12 @@ export function SettingsWorkspace() {
   const initializing = useAuthStore((state) => state.initializing);
   const setUser = useAuthStore((state) => state.setUser);
   const openSignInModal = useUiStore((state) => state.openSignInModal);
+  const openProSubscribeModal = useUiStore(
+    (state) => state.openProSubscribeModal,
+  );
   const [deleting, setDeleting] = useState(false);
+  const [billingBusy, setBillingBusy] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initializing) return;
@@ -44,6 +50,31 @@ export function SettingsWorkspace() {
       router.push('/');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    setBillingBusy(true);
+    setBillingError(null);
+    try {
+      const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error('Sign in again to manage billing.');
+      }
+      const response = await fetch('/api/billing/portal', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !data.url) {
+        throw new Error(data.error || 'Unable to open billing portal.');
+      }
+      window.location.href = data.url;
+    } catch (error) {
+      setBillingError(
+        error instanceof Error ? error.message : 'Unable to open billing portal.',
+      );
+      setBillingBusy(false);
     }
   };
 
@@ -87,8 +118,12 @@ export function SettingsWorkspace() {
           user={user}
           notice={BRAND.notice}
           deleting={deleting}
+          billingBusy={billingBusy}
+          billingError={billingError}
           onSignOut={() => void handleSignOut()}
           onDeleteAccount={() => void handleDeleteAccount()}
+          onSubscribePro={() => openProSubscribeModal('PepGuide Pro')}
+          onManageBilling={() => void handleManageBilling()}
         />
       </div>
     </div>

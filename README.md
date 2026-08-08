@@ -76,27 +76,60 @@ npm run typecheck  # TypeScript check
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local` when connecting real Firebase services:
+Copy `.env.example` to `.env.local` and fill in Firebase, OpenAI, and Stripe values as needed.
 
-```bash
-NEXT_PUBLIC_USE_MOCK_SERVICES=true
-# Firebase config (optional in mock mode)
-```
-
-## Firebase setup (optional)
-
-When moving beyond mock mode:
+## Firebase setup
 
 1. Create a Firebase project
 2. Enable Email/Password auth
 3. Add web app config to `.env.local`
 4. Deploy `firestore/firestore.rules`
-5. Deploy Cloud Functions from `/functions`
+5. Add Firebase Admin service-account vars (`FIREBASE_ADMIN_*`) for checkout + Pro unlock
 6. Set `NEXT_PUBLIC_USE_MOCK_SERVICES=false`
+
+## Stripe — PepGuide Pro ($20/mo)
+
+Checkout, confirm, webhook, and Customer Portal routes are already wired:
+
+| Route | Purpose |
+|-------|---------|
+| `POST /api/billing/checkout` | Start Stripe Checkout subscription |
+| `POST /api/billing/confirm` | Activate Pro after return from Checkout |
+| `POST /api/billing/webhook` | Keep Pro in sync on renew / cancel |
+| `POST /api/billing/portal` | Stripe Customer Portal (manage / cancel) |
+
+### Setup checklist
+
+1. In Stripe, copy your **Secret key** → `STRIPE_SECRET_KEY`
+2. (Optional) Create a **$20/month** Price → `STRIPE_PRICE_ID` (otherwise checkout uses an inline $20 price)
+3. Set `NEXT_PUBLIC_APP_URL` to your site origin (`http://localhost:3000` locally)
+4. Add a webhook endpoint to `/api/billing/webhook` for:
+   - `checkout.session.completed`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+5. Copy the webhook signing secret → `STRIPE_WEBHOOK_SECRET`
+   - Local: `stripe listen --forward-to localhost:3000/api/billing/webhook`
+6. Enable the **Customer portal** in Stripe (cancel + payment method)
+7. Ensure Firebase Admin vars are set so paid sessions can write `subscriptionTier: pro`
+
+### Pro explainer video
+
+When a free user opens a locked Pro feature, the subscribe modal includes a video slot.
+
+Set one of:
+
+```bash
+NEXT_PUBLIC_PRO_EXPLAINER_VIDEO_URL=https://www.youtube.com/watch?v=VIDEO_ID
+# or Vimeo, or a file under /public:
+NEXT_PUBLIC_PRO_EXPLAINER_VIDEO_URL=/pro/explainer.mp4
+NEXT_PUBLIC_PRO_EXPLAINER_VIDEO_POSTER=/pro/explainer-poster.jpg
+```
+
+Until the URL is set, the slot shows a branded placeholder.
 
 ## Safety architecture
 
-All production AI requests go through Firebase callable functions:
+All production AI requests go through Firebase callable functions / server routes:
 
 1. Verify auth + App Check
 2. Validate input and rate limits
@@ -110,7 +143,7 @@ The web client never receives OpenAI API keys.
 
 ## Notes
 
-- PepGuide is completely free — no Stripe, no paid tiers, no paywalls
+- Free tier: Chat, Questions & Discussion, Library, Cycle, Calculator
+- PepGuide Pro ($20/mo via Stripe): Education & Research, Protocols
 - Firebase Auth handles sessions when configured
-- Temporary chats are session-scoped in the mock layer
 
