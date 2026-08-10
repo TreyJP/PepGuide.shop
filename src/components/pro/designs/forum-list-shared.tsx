@@ -4,7 +4,7 @@ import { Pin, PinOff } from 'lucide-react';
 
 import { AuthorLabel } from '@/src/components/pro/admin-badge';
 import { Button } from '@/src/components/ui/button';
-import { formatRelativeDate } from '@/src/lib/utils';
+import { formatRelativeDate, getDisplayFirstName } from '@/src/lib/utils';
 import type { ForumPost } from '@/src/types';
 
 export function PinnedChip() {
@@ -35,7 +35,7 @@ export function PostMeta({
         onClick={() =>
           onOpenRank(
             post.authorId,
-            post.authorDisplayName,
+            getDisplayFirstName(post.authorDisplayName),
             post.authorIsAdmin,
           )
         }

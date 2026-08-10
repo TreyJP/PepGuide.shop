@@ -15,7 +15,7 @@ import { MarkdownContent } from '@/src/components/chat/markdown-content';
 import { AuthorLabel } from '@/src/components/pro/admin-badge';
 import { Button } from '@/src/components/ui/button';
 import { Textarea } from '@/src/components/ui/textarea';
-import { cn, formatRelativeDate } from '@/src/lib/utils';
+import { cn, formatRelativeDate, getDisplayFirstName } from '@/src/lib/utils';
 import type { ForumPost, ForumReply } from '@/src/types';
 
 export const FORUM_REPLY_COMPOSER_ID = 'forum-reply-composer';
@@ -205,7 +205,7 @@ export function ThreadPostMeta({
         onClick={() =>
           onOpenRank(
             post.authorId,
-            post.authorDisplayName,
+            getDisplayFirstName(post.authorDisplayName),
             post.authorIsAdmin,
           )
         }
@@ -244,7 +244,7 @@ export function ThreadReplyMeta({
           onClick={() =>
             onOpenRank(
               reply.authorId,
-              reply.authorDisplayName,
+              getDisplayFirstName(reply.authorDisplayName),
               reply.authorIsAdmin,
             )
           }

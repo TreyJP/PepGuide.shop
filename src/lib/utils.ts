@@ -5,6 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Public-facing first name from a full display name (forum threads, etc.). */
+export function getDisplayFirstName(
+  name: string | null | undefined,
+  fallback = 'Researcher',
+): string {
+  const trimmed = (name ?? '').trim();
+  if (!trimmed) return fallback;
+  return trimmed.split(/\s+/)[0] || fallback;
+}
+
 export function createId(prefix = 'id'): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }

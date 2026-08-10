@@ -3,7 +3,7 @@
 import { Shield } from 'lucide-react';
 
 import { Badge } from '@/src/components/ui/badge';
-import { cn } from '@/src/lib/utils';
+import { cn, getDisplayFirstName } from '@/src/lib/utils';
 
 export function AdminBadge({
   className,
@@ -38,6 +38,7 @@ export function AuthorLabel({
   className?: string;
   onClick?: () => void;
 }) {
+  const firstName = getDisplayFirstName(name);
   const nameClass = cn(
     'text-sm font-medium',
     isAdmin ? 'text-accent' : 'text-foreground',
@@ -48,10 +49,10 @@ export function AuthorLabel({
     <span className={cn('inline-flex flex-wrap items-center gap-1.5', className)}>
       {onClick ? (
         <button type="button" onClick={onClick} className={nameClass}>
-          {name}
+          {firstName}
         </button>
       ) : (
-        <span className={nameClass}>{name}</span>
+        <span className={nameClass}>{firstName}</span>
       )}
       {isAdmin ? <AdminBadge compact /> : null}
     </span>
