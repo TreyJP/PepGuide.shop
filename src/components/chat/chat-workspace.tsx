@@ -102,13 +102,14 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
 
   const requireAuth = useCallback(
     (message?: string) => {
-      if (user) return true;
+      // Read live store — Google sign-in can settle right after navigation.
+      if (useAuthStore.getState().user) return true;
       openSignInModal(
         message ?? 'Sign in to chat with PepGuide AI and save your research.',
       );
       return false;
     },
-    [openSignInModal, user],
+    [openSignInModal],
   );
 
   const applyModeration = useCallback(

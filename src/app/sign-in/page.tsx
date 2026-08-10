@@ -90,6 +90,7 @@ export default function SignInPage() {
       await auth?.authStateReady();
       await auth?.currentUser?.getIdToken(true);
 
+      setGoogleLoading(false);
       router.replace('/chat');
     } catch (err) {
       console.error('[PepGuide auth] Google sign-in UI error', err);

@@ -81,22 +81,36 @@ export const firebaseAuthService = {
     }
 
     let generation = 0;
+    let unsubscribed = false;
+    let unsubscribeAuth: (() => void) | null = null;
 
-    void getRedirectResult(auth).catch((error) => {
-      console.error('Google redirect sign-in failed', error);
-    });
+    // Finish Google redirect sign-in before attaching the listener so we don't
+    // briefly emit null and reopen the sign-in UI after a successful login.
+    void (async () => {
+      try {
+        await getRedirectResult(auth);
+      } catch (error) {
+        console.error('Google redirect sign-in failed', error);
+      }
+      if (unsubscribed) return;
 
-    return onAuthStateChanged(auth, (firebaseUser) => {
-      const current = ++generation;
-      void (async () => {
-        if (!firebaseUser) {
-          if (current === generation) listener(null);
-          return;
-        }
-        const profile = await toProfile(firebaseUser);
-        if (current === generation) listener(profile);
-      })();
-    });
+      unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+        const current = ++generation;
+        void (async () => {
+          if (!firebaseUser) {
+            if (current === generation) listener(null);
+            return;
+          }
+          const profile = await toProfile(firebaseUser);
+          if (current === generation) listener(profile);
+        })();
+      });
+    })();
+
+    return () => {
+      unsubscribed = true;
+      unsubscribeAuth?.();
+    };
   },
 
   async signIn(input: SignInInput): Promise<UserProfile> {
@@ -150,8 +164,16 @@ export const firebaseAuthService = {
 
     const auth = requireAuth();
     await auth.authStateReady();
+
+    // Already signed in (including after a prior Google redirect) — don't re-prompt.
+    if (auth.currentUser) {
+      await auth.currentUser.getIdToken(true);
+      return toProfile(auth.currentUser);
+    }
+
     const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
+    // Do not set prompt=select_account — that forces Google's chooser every time
+    // even when the user already has an active Google session.
 
     try {
       // Popup keeps context; COOP header same-origin-allow-popups helps on modern browsers.

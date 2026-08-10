@@ -4,7 +4,6 @@ import {
   BookOpen,
   Calculator,
   FlaskConical,
-  Handshake,
   Library,
   Lock,
   MessageSquare,
@@ -35,7 +34,6 @@ const MAIN_NAV = [
   { href: '/library', label: 'All Peptides', icon: Library },
   { href: '/cycle', label: 'Cycle', icon: RefreshCw },
   { href: '/calculator', label: 'Calculator', icon: Calculator },
-  { href: '/affiliates', label: 'Affiliates', icon: Handshake },
 ] as const;
 
 const PRO_NAV = [

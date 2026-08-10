@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { InAppBrowserGate } from '@/src/components/auth/in-app-browser-gate';
 import { SignInModal } from '@/src/components/auth/sign-in-modal';
 import { ProSubscribeModal } from '@/src/components/billing/pro-subscribe-modal';
@@ -9,9 +11,15 @@ import { useUiStore } from '@/src/stores/ui-store';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const initializing = useAuthStore((state) => state.initializing);
+  const user = useAuthStore((state) => state.user);
   const signInModalOpen = useUiStore((state) => state.signInModalOpen);
   const signInModalMessage = useUiStore((state) => state.signInModalMessage);
   const closeSignInModal = useUiStore((state) => state.closeSignInModal);
+
+  // Never keep the sign-in prompt open after auth succeeds (Google popup/redirect).
+  useEffect(() => {
+    if (user && signInModalOpen) closeSignInModal();
+  }, [user, signInModalOpen, closeSignInModal]);
 
   if (initializing) {
     return (

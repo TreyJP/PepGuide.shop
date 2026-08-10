@@ -1,22 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ComponentProps } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { LibDesignDeck } from '@/src/components/library/designs/lib-design-deck';
-import { LibDesignLedger } from '@/src/components/library/designs/lib-design-ledger';
-import { LibDesignMarket } from '@/src/components/library/designs/lib-design-market';
-import { LibDesignStack } from '@/src/components/library/designs/lib-design-stack';
 import { LibDesignTile } from '@/src/components/library/designs/lib-design-tile';
 import '@/src/components/library/library-card-designs.css';
-import {
-  LIBRARY_DESIGNS,
-  type LibraryDesignId,
-} from '@/src/constants/library-designs';
 import type { AffiliateOffer } from '@/src/data/affiliates/slots';
 import { resolvePartnerOffers } from '@/src/lib/affiliate-offers';
 import { buildLibraryPricingMap } from '@/src/lib/library-pricing';
 import { peptideRepository } from '@/src/services/firestore/peptides';
-import { useLibraryDesignStore } from '@/src/stores/library-design-store';
 import { usePartnersStore } from '@/src/stores/partners-store';
 import type { Peptide } from '@/src/types';
 
@@ -43,31 +34,7 @@ function matchesQuery(peptide: Peptide, query: string): boolean {
   );
 }
 
-function DesignView({
-  designId,
-  ...props
-}: {
-  designId: LibraryDesignId;
-} & ComponentProps<typeof LibDesignDeck>) {
-  switch (designId) {
-    case 'market':
-      return <LibDesignMarket {...props} />;
-    case 'stack':
-      return <LibDesignStack {...props} />;
-    case 'tile':
-      return <LibDesignTile {...props} />;
-    case 'ledger':
-      return <LibDesignLedger {...props} />;
-    case 'deck':
-    default:
-      return <LibDesignDeck {...props} />;
-  }
-}
-
 export function LibraryWorkspace() {
-  const designId = useLibraryDesignStore((state) => state.designId);
-  const setDesignId = useLibraryDesignStore((state) => state.setDesignId);
-
   const partners = usePartnersStore((state) => state.partners);
   const partnersLoaded = usePartnersStore((state) => state.loaded);
   const loadPartners = usePartnersStore((state) => state.loadPartners);
@@ -117,42 +84,10 @@ export function LibraryWorkspace() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [peptides, query, offersById]);
 
-  const resolvedDesignId = LIBRARY_DESIGNS.some(
-    (design) => design.id === designId,
-  )
-    ? designId
-    : 'deck';
-
-  const activeBlurb =
-    LIBRARY_DESIGNS.find((design) => design.id === resolvedDesignId)?.blurb ??
-    '';
-
   return (
     <div className="lib-card-root">
-      <div className="lib-card-picker">
-        <label>
-          Design
-          <select
-            value={resolvedDesignId}
-            onChange={(event) =>
-              setDesignId(event.target.value as LibraryDesignId)
-            }
-            aria-label="All peptides page design"
-          >
-            {LIBRARY_DESIGNS.map((design) => (
-              <option key={design.id} value={design.id}>
-                {design.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span>{activeBlurb}</span>
-      </div>
-
       <div className="lib-card-scroll">
-        <DesignView
-          key={resolvedDesignId}
-          designId={resolvedDesignId}
+        <LibDesignTile
           query={query}
           onQueryChange={setQuery}
           loading={loading}
