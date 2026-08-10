@@ -1,9 +1,9 @@
 export const LIBRARY_DESIGN_IDS = [
-  'relay',
-  'specimen',
-  'harbor',
-  'kinetic',
-  'bloom',
+  'deck',
+  'market',
+  'stack',
+  'tile',
+  'ledger',
 ] as const;
 
 export type LibraryDesignId = (typeof LIBRARY_DESIGN_IDS)[number];
@@ -14,30 +14,30 @@ export const LIBRARY_DESIGNS: Array<{
   blurb: string;
 }> = [
   {
-    id: 'relay',
-    label: 'Relay',
-    blurb: 'Sticky category rail + streaming compound list',
+    id: 'deck',
+    label: 'Deck',
+    blurb: 'Soft compound cards with a neat vendor price grid underneath',
   },
   {
-    id: 'specimen',
-    label: 'Specimen',
-    blurb: 'Museum mounts with monogram plates',
+    id: 'market',
+    label: 'Market',
+    blurb: 'Bold marketplace cards and dense vendor tiles',
   },
   {
-    id: 'harbor',
-    label: 'Harbor',
-    blurb: 'Wide landscape bands and quiet typography',
+    id: 'stack',
+    label: 'Stack',
+    blurb: 'Full-width cards with a horizontal vendor strip',
   },
   {
-    id: 'kinetic',
-    label: 'Kinetic',
-    blurb: 'Giant category watermarks over a tight grid',
+    id: 'tile',
+    label: 'Tile',
+    blurb: 'Compact two-column mosaic of peptide + vendor mini-grids',
   },
   {
-    id: 'bloom',
-    label: 'Bloom',
-    blurb: 'Soft pods with ribbon category headers',
+    id: 'ledger',
+    label: 'Ledger',
+    blurb: 'Clean list cards with a structured vendor price board',
   },
 ];
 
-export const DEFAULT_LIBRARY_DESIGN: LibraryDesignId = 'relay';
+export const DEFAULT_LIBRARY_DESIGN: LibraryDesignId = 'tile';

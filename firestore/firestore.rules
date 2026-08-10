@@ -44,7 +44,18 @@ service cloud.firestore {
           'accountStatus'
         ])
         && request.resource.data.subscriptionTier == 'free'
-        && request.resource.data.accountStatus == 'active';
+        && request.resource.data.accountStatus == 'active'
+        && (
+          !('referredByAffiliateId' in request.resource.data)
+          || request.resource.data.referredByAffiliateId == null
+          || (
+            request.resource.data.referredByCode is string
+            && exists(/databases/$(database)/documents/referralAffiliates/$(request.resource.data.referredByAffiliateId))
+            && get(/databases/$(database)/documents/referralAffiliates/$(request.resource.data.referredByAffiliateId)).data.active == true
+            && get(/databases/$(database)/documents/referralAffiliates/$(request.resource.data.referredByAffiliateId)).data.code
+              == request.resource.data.referredByCode
+          )
+        );
 
       allow update: if isOwner(userId)
         && !request.resource.data.diff(resource.data).affectedKeys()
@@ -54,7 +65,9 @@ service cloud.firestore {
             'chatBlockedUntil',
             'abuseStrikeCount',
             'abuseWindowStartedAt',
-            'lastAbuseAt'
+            'lastAbuseAt',
+            'referredByCode',
+            'referredByAffiliateId'
           ]);
 
       allow delete: if isOwner(userId) || isAdmin();
@@ -90,6 +103,58 @@ service cloud.firestore {
     match /affiliatePartners/{partnerId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
+    }
+
+    // Signup referral affiliates (codes + commission %). Public read so
+    // codes can be validated at signup. Any signed-in user may self-enroll
+    // once (doc id = uid) at the fixed 50% / 20% rates. Admins manage all.
+    match /referralAffiliates/{affiliateId} {
+      allow read: if true;
+
+      allow create: if isAdmin()
+        || (
+          isSignedIn()
+          && affiliateId == request.auth.uid
+          && request.resource.data.linkedUserId == request.auth.uid
+          && request.resource.data.active == true
+          && request.resource.data.selfEnrolled == true
+          && request.resource.data.firstOrderCommissionPercent == 50
+          && request.resource.data.recurringCommissionPercent == 20
+          && request.resource.data.commissionPercent == 50
+          && request.resource.data.referralCount == 0
+          && request.resource.data.code is string
+          && request.resource.data.code.size() >= 3
+          && request.resource.data.code.size() <= 32
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+        );
+
+      allow delete: if isAdmin();
+
+      allow update: if isAdmin()
+        || (
+          isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['referralCount', 'updatedAt'])
+          && request.resource.data.referralCount is int
+          && request.resource.data.referralCount == resource.data.referralCount + 1
+        )
+        || (
+          // Owner may update display name / preferred code only.
+          isSignedIn()
+          && resource.data.linkedUserId == request.auth.uid
+          && request.resource.data.linkedUserId == resource.data.linkedUserId
+          && request.resource.data.firstOrderCommissionPercent
+            == resource.data.firstOrderCommissionPercent
+          && request.resource.data.recurringCommissionPercent
+            == resource.data.recurringCommissionPercent
+          && request.resource.data.commissionPercent
+            == resource.data.commissionPercent
+          && request.resource.data.referralCount == resource.data.referralCount
+          && request.resource.data.active == resource.data.active
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['name', 'email', 'code', 'updatedAt'])
+        );
     }
 
     match /config/admins {

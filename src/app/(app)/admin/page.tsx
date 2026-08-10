@@ -1,9 +1,10 @@
 'use client';
 
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 
+import { AdminAffiliatesPanel } from '@/src/components/admin/admin-affiliates-panel';
 import { AdminDashboard } from '@/src/components/admin/admin-dashboard';
 import { Button } from '@/src/components/ui/button';
 import {
@@ -17,6 +18,7 @@ import {
   PARTNER_LAB_TESTS,
   type PartnerLabTestId,
 } from '@/src/data/affiliates/lab-tests';
+import { isPreferredPartner } from '@/src/data/affiliates/preferred-partners';
 import { VIAL_TEST_AMOUNTS } from '@/src/data/affiliates/slots';
 import { useAdminAccess } from '@/src/hooks/use-admin-access';
 import { cn } from '@/src/lib/utils';
@@ -25,7 +27,7 @@ import { useAuthStore } from '@/src/stores/auth-store';
 import { usePartnersStore } from '@/src/stores/partners-store';
 import type { AffiliatePartner, PartnerTestAmount } from '@/src/types/affiliates';
 
-type AdminTab = 'dashboard' | 'partners' | 'access';
+type AdminTab = 'dashboard' | 'partners' | 'affiliates' | 'access';
 
 function emptyLabs(): Record<PartnerLabTestId, boolean | null> {
   return Object.fromEntries(
@@ -45,6 +47,7 @@ type Draft = {
   label: string;
   href: string;
   active: boolean;
+  hasCatalogProducts: boolean;
   testAmounts: PartnerTestAmount[];
   labTests: Record<PartnerLabTestId, boolean | null>;
 };
@@ -58,6 +61,7 @@ function partnerToDraft(partner: AffiliatePartner): Draft {
     label: partner.label,
     href: partner.href,
     active: partner.active,
+    hasCatalogProducts: (partner.products?.length ?? 0) > 0,
     testAmounts: VIAL_TEST_AMOUNTS.map((testAmount) => ({
       testAmount,
       priceUsd: amountMap.get(testAmount) ?? 0,
@@ -72,6 +76,7 @@ function newDraft(): Draft {
     label: '',
     href: '',
     active: true,
+    hasCatalogProducts: false,
     testAmounts: blankAmounts(),
     labTests: emptyLabs(),
   };
@@ -185,7 +190,7 @@ export default function AdminPage() {
       return;
     }
     const enabledAmounts = draft.testAmounts.filter((item) => item.priceUsd > 0);
-    if (enabledAmounts.length === 0) {
+    if (enabledAmounts.length === 0 && !draft.hasCatalogProducts) {
       setMessage('Enable at least one vial size with a price.');
       return;
     }
@@ -197,7 +202,10 @@ export default function AdminPage() {
         label: draft.label,
         href: draft.href || '#',
         active: draft.active,
-        testAmounts: enabledAmounts,
+        // Catalog partners keep product SKUs; only send vial sizes when set.
+        ...(enabledAmounts.length > 0 || !draft.hasCatalogProducts
+          ? { testAmounts: enabledAmounts }
+          : {}),
         labTests: draft.labTests,
       });
       setMessage(draft.id ? 'Partner updated.' : 'Partner added.');
@@ -216,6 +224,35 @@ export default function AdminPage() {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const togglePartnerVisibility = async (
+    partner: AffiliatePartner,
+    event: MouseEvent<HTMLButtonElement>,
+  ) => {
+    event.stopPropagation();
+    setMessage(null);
+    try {
+      const updated = await upsertPartner(partner.id, {
+        label: partner.label,
+        href: partner.href,
+        active: !partner.active,
+      });
+      if (draft.id === partner.id) {
+        setDraft(partnerToDraft(updated));
+      }
+      setMessage(
+        updated.active
+          ? `${updated.label} is now visible.`
+          : `${updated.label} is now hidden.`,
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to update vendor visibility.',
+      );
     }
   };
 
@@ -309,13 +346,14 @@ export default function AdminPage() {
           Admin
         </h1>
         <p className="mt-1 text-sm text-foreground-secondary">
-          Site metrics, partner sources, and admin access.
+          Site metrics, partners, referral affiliates, and admin access.
         </p>
         <div className="mt-4 flex flex-wrap gap-1.5">
           {(
             [
               { id: 'dashboard', label: 'Dashboard' },
               { id: 'partners', label: 'Partners' },
+              { id: 'affiliates', label: 'Affiliates' },
               { id: 'access', label: 'Access' },
             ] as const
           ).map((item) => (
@@ -342,13 +380,18 @@ export default function AdminPage() {
         </div>
       ) : null}
 
+      {tab === 'affiliates' ? <AdminAffiliatesPanel /> : null}
+
       {tab === 'partners' ? (
       <div className="mx-auto grid max-w-5xl gap-6 p-6 lg:grid-cols-[1fr_1.2fr]">
         <Card>
           <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
             <div>
               <CardTitle>Partners</CardTitle>
-              <CardDescription>Sources shown in pricing modals</CardDescription>
+              <CardDescription>
+                Hide a vendor to remove it from All Peptides, chat pricing, and
+                compare modals
+              </CardDescription>
             </div>
             <Button size="sm" variant="secondary" onClick={startCreate}>
               <Plus className="size-3.5" />
@@ -364,29 +407,63 @@ export default function AdminPage() {
               </p>
             ) : (
               partners.map((partner) => (
-                <button
+                <div
                   key={partner.id}
-                  type="button"
-                  onClick={() => startEdit(partner)}
                   className={cn(
-                    'flex w-full items-center justify-between rounded-[12px] border px-3 py-2.5 text-left transition-colors',
+                    'flex w-full items-center gap-2 rounded-[12px] border px-2 py-2 transition-colors',
                     draft.id === partner.id
                       ? 'border-accent bg-accent-muted/40'
-                      : 'border-border bg-surface hover:bg-surface-secondary',
+                      : 'border-border bg-surface',
+                    !partner.active && 'opacity-70',
                   )}
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {partner.label}
+                  <button
+                    type="button"
+                    onClick={() => startEdit(partner)}
+                    className="min-w-0 flex-1 rounded-[10px] px-1.5 py-1 text-left hover:bg-surface-secondary/80"
+                  >
+                    <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-semibold text-foreground">
+                      <span className="truncate">{partner.label}</span>
+                      {isPreferredPartner(partner.id) ? (
+                        <span className="shrink-0 rounded-[6px] bg-teal-700/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-teal-800">
+                          Trusted
+                        </span>
+                      ) : null}
                     </p>
                     <p className="mt-0.5 text-xs text-foreground-secondary">
                       {partner.products?.length
                         ? `${partner.products.length} products`
                         : `${partner.testAmounts.length} sizes`}{' '}
-                      · {partner.active ? 'Active' : 'Hidden'}
+                      · {partner.active ? 'Visible' : 'Hidden'}
+                      {isPreferredPartner(partner.id) ? ' · Top placement' : ''}
                     </p>
-                  </div>
-                </button>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(event) =>
+                      void togglePartnerVisibility(partner, event)
+                    }
+                    className={cn(
+                      'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border px-2.5 text-xs font-semibold transition-colors',
+                      partner.active
+                        ? 'border-border bg-surface text-foreground hover:bg-surface-secondary'
+                        : 'border-accent/30 bg-accent-muted text-accent hover:bg-accent-muted/80',
+                    )}
+                    aria-label={
+                      partner.active
+                        ? `Hide ${partner.label}`
+                        : `Show ${partner.label}`
+                    }
+                    title={partner.active ? 'Hide vendor' : 'Show vendor'}
+                  >
+                    {partner.active ? (
+                      <EyeOff className="size-3.5" />
+                    ) : (
+                      <Eye className="size-3.5" />
+                    )}
+                    {partner.active ? 'Hide' : 'Show'}
+                  </button>
+                </div>
               ))
             )}
           </CardContent>
@@ -435,9 +512,10 @@ export default function AdminPage() {
                 />
               </label>
 
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-start gap-2.5 rounded-[12px] border border-border bg-surface-secondary/50 px-3 py-3 text-sm">
                 <input
                   type="checkbox"
+                  className="mt-0.5"
                   checked={draft.active}
                   onChange={(event) =>
                     setDraft((current) => ({
@@ -446,8 +524,23 @@ export default function AdminPage() {
                     }))
                   }
                 />
-                <span>Active in pricing modals</span>
+                <span>
+                  <span className="font-medium text-foreground">
+                    Visible to users
+                  </span>
+                  <span className="mt-0.5 block text-xs text-foreground-secondary">
+                    Uncheck to hide this vendor from All Peptides, chat pricing,
+                    and compare modals. Catalog products stay saved.
+                  </span>
+                </span>
               </label>
+
+              {draft.hasCatalogProducts ? (
+                <p className="rounded-[12px] border border-border bg-surface-secondary/40 px-3 py-2 text-xs text-foreground-secondary">
+                  This partner uses a product catalog. Vial sizes below are
+                  optional and only used if the catalog has no match.
+                </p>
+              ) : null}
 
               <div>
                 <p className="mb-2 text-sm font-medium text-foreground">

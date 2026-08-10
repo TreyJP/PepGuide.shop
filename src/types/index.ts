@@ -112,6 +112,10 @@ export type UserProfile = {
   acceptedPrivacyVersion: string;
   acceptedResearchNoticeVersion: string;
   dataRetentionDays: number;
+  /** Optional referral affiliate code used at signup. */
+  referredByCode: string | null;
+  /** Referral affiliate id attributed at signup. */
+  referredByAffiliateId: string | null;
 };
 
 /** Public Pro ranking / forum identity card. */

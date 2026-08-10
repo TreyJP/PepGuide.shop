@@ -1,0 +1,419 @@
+/* Price-first library catalog */
+
+.lib-catalog-root {
+  --lib-navy: #0a1b3a;
+  --lib-blue: #0057ff;
+  --lib-sky: #e8f0ff;
+  --lib-line: color-mix(in srgb, #0a1b3a 10%, transparent);
+  position: relative;
+  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(720px 280px at 50% -10%, color-mix(in srgb, var(--lib-blue) 12%, transparent), transparent 60%),
+    #f5f7fb;
+}
+
+.lib-catalog-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.lib-catalog {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem calc(2rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+  .lib-catalog {
+    padding: 1.75rem 1.25rem 2.5rem;
+  }
+}
+
+.lib-catalog__header {
+  text-align: left;
+  margin-bottom: 1.1rem;
+}
+
+.lib-catalog__header h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 5vw, 2.35rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--lib-navy);
+}
+
+.lib-catalog__header p {
+  margin: 0.35rem 0 0;
+  max-width: 28rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--foreground-secondary);
+}
+
+.lib-catalog__search {
+  margin-top: 1rem;
+}
+
+.lib-catalog__search .lib-search {
+  max-width: none;
+}
+
+.lib-catalog__search .lib-search input {
+  height: 3rem;
+  border-radius: 14px;
+  border: 1px solid var(--lib-line);
+  background: white;
+  font-size: 0.95rem;
+  box-shadow: 0 1px 0 rgba(10, 27, 58, 0.03);
+}
+
+.lib-catalog__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.lib-catalog__chips button {
+  border: 1px solid var(--lib-line);
+  background: white;
+  color: var(--lib-navy);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.lib-catalog__chips button:hover,
+.lib-catalog__chips button[data-active='true'] {
+  border-color: color-mix(in srgb, var(--lib-blue) 45%, var(--border));
+  background: var(--lib-sky);
+  color: var(--lib-blue);
+}
+
+.lib-catalog__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin: 1.15rem 0 0.75rem;
+}
+
+.lib-catalog__count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--foreground-secondary);
+}
+
+.lib-catalog__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--lib-navy);
+  cursor: pointer;
+  user-select: none;
+}
+
+.lib-catalog__toggle input {
+  accent-color: var(--lib-blue);
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.lib-catalog__letters {
+  display: flex;
+  gap: 0.3rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+  margin-bottom: 0.85rem;
+  scrollbar-width: none;
+}
+
+.lib-catalog__letters::-webkit-scrollbar {
+  display: none;
+}
+
+.lib-catalog__letters button {
+  flex-shrink: 0;
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--foreground-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lib-catalog__letters button[data-active='true'] {
+  background: var(--lib-navy);
+  color: white;
+}
+
+.lib-catalog__letters button:hover:not([data-active='true']) {
+  background: color-mix(in srgb, white 70%, transparent);
+  border-color: var(--lib-line);
+}
+
+.lib-catalog__list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.lib-catalog__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--lib-line);
+  background: white;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lib-catalog__row:hover {
+    border-color: color-mix(in srgb, var(--lib-blue) 35%, var(--border));
+    box-shadow: 0 8px 22px rgba(10, 27, 58, 0.06);
+    transform: translateY(-1px);
+  }
+}
+
+.lib-catalog__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--lib-navy);
+}
+
+.lib-catalog__alias {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--foreground-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lib-catalog__price {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+
+.lib-catalog__price-amount {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--lib-navy);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.lib-catalog__price-meta {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--foreground-secondary);
+}
+
+.lib-catalog__price--empty .lib-catalog__price-amount {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--foreground-secondary);
+}
+
+.lib-catalog__empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--foreground-secondary);
+  font-size: 0.92rem;
+  border: 1px dashed var(--lib-line);
+  border-radius: 14px;
+  background: color-mix(in srgb, white 70%, transparent);
+}
+
+/* Shared search (catalog only needs these) */
+.lib-search {
+  position: relative;
+  width: 100%;
+}
+
+.lib-search svg {
+  position: absolute;
+  left: 0.95rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--foreground-secondary);
+}
+
+.lib-search input {
+  height: 2.6rem;
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: white;
+  padding: 0 0.9rem 0 2.5rem;
+  font-size: 0.9rem;
+  color: var(--foreground);
+}
+
+.lib-search input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--lib-blue) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--lib-blue) 14%, transparent);
+}
+
+/* Detail page price focus */
+.lib-detail {
+  --lib-navy: #0a1b3a;
+  --lib-blue: #0057ff;
+  min-height: 100%;
+  background: #f5f7fb;
+}
+
+.lib-detail__header {
+  border-bottom: 1px solid color-mix(in srgb, #0a1b3a 10%, transparent);
+  background: white;
+  padding: 1.15rem 1.25rem 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .lib-detail__header {
+    padding: 1.35rem 1.5rem 1.5rem;
+  }
+}
+
+.lib-detail__back {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--lib-blue);
+  text-decoration: none;
+}
+
+.lib-detail__back:hover {
+  text-decoration: underline;
+}
+
+.lib-detail__header h1 {
+  margin: 0.65rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 4vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--lib-navy);
+}
+
+.lib-detail__aliases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.lib-detail__aliases span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--foreground-secondary);
+  background: #f0f3f8;
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+}
+
+.lib-detail__body {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1.15rem 1rem calc(2rem + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .lib-detail__body {
+    padding: 1.35rem 1.25rem 2.5rem;
+  }
+}
+
+.lib-detail__research {
+  border: 1px solid color-mix(in srgb, #0a1b3a 10%, transparent);
+  border-radius: 16px;
+  background: white;
+  overflow: hidden;
+}
+
+.lib-detail__research summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 1rem 1.1rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--lib-navy);
+  user-select: none;
+}
+
+.lib-detail__research summary::-webkit-details-marker {
+  display: none;
+}
+
+.lib-detail__research summary::after {
+  content: 'Show';
+  float: right;
+  font-family: var(--font-sans, inherit);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--lib-blue);
+  letter-spacing: 0.02em;
+}
+
+.lib-detail__research[open] summary::after {
+  content: 'Hide';
+}
+
+.lib-detail__research-body {
+  padding: 0 1.1rem 1.15rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.lib-detail__research-block h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--foreground-secondary);
+}
+
+.lib-detail__research-block p,
+.lib-detail__research-block li {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--foreground-secondary);
+}
+
+.lib-detail__research-block ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}

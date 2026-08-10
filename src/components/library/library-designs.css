@@ -360,9 +360,10 @@
 @media (min-width: 640px) {
   .lib-relay__item {
     gap: 0.85rem;
-    height: 4.75rem;
+    min-height: 4.75rem;
+    height: auto;
     border-radius: 16px;
-    padding: 0 1rem 0 1.05rem;
+    padding: 0.65rem 1rem 0.65rem 1.05rem;
   }
 }
 
@@ -433,11 +434,56 @@
   }
 }
 
+.lib-relay__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
 .lib-relay__go {
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--lib-blue);
   flex-shrink: 0;
+}
+
+.lib-price-chip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.3rem 0.45rem;
+  max-width: 9.5rem;
+  text-align: right;
+}
+
+.lib-price-chip__from {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--foreground-secondary);
+}
+
+.lib-price-chip__amount {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--lib-navy);
+  font-variant-numeric: tabular-nums;
+}
+
+.lib-price-chip__vendors {
+  width: 100%;
+  font-size: 0.65rem;
+  color: var(--foreground-secondary);
+}
+
+.lib-price-chip--empty {
+  font-size: 0.68rem;
+  color: var(--foreground-secondary);
 }
 
 @media (max-width: 380px) {
@@ -572,6 +618,11 @@
 
 .lib-specimen__caption {
   margin-top: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -670,13 +721,18 @@
   gap: 0.45rem;
 }
 
-.lib-harbor__meta span {
+.lib-harbor__meta > span {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--lib-navy);
   background: var(--lib-mist);
   border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+.lib-harbor__meta .lib-price-chip {
+  margin-right: 0.15rem;
   padding: 0.25rem 0.65rem;
 }
 
@@ -790,6 +846,11 @@
 
 .lib-kinetic__card footer {
   margin-top: 0.65rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--lib-blue);
@@ -887,6 +948,12 @@
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--lib-navy);
+}
+
+.lib-bloom__pill .lib-price-chip {
+  margin-top: 0.55rem;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .lib-bloom__pill p {

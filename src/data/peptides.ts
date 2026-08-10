@@ -1,6 +1,13 @@
+import {
+  getSponsorCompoundIds,
+  getSponsorSearchAliasesByCompoundId,
+} from '@/src/data/affiliates/sponsor-compounds';
 import { KNOWLEDGE_COMPOUNDS } from '@/src/data/knowledge/compounds';
 import type { KnowledgeCompound } from '@/src/data/knowledge/types';
 import type { Citation, EvidenceGrade, Peptide, RegulatoryStatus } from '@/src/types';
+
+const SPONSOR_COMPOUND_IDS = getSponsorCompoundIds();
+const SPONSOR_SEARCH_ALIASES = getSponsorSearchAliasesByCompoundId();
 
 const CATEGORY_TO_RESEARCH: Record<string, string> = {
   metabolic_weight: 'Metabolic research',
@@ -124,10 +131,17 @@ function toCitation(ref: KnowledgeCompound['references'][number]): Citation {
 }
 
 function knowledgeToPeptide(compound: KnowledgeCompound): Peptide {
+  const sponsorAliases = SPONSOR_SEARCH_ALIASES.get(compound.id) ?? [];
+  const aliases = [
+    ...new Set(
+      [...compound.aliases, ...sponsorAliases].map((alias) => alias.trim()).filter(Boolean),
+    ),
+  ];
+
   return {
     id: compound.id,
     name: compound.name,
-    aliases: compound.aliases,
+    aliases,
     classification: compound.isPeptide
       ? compound.classification
       : `${compound.classification} [Non-peptide research compound]`,
@@ -166,8 +180,14 @@ function knowledgeToPeptide(compound: KnowledgeCompound): Peptide {
   };
 }
 
-/** Library + chat lists are peptides only. */
-const LIBRARY_COMPOUNDS = KNOWLEDGE_COMPOUNDS.filter((c) => c.isPeptide);
+/**
+ * Library includes all peptides plus any non-peptide compounds sold by sponsors
+ * (e.g. BAC water, NAD+). Chat recommendations stay peptide-only via
+ * `getPeptideCompounds` / `filterPeptideIds`.
+ */
+const LIBRARY_COMPOUNDS = KNOWLEDGE_COMPOUNDS.filter(
+  (compound) => compound.isPeptide || SPONSOR_COMPOUND_IDS.has(compound.id),
+);
 
 export const MOCK_PEPTIDES: Peptide[] = LIBRARY_COMPOUNDS.map(knowledgeToPeptide);
 

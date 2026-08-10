@@ -4,6 +4,7 @@ import {
   BookOpen,
   Calculator,
   FlaskConical,
+  Handshake,
   Library,
   Lock,
   MessageSquare,
@@ -31,9 +32,10 @@ import { useUiStore } from '@/src/stores/ui-store';
 const MAIN_NAV = [
   { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/pro/forum', label: 'Questions & Discussion', icon: MessagesSquare },
-  { href: '/library', label: 'Library', icon: Library },
+  { href: '/library', label: 'All Peptides', icon: Library },
   { href: '/cycle', label: 'Cycle', icon: RefreshCw },
   { href: '/calculator', label: 'Calculator', icon: Calculator },
+  { href: '/affiliates', label: 'Affiliates', icon: Handshake },
 ] as const;
 
 const PRO_NAV = [

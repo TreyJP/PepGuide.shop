@@ -48,6 +48,8 @@ function fallbackProfile(user: User): UserProfile {
     acceptedPrivacyVersion: BRAND.privacyVersion,
     acceptedResearchNoticeVersion: BRAND.researchNoticeVersion,
     dataRetentionDays: 365,
+    referredByCode: null,
+    referredByAffiliateId: null,
   };
 }
 
@@ -124,7 +126,19 @@ export const firebaseAuthService = {
       // best-effort
     }
     await credential.user.getIdToken(true);
-    return toProfile(credential.user);
+    try {
+      return await userRepository.ensureProfile({
+        id: credential.user.uid,
+        displayName: input.displayName,
+        email: input.email,
+        photoURL: credential.user.photoURL,
+        emailVerified: credential.user.emailVerified,
+        referralCode: input.referralCode,
+      });
+    } catch (error) {
+      console.error('Failed to sync user profile; using auth fallback', error);
+      return fallbackProfile(credential.user);
+    }
   },
 
   async signInWithGoogle(): Promise<UserProfile | null> {

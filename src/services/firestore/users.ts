@@ -7,7 +7,12 @@ import {
 } from 'firebase/firestore';
 
 import { BRAND } from '@/src/constants/brand';
+import {
+  consumeReferralCode,
+  normalizeReferralCode,
+} from '@/src/lib/referral-code';
 import { getFirestoreDb } from '@/src/services/firebase/config';
+import { referralAffiliatesRepository } from '@/src/services/firestore/referral-affiliates';
 import type { UserProfile } from '@/src/types';
 
 function requireDb() {
@@ -56,6 +61,15 @@ function mapUser(id: string, data: Record<string, unknown>): UserProfile {
       data.acceptedResearchNoticeVersion ?? BRAND.researchNoticeVersion,
     ),
     dataRetentionDays: Number(data.dataRetentionDays ?? 365),
+    referredByCode:
+      typeof data.referredByCode === 'string' && data.referredByCode.trim()
+        ? normalizeReferralCode(data.referredByCode)
+        : null,
+    referredByAffiliateId:
+      typeof data.referredByAffiliateId === 'string' &&
+      data.referredByAffiliateId.trim()
+        ? data.referredByAffiliateId.trim()
+        : null,
   };
 }
 
@@ -72,8 +86,27 @@ export const userRepository = {
     email: string;
     photoURL?: string | null;
     emailVerified?: boolean;
+    referralCode?: string | null;
   }): Promise<UserProfile> {
     const now = new Date().toISOString();
+    const pendingCode =
+      normalizeReferralCode(input.referralCode) || consumeReferralCode();
+    let referredByCode: string | null = null;
+    let referredByAffiliateId: string | null = null;
+
+    if (pendingCode) {
+      try {
+        const affiliate =
+          await referralAffiliatesRepository.resolveActiveCode(pendingCode);
+        if (affiliate) {
+          referredByCode = affiliate.code;
+          referredByAffiliateId = affiliate.id;
+        }
+      } catch (error) {
+        console.error('Failed to resolve referral code', error);
+      }
+    }
+
     const payload = {
       displayName: input.displayName,
       email: input.email,
@@ -94,9 +127,22 @@ export const userRepository = {
       acceptedPrivacyVersion: BRAND.privacyVersion,
       acceptedResearchNoticeVersion: BRAND.researchNoticeVersion,
       dataRetentionDays: 365,
+      referredByCode,
+      referredByAffiliateId,
     };
 
     await setDoc(doc(requireDb(), 'users', input.id), payload, { merge: true });
+
+    if (referredByAffiliateId) {
+      try {
+        await referralAffiliatesRepository.recordReferralSignup(
+          referredByAffiliateId,
+        );
+      } catch (error) {
+        console.error('Failed to record referral signup', error);
+      }
+    }
+
     return mapUser(input.id, payload);
   },
 
@@ -106,6 +152,7 @@ export const userRepository = {
     email: string;
     photoURL?: string | null;
     emailVerified?: boolean;
+    referralCode?: string | null;
   }): Promise<UserProfile> {
     const existing = await this.getProfile(input.id);
     if (existing) {
@@ -134,6 +181,8 @@ export const userRepository = {
       accountStatus: _status,
       chatBlockedUntil: _blocked,
       abuseStrikeCount: _strikes,
+      referredByCode: _refCode,
+      referredByAffiliateId: _refId,
       ...safe
     } = patch;
     await updateDoc(doc(requireDb(), 'users', userId), {

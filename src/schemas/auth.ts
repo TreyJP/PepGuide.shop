@@ -29,6 +29,15 @@ export const signUpSchema = z
         message: 'You must acknowledge the research-use notice',
       }),
     }),
+    referralCode: z
+      .string()
+      .trim()
+      .max(32, 'Referral code is too long')
+      .regex(
+        /^[A-Za-z0-9_-]*$/,
+        'Referral code can only use letters, numbers, _ or -',
+      )
+      .optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',

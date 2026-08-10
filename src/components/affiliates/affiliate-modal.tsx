@@ -6,8 +6,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { PartnerSlotList } from '@/src/components/affiliates/partner-slot-layouts';
 import { ModalShell } from '@/src/components/ui/modal-shell';
 import { getPartnerLabSortScore } from '@/src/data/affiliates/lab-tests';
-import { getAffiliateOffers } from '@/src/data/affiliates/slots';
-import { buildOffersFromPartners } from '@/src/lib/affiliate-offers';
+import { isPreferredPartner } from '@/src/data/affiliates/preferred-partners';
+import { resolvePartnerOffers } from '@/src/lib/affiliate-offers';
 import { cn } from '@/src/lib/utils';
 import { usePartnersStore } from '@/src/stores/partners-store';
 
@@ -46,15 +46,15 @@ export function AffiliateModal({
 
   const offers = useMemo(() => {
     if (!open) return [];
-    const active = partners.filter((partner) => partner.active);
-    if (active.length > 0) {
-      return buildOffersFromPartners(active, peptideId);
-    }
-    return getAffiliateOffers(peptideId);
+    return resolvePartnerOffers(partners, peptideId, 'lowestPerVendor');
   }, [open, partners, peptideId]);
 
   const visibleOffers = useMemo(() => {
     return [...offers].sort((a, b) => {
+      const aPreferred = isPreferredPartner(a.vendorId, a.vendorLabel) ? 0 : 1;
+      const bPreferred = isPreferredPartner(b.vendorId, b.vendorLabel) ? 0 : 1;
+      if (aPreferred !== bPreferred) return aPreferred - bPreferred;
+
       const aLab = getPartnerLabSortScore(
         a.vendorId,
         partnerById.get(a.vendorId)?.labTests,

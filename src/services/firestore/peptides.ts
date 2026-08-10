@@ -15,15 +15,20 @@ export const peptideRepository = {
     const query = filters.query?.trim().toLowerCase();
 
     if (query) {
-      results = results.filter(
-        (peptide) =>
+      const compactQuery = query.replace(/[^a-z0-9]+/g, '');
+      results = results.filter((peptide) => {
+        const compactId = peptide.id.replace(/[^a-z0-9]+/gi, '').toLowerCase();
+        return (
+          peptide.id.toLowerCase().includes(query) ||
+          (compactQuery.length >= 2 && compactId.includes(compactQuery)) ||
           peptide.name.toLowerCase().includes(query) ||
           peptide.aliases.some((alias) => alias.toLowerCase().includes(query)) ||
           peptide.shortDescription.toLowerCase().includes(query) ||
           peptide.researchCategories.some((category) =>
             category.toLowerCase().includes(query),
-          ),
-      );
+          )
+        );
+      });
     }
 
     if (filters.category) {

@@ -2,8 +2,8 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { AuthLayout } from '@/src/components/auth/auth-layout';
@@ -11,19 +11,28 @@ import { Button } from '@/src/components/ui/button';
 import { Checkbox } from '@/src/components/ui/checkbox';
 import { Input } from '@/src/components/ui/input';
 import { BRAND } from '@/src/constants/brand';
+import {
+  normalizeReferralCode,
+  stashReferralCode,
+} from '@/src/lib/referral-code';
 import { getAuthErrorMessage } from '@/src/lib/firebase-errors';
 import { signUpSchema, type SignUpInput } from '@/src/schemas/auth';
 import { authService } from '@/src/services/auth';
 import { getFirebaseAuth } from '@/src/services/firebase/config';
 import { useAuthStore } from '@/src/stores/auth-store';
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const initializing = useAuthStore((state) => state.initializing);
   const setUser = useAuthStore((state) => state.setUser);
   const [error, setError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  const referralFromUrl = normalizeReferralCode(
+    searchParams.get('ref') || searchParams.get('code'),
+  );
 
   useEffect(() => {
     if (!initializing && user) {
@@ -31,10 +40,15 @@ export default function SignUpPage() {
     }
   }, [initializing, user, router]);
 
+  useEffect(() => {
+    if (referralFromUrl) stashReferralCode(referralFromUrl);
+  }, [referralFromUrl]);
+
   const {
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
@@ -43,8 +57,14 @@ export default function SignUpPage() {
       acceptTerms: undefined,
       acceptPrivacy: undefined,
       acceptResearchNotice: undefined,
+      referralCode: referralFromUrl || '',
     },
   });
+
+  const referralCodeValue = watch('referralCode');
+  useEffect(() => {
+    stashReferralCode(referralCodeValue);
+  }, [referralCodeValue]);
 
   const onSubmit = async (values: SignUpInput) => {
     setError(null);
@@ -56,6 +76,7 @@ export default function SignUpPage() {
         return;
       }
 
+      stashReferralCode(values.referralCode);
       const signedIn = await authService.signUp(values);
       setUser(signedIn);
 
@@ -88,6 +109,7 @@ export default function SignUpPage() {
         return;
       }
 
+      stashReferralCode(referralCodeValue || referralFromUrl);
       const signedIn = await authService.signInWithGoogle();
       if (!signedIn) return;
       setUser(signedIn);
@@ -140,6 +162,15 @@ export default function SignUpPage() {
           autoComplete="new-password"
           error={errors.confirmPassword?.message}
           {...register('confirmPassword')}
+        />
+        <Input
+          label="Referral code (optional)"
+          autoCapitalize="characters"
+          autoComplete="off"
+          placeholder="If you have one"
+          hint="From a PepGuide affiliate — leave blank if none"
+          error={errors.referralCode?.message}
+          {...register('referralCode')}
         />
 
         <div className="space-y-1 rounded-[14px] border border-border bg-surface-secondary/40 p-2">
@@ -235,3 +266,16 @@ export default function SignUpPage() {
   );
 }
 
+export default function SignUpPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthLayout title="Create your account" description="Loading…">
+          <div className="h-40 animate-pulse rounded-[14px] bg-surface-secondary/50" />
+        </AuthLayout>
+      }
+    >
+      <SignUpForm />
+    </Suspense>
+  );
+}

@@ -1,4 +1,5 @@
 import { BRAND } from '@/src/constants/brand';
+import { normalizeReferralCode } from '@/src/lib/referral-code';
 import type { SignInInput, SignUpInput } from '@/src/schemas/auth';
 import type { UserProfile } from '@/src/types';
 import { createId } from '@/src/utils/dates';
@@ -13,8 +14,10 @@ function notify() {
 function createMockUser(
   input: Pick<UserProfile, 'displayName' | 'email'> & {
     onboardingCompleted?: boolean;
+    referralCode?: string | null;
   },
 ): UserProfile {
+  const code = normalizeReferralCode(input.referralCode) || null;
   return {
     id: createId('user'),
     displayName: input.displayName,
@@ -35,6 +38,8 @@ function createMockUser(
     acceptedPrivacyVersion: BRAND.privacyVersion,
     acceptedResearchNoticeVersion: BRAND.researchNoticeVersion,
     dataRetentionDays: 365,
+    referredByCode: code,
+    referredByAffiliateId: code ? 'mock-affiliate' : null,
   };
 }
 
@@ -64,6 +69,7 @@ export const mockAuthService = {
       displayName: input.displayName,
       email: input.email,
       onboardingCompleted: true,
+      referralCode: input.referralCode,
     });
     notify();
     return currentUser;

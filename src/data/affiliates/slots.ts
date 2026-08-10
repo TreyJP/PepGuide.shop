@@ -4,9 +4,26 @@ import {
   NEUROLABS_PARTNER,
 } from '@/src/data/affiliates/neurolabs-catalog';
 import {
+  PRISTINE_PEPTIDE_CATALOG,
+  PRISTINE_PEPTIDE_PARTNER,
+} from '@/src/data/affiliates/pristine-peptide-catalog';
+import {
+  sortOffersPreferredFirst,
+  withTrustedPartnerOfferFields,
+} from '@/src/data/affiliates/preferred-partners';
+import {
+  REFINED_BIOLABS_CATALOG,
+  REFINED_BIOLABS_PARTNER,
+} from '@/src/data/affiliates/refined-biolabs-catalog';
+import {
   SOMACHEMS_CATALOG,
   SOMACHEMS_PARTNER,
 } from '@/src/data/affiliates/somachems-catalog';
+import {
+  VITALCHEMS_CATALOG,
+  VITALCHEMS_PARTNER,
+} from '@/src/data/affiliates/vitalchems-catalog';
+import { getOfferSalePriceUsd } from '@/src/lib/offer-pricing';
 import type { PartnerProduct } from '@/src/types/affiliates';
 
 export type AffiliateOffer = {
@@ -16,11 +33,14 @@ export type AffiliateOffer = {
   /** Optional SKU / product title from a real catalog. */
   productName?: string;
   testAmount: string;
+  /** List / catalog price before coupon. */
   priceUsd: number;
   priceMaxUsd?: number | null;
   href: string;
   couponCode: string;
   discountLabel: string;
+  /** Numeric coupon percent used for sale-price display. */
+  discountPercent?: number;
 };
 
 /** Common peptide vial / test sizes (legacy filter chips). */
@@ -44,21 +64,57 @@ type OfflineCatalog = {
   id: string;
   label: string;
   href: string;
+  couponCode: string;
+  discountLabel: string;
+  discountPercent?: number;
   products: PartnerProduct[];
 };
 
 const OFFLINE_CATALOGS: OfflineCatalog[] = [
   {
+    id: REFINED_BIOLABS_PARTNER.id,
+    label: REFINED_BIOLABS_PARTNER.label,
+    href: REFINED_BIOLABS_PARTNER.href,
+    couponCode: REFINED_BIOLABS_PARTNER.couponCode,
+    discountLabel: REFINED_BIOLABS_PARTNER.discountLabel,
+    discountPercent: REFINED_BIOLABS_PARTNER.discountPercent,
+    products: REFINED_BIOLABS_CATALOG,
+  },
+  {
     id: SOMACHEMS_PARTNER.id,
     label: SOMACHEMS_PARTNER.label,
     href: SOMACHEMS_PARTNER.href,
+    couponCode: SOMACHEMS_PARTNER.couponCode,
+    discountLabel: SOMACHEMS_PARTNER.discountLabel,
+    discountPercent: 10,
     products: SOMACHEMS_CATALOG,
   },
   {
     id: NEUROLABS_PARTNER.id,
     label: NEUROLABS_PARTNER.label,
     href: NEUROLABS_PARTNER.href,
+    couponCode: NEUROLABS_PARTNER.couponCode,
+    discountLabel: NEUROLABS_PARTNER.discountLabel,
+    discountPercent: 10,
     products: NEUROLABS_CATALOG,
+  },
+  {
+    id: PRISTINE_PEPTIDE_PARTNER.id,
+    label: PRISTINE_PEPTIDE_PARTNER.label,
+    href: PRISTINE_PEPTIDE_PARTNER.href,
+    couponCode: PRISTINE_PEPTIDE_PARTNER.couponCode,
+    discountLabel: PRISTINE_PEPTIDE_PARTNER.discountLabel,
+    discountPercent: 10,
+    products: PRISTINE_PEPTIDE_CATALOG,
+  },
+  {
+    id: VITALCHEMS_PARTNER.id,
+    label: VITALCHEMS_PARTNER.label,
+    href: VITALCHEMS_PARTNER.href,
+    couponCode: VITALCHEMS_PARTNER.couponCode,
+    discountLabel: VITALCHEMS_PARTNER.discountLabel,
+    discountPercent: VITALCHEMS_PARTNER.discountPercent,
+    products: VITALCHEMS_CATALOG,
   },
 ];
 
@@ -77,11 +133,10 @@ export function pickLowestOffersByVendor(
       });
     }
   }
-  return [...byVendor.values()].sort((a, b) => a.priceUsd - b.priceUsd);
+  return sortOffersPreferredFirst([...byVendor.values()]);
 }
 
-/** Offline fallback from seeded partner catalogs when partners haven’t loaded. */
-export function getAffiliateOffers(peptideId: string): AffiliateOffer[] {
+function collectOfflineOffers(peptideId: string): AffiliateOffer[] {
   const offers: AffiliateOffer[] = [];
 
   for (const catalog of OFFLINE_CATALOGS) {
@@ -89,28 +144,43 @@ export function getAffiliateOffers(peptideId: string): AffiliateOffer[] {
       if (!product.peptideIds.includes(peptideId) || product.priceUsd == null) {
         continue;
       }
-      offers.push({
-        id: `${peptideId}-${catalog.id}-${product.id}`,
-        vendorId: catalog.id,
-        vendorLabel: catalog.label,
-        productName: product.name,
-        testAmount: product.testAmount?.trim() || 'Standard',
-        priceUsd: product.priceUsd,
-        priceMaxUsd: null,
-        href: product.href || catalog.href,
-        couponCode: DEFAULT_AFFILIATE_COUPON.code,
-        discountLabel: DEFAULT_AFFILIATE_COUPON.discountLabel,
-      });
+      offers.push(
+        withTrustedPartnerOfferFields({
+          id: `${peptideId}-${catalog.id}-${product.id}`,
+          vendorId: catalog.id,
+          vendorLabel: catalog.label,
+          productName: product.name,
+          testAmount: product.testAmount?.trim() || 'Standard',
+          priceUsd: product.priceUsd,
+          priceMaxUsd: null,
+          href: product.href || catalog.href,
+          couponCode: catalog.couponCode || DEFAULT_AFFILIATE_COUPON.code,
+          discountLabel:
+            catalog.discountLabel || DEFAULT_AFFILIATE_COUPON.discountLabel,
+          discountPercent:
+            catalog.discountPercent ?? DEFAULT_AFFILIATE_COUPON.discountPercent,
+        }),
+      );
     }
   }
 
-  return pickLowestOffersByVendor(offers);
+  return offers;
+}
+
+/** Offline fallback — one lowest-priced listing per partner. */
+export function getAffiliateOffers(peptideId: string): AffiliateOffer[] {
+  return pickLowestOffersByVendor(collectOfflineOffers(peptideId));
+}
+
+/** Offline fallback — preferred partner first, then cheapest. */
+export function getAllAffiliateOffers(peptideId: string): AffiliateOffer[] {
+  return sortOffersPreferredFirst(collectOfflineOffers(peptideId));
 }
 
 export function getLowestAffiliatePrice(peptideId: string): number | null {
   const offers = getAffiliateOffers(peptideId);
   if (offers.length === 0) return null;
-  return offers[0]!.priceUsd;
+  return Math.min(...offers.map((offer) => getOfferSalePriceUsd(offer)));
 }
 
 export function formatAffiliateUsd(

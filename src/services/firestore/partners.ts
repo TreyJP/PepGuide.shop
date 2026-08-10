@@ -20,9 +20,22 @@ import {
   NEUROLABS_PARTNER,
 } from '@/src/data/affiliates/neurolabs-catalog';
 import {
+  PRISTINE_PEPTIDE_CATALOG,
+  PRISTINE_PEPTIDE_PARTNER,
+} from '@/src/data/affiliates/pristine-peptide-catalog';
+import { PREFERRED_PARTNER_ID } from '@/src/data/affiliates/preferred-partners';
+import {
+  REFINED_BIOLABS_CATALOG,
+  REFINED_BIOLABS_PARTNER,
+} from '@/src/data/affiliates/refined-biolabs-catalog';
+import {
   SOMACHEMS_CATALOG,
   SOMACHEMS_PARTNER,
 } from '@/src/data/affiliates/somachems-catalog';
+import {
+  VITALCHEMS_CATALOG,
+  VITALCHEMS_PARTNER,
+} from '@/src/data/affiliates/vitalchems-catalog';
 import {
   getFirestoreDb,
   shouldUseMockServices,
@@ -43,20 +56,36 @@ type CatalogPartnerDef = {
   href: string;
   couponCode: string;
   discountLabel: string;
+  discountPercent?: number;
   sortOrder: number;
   products: PartnerProduct[];
 };
 
 const CATALOG_PARTNERS: CatalogPartnerDef[] = [
   {
-    ...SOMACHEMS_PARTNER,
+    ...REFINED_BIOLABS_PARTNER,
     sortOrder: 0,
+    products: REFINED_BIOLABS_CATALOG,
+  },
+  {
+    ...SOMACHEMS_PARTNER,
+    sortOrder: 1,
     products: SOMACHEMS_CATALOG,
   },
   {
     ...NEUROLABS_PARTNER,
-    sortOrder: 1,
+    sortOrder: 2,
     products: NEUROLABS_CATALOG,
+  },
+  {
+    ...PRISTINE_PEPTIDE_PARTNER,
+    sortOrder: 3,
+    products: PRISTINE_PEPTIDE_CATALOG,
+  },
+  {
+    ...VITALCHEMS_PARTNER,
+    sortOrder: 4,
+    products: VITALCHEMS_CATALOG,
   },
 ];
 
@@ -78,6 +107,49 @@ function defaultLabTests(): Record<PartnerLabTestId, boolean | null> {
   return labTests;
 }
 
+/** Partners that always show a complete 7/7 COA panel. */
+const FULL_LAB_PANEL_PARTNER_IDS = new Set<string>([
+  PREFERRED_PARTNER_ID,
+  'vitalchems',
+]);
+
+/** Full COA panel (all seven checks passed). */
+function fullLabTests(): Record<PartnerLabTestId, boolean | null> {
+  const labTests = emptyLabTests();
+  for (const test of PARTNER_LAB_TESTS) {
+    labTests[test.id] = true;
+  }
+  return labTests;
+}
+
+/** NeuroLabs public panel: LC-MS, HPLC-UV, quant, LAL, PCR microbial, fentanyl. */
+function neurolabsLabTests(): Record<PartnerLabTestId, boolean | null> {
+  return {
+    ...emptyLabTests(),
+    identification: true, // Identity · LC-MS
+    net_purity: true, // Purity · HPLC-UV >99%
+    net_content: true, // Net content · Quantitation
+    endotoxins: true, // Endotoxin · LAL USP <85>
+    sterility: true, // Microbial · PCR
+    fentanyl: true, // Fentanyl screen · confirmed negative
+    heavy_metals: null, // Not listed on their public panel
+  };
+}
+
+function catalogLabTests(
+  partnerId: string,
+): Record<PartnerLabTestId, boolean | null> | null {
+  if (FULL_LAB_PANEL_PARTNER_IDS.has(partnerId)) return fullLabTests();
+  if (partnerId === 'neurolabs') return neurolabsLabTests();
+  return null;
+}
+
+function labTestsForPartner(
+  partnerId: string,
+): Record<PartnerLabTestId, boolean | null> {
+  return catalogLabTests(partnerId) ?? defaultLabTests();
+}
+
 function buildCatalogPartner(
   def: CatalogPartnerDef,
   now = new Date().toISOString(),
@@ -92,7 +164,7 @@ function buildCatalogPartner(
     discountLabel: def.discountLabel,
     testAmounts: [],
     products: def.products.map((product) => ({ ...product })),
-    labTests: defaultLabTests(),
+    labTests: labTestsForPartner(def.id),
     createdAt: now,
     updatedAt: now,
   };
@@ -195,13 +267,21 @@ async function syncCatalogPartnerLive(def: CatalogPartnerDef): Promise<void> {
 
   if (existing.exists()) {
     const current = mapPartner(def.id, existing.data() as Record<string, unknown>);
+    const preferred = def.id === PREFERRED_PARTNER_ID;
+    const forcedLabs = catalogLabTests(def.id);
     await setDoc(ref, {
       ...next,
       createdAt: current.createdAt,
-      labTests: current.labTests,
+      // Forced catalog panels stay in sync (e.g. 7/7 or NeuroLabs 6/7).
+      labTests: forcedLabs ?? current.labTests,
       active: current.active,
-      couponCode: current.couponCode || next.couponCode,
-      discountLabel: current.discountLabel || next.discountLabel,
+      sortOrder: preferred ? next.sortOrder : (current.sortOrder ?? next.sortOrder),
+      couponCode: preferred
+        ? next.couponCode
+        : current.couponCode || next.couponCode,
+      discountLabel: preferred
+        ? next.discountLabel
+        : current.discountLabel || next.discountLabel,
       href: current.href || next.href,
       updatedAt: now,
     });
@@ -232,12 +312,15 @@ async function listMock(): Promise<AffiliatePartner[]> {
     ...CATALOG_PARTNERS.map((def) => {
       const existing = mockPartners.find((partner) => partner.id === def.id);
       if (!existing) return buildCatalogPartner(def);
+      const next = buildCatalogPartner(def, existing.createdAt);
+      const preferred = def.id === PREFERRED_PARTNER_ID;
+      const forcedLabs = catalogLabTests(def.id);
       return {
-        ...buildCatalogPartner(def, existing.createdAt),
-        labTests: existing.labTests,
+        ...next,
+        labTests: forcedLabs ?? existing.labTests,
         active: existing.active,
-        couponCode: existing.couponCode,
-        discountLabel: existing.discountLabel,
+        couponCode: preferred ? next.couponCode : existing.couponCode,
+        discountLabel: preferred ? next.discountLabel : existing.discountLabel,
         href: existing.href,
       };
     }),
