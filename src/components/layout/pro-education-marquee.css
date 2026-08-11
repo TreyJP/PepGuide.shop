@@ -1,0 +1,111 @@
+.pro-marquee {
+  display: block;
+  width: 100%;
+  flex-shrink: 0;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 12%, white) 0%,
+    color-mix(in srgb, var(--accent) 7%, white) 50%,
+    color-mix(in srgb, var(--accent) 12%, white) 100%
+  );
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pro-marquee:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.pro-marquee__viewport {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 4%,
+    #000 96%,
+    transparent 100%
+  );
+}
+
+.pro-marquee__track {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 1.75rem;
+  min-width: max-content;
+  padding: 0.55rem 0;
+  animation: pro-marquee-scroll 42s linear infinite;
+}
+
+.pro-marquee:hover .pro-marquee__track {
+  animation-play-state: paused;
+}
+
+.pro-marquee__item {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.45rem;
+  padding-right: 1.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--accent) 82%, var(--foreground));
+}
+
+@media (min-width: 640px) {
+  .pro-marquee__item {
+    font-size: 0.78rem;
+  }
+}
+
+.pro-marquee__icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+@keyframes pro-marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pro-marquee__viewport {
+    mask-image: none;
+    justify-content: center;
+  }
+
+  .pro-marquee__track {
+    animation: none;
+    min-width: 0;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .pro-marquee__track + .pro-marquee__track {
+    display: none;
+  }
+
+  .pro-marquee__item:not(:first-child) {
+    display: none;
+  }
+
+  .pro-marquee__item {
+    padding-right: 0;
+  }
+}

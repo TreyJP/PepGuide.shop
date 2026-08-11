@@ -1,8 +1,20 @@
+import {
+  PEPTIDE_OF_THE_WEEK,
+  PEPTIDE_OF_WEEK_BANNER_ENABLED,
+} from '@/src/data/pro/peptide-of-the-week';
+
+export type ProGuideSection =
+  | 'Peptide of the week'
+  | 'Starter guides'
+  | 'Research guides';
+
 export type ProGuideLesson = {
   id: string;
   title: string;
   durationMinutes: number;
-  /** Optional hosted video URL — leave empty until content is uploaded. */
+  /** Display length for the thumbnail badge (e.g. `1:37`). Falls back to `N min`. */
+  durationLabel?: string;
+  /** Optional hosted video URL — YouTube, Vimeo, or `/guides/your-file.mp4`. */
   videoUrl?: string;
   summary: string;
 };
@@ -11,139 +23,91 @@ export type ProGuideCourse = {
   id: string;
   title: string;
   tagline: string;
-  level: 'Start here' | 'Core' | 'Advanced';
+  level: ProGuideSection;
   lessonCount: number;
   totalMinutes: number;
   lessons: ProGuideLesson[];
 };
 
-export const PRO_GUIDE_COURSES: ProGuideCourse[] = [
-  {
-    id: 'foundations',
-    title: 'Peptide research foundations',
-    tagline: 'How to learn peptides the right way — evidence, safety framing, and tools.',
-    level: 'Start here',
-    lessonCount: 4,
-    totalMinutes: 42,
+export const GUIDE_SECTIONS: readonly ProGuideSection[] = [
+  'Peptide of the week',
+  'Starter guides',
+  'Research guides',
+] as const;
+
+const STARTER_GUIDE_VIDEOS = {
+  pin:
+    process.env.NEXT_PUBLIC_STARTER_GUIDE_PIN_URL?.trim() ||
+    '/guides/pinningguide.mp4',
+  reconstitute:
+    process.env.NEXT_PUBLIC_STARTER_GUIDE_RECONSTITUTE_URL?.trim() ||
+    '/guides/guidereconstitute.mp4',
+} as const;
+
+function buildPeptideOfWeekCourse(): ProGuideCourse | null {
+  const potw = PEPTIDE_OF_THE_WEEK;
+  const hasVideo = Boolean(potw.videoUrl?.trim());
+  if (!PEPTIDE_OF_WEEK_BANNER_ENABLED && !hasVideo) return null;
+
+  return {
+    id: 'peptide-of-the-week',
+    title: 'Peptide of the week',
+    tagline: potw.headline || 'This week’s featured educational walkthrough.',
+    level: 'Peptide of the week',
+    lessonCount: 1,
+    totalMinutes: 12,
     lessons: [
       {
-        id: 'foundations-1',
-        title: 'What PepGuide Pro is (and isn’t)',
-        durationMinutes: 8,
-        summary:
-          'Educational research framing, what Pro unlocks, and how to use Guides vs Protocols.',
-      },
-      {
-        id: 'foundations-2',
-        title: 'Reading evidence without the hype',
+        id: 'potw-current',
+        title: potw.name
+          ? `${potw.name} — ${potw.weekLabel}`
+          : 'This week’s featured peptide',
         durationMinutes: 12,
+        videoUrl: hasVideo ? potw.videoUrl : undefined,
         summary:
-          'Human vs animal vs in-vitro signals, common marketing traps, and what “research dosing” means.',
-      },
-      {
-        id: 'foundations-3',
-        title: 'Using Chat, Library, and Cycle together',
-        durationMinutes: 10,
-        summary:
-          'A practical walkthrough of the free tools plus how Pro content plugs into your research log.',
-      },
-      {
-        id: 'foundations-4',
-        title: 'Lab testing & vendor literacy',
-        durationMinutes: 12,
-        summary:
-          'What COAs and lab panels usually cover, and how to compare partners without guessing.',
+          potw.blurb ||
+          'A short educational look at this week’s featured peptide.',
       },
     ],
-  },
-  {
-    id: 'metabolic-stacks',
-    title: 'Metabolic peptide literacy',
-    tagline: 'Understand GLP / dual / triple agonist research stacks before you compare options.',
-    level: 'Core',
-    lessonCount: 3,
-    totalMinutes: 36,
-    lessons: [
-      {
-        id: 'metabolic-1',
-        title: 'How metabolic peptides are usually discussed',
-        durationMinutes: 14,
-        summary:
-          'Mechanisms at a high level, titration language in trials/labels, and appetite vs metabolic endpoints.',
-      },
-      {
-        id: 'metabolic-2',
-        title: 'Building a research comparison shortlist',
-        durationMinutes: 12,
-        summary:
-          'How to use Protocols for goal-based stacks and Library cards for compound detail.',
-      },
-      {
-        id: 'metabolic-3',
-        title: 'Logging outcomes that actually matter',
-        durationMinutes: 10,
-        summary:
-          'What to track in Cycle for research notes — consistency, tolerability themes, and questions for a clinician.',
-      },
-    ],
-  },
-  {
-    id: 'recovery-repair',
-    title: 'Recovery & repair research',
-    tagline: 'Navigate healing-oriented peptides with clearer expectations and stack context.',
-    level: 'Core',
-    lessonCount: 3,
-    totalMinutes: 28,
-    lessons: [
-      {
-        id: 'recovery-1',
-        title: 'Repair peptides 101',
-        durationMinutes: 10,
-        summary:
-          'Where BPC-157, TB-500, and related compounds show up in research conversation — and limits of the evidence.',
-      },
-      {
-        id: 'recovery-2',
-        title: 'Pairing compounds in a stack (education only)',
-        durationMinutes: 10,
-        summary:
-          'How Protocols group compounds by goal, and how to read “why this stack” notes critically.',
-      },
-      {
-        id: 'recovery-3',
-        title: 'When to pause and ask a professional',
-        durationMinutes: 8,
-        summary:
-          'Red flags, injury context, and keeping PepGuide educational — not a treatment plan.',
-      },
-    ],
-  },
-  {
-    id: 'advanced-logging',
-    title: 'Advanced research logging',
-    tagline: 'Turn scattered notes into a clean Pro workflow across stacks and guides.',
-    level: 'Advanced',
-    lessonCount: 2,
-    totalMinutes: 18,
-    lessons: [
-      {
-        id: 'advanced-1',
-        title: 'From protocol → cycle log',
-        durationMinutes: 9,
-        summary:
-          'How to take a Protocol stack and turn it into tracked Cycle entries without treating it as a prescription.',
-      },
-      {
-        id: 'advanced-2',
-        title: 'Reviewing a month of research notes',
-        durationMinutes: 9,
-        summary:
-          'A simple weekly review ritual: what changed, what to re-check in Library, what to ask next in Chat.',
-      },
-    ],
-  },
-];
+  };
+}
+
+const STARTER_GUIDES_COURSE: ProGuideCourse = {
+  id: 'starter-guides',
+  title: 'Starter guides',
+  tagline: 'Begin here — short videos that get you oriented in PepGuide Pro.',
+  level: 'Starter guides',
+  lessonCount: 2,
+  totalMinutes: 3,
+  lessons: [
+    {
+      id: 'starter-reconstitute',
+      title: 'How To Reconstitute Your Peptides',
+      durationMinutes: 2,
+      durationLabel: '1:37',
+      videoUrl: STARTER_GUIDE_VIDEOS.reconstitute,
+      summary: 'Step-by-step walkthrough for reconstituting research peptides.',
+    },
+    {
+      id: 'starter-pin',
+      title: 'How To Pin Peptides',
+      durationMinutes: 1,
+      durationLabel: '0:55',
+      videoUrl: STARTER_GUIDE_VIDEOS.pin,
+      summary:
+        'How to prepare and administer a subcutaneous research injection.',
+    },
+  ],
+};
+
+/** Courses shown in Education & Research. */
+export function getVisibleGuideCourses(): ProGuideCourse[] {
+  const potw = buildPeptideOfWeekCourse();
+  return potw ? [potw, STARTER_GUIDES_COURSE] : [STARTER_GUIDES_COURSE];
+}
+
+export const PRO_GUIDE_COURSES: ProGuideCourse[] = getVisibleGuideCourses();
 
 export function getGuideCourse(id: string): ProGuideCourse | undefined {
-  return PRO_GUIDE_COURSES.find((course) => course.id === id);
+  return getVisibleGuideCourses().find((course) => course.id === id);
 }

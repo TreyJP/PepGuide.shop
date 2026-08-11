@@ -51,3 +51,8 @@ functions/node_modules
 
 # vercel
 .vercel
+
+# Large guide videos — host externally (Vercel Blob / R2 / CDN) and set
+# NEXT_PUBLIC_STARTER_GUIDE_PIN_URL / NEXT_PUBLIC_STARTER_GUIDE_RECONSTITUTE_URL.
+# Keep local copies in public/guides for dev; do not commit mp4s (GitHub 100MB limit).
+/public/guides/*.mp4
