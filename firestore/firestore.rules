@@ -295,6 +295,78 @@ service cloud.firestore {
       }
     }
 
+    // Vendor reviews forum (signed-in members; listed under PepGuide Pro nav)
+    match /vendorReviews/{reviewId} {
+      allow read: if canUseProCommunity();
+
+      allow create: if canUseProCommunity()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.keys().hasAll([
+          'partnerId',
+          'partnerLabel',
+          'rating',
+          'title',
+          'body',
+          'authorId',
+          'authorDisplayName',
+          'authorIsAdmin',
+          'createdAt',
+          'updatedAt',
+          'replyCount',
+          'searchText'
+        ])
+        && request.resource.data.partnerId is string
+        && request.resource.data.partnerId.size() > 0
+        && request.resource.data.partnerId.size() <= 80
+        && request.resource.data.partnerLabel is string
+        && request.resource.data.partnerLabel.size() > 0
+        && request.resource.data.partnerLabel.size() <= 120
+        && request.resource.data.rating is number
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && request.resource.data.body is string
+        && request.resource.data.body.size() > 0
+        && request.resource.data.body.size() <= 20000
+        && request.resource.data.authorDisplayName is string
+        && request.resource.data.authorIsAdmin is bool
+        && request.resource.data.replyCount == 0
+        && request.resource.data.searchText is string;
+
+      allow update: if canUseProCommunity()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['replyCount', 'updatedAt']);
+
+      allow delete: if isAdmin()
+        || (canUseProCommunity() && resource.data.authorId == request.auth.uid);
+
+      match /replies/{replyId} {
+        allow read: if canUseProCommunity();
+
+        allow create: if canUseProCommunity()
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.keys().hasAll([
+            'body',
+            'authorId',
+            'authorDisplayName',
+            'authorIsAdmin',
+            'createdAt'
+          ])
+          && request.resource.data.body is string
+          && request.resource.data.body.size() > 0
+          && request.resource.data.body.size() <= 8000
+          && request.resource.data.authorDisplayName is string
+          && request.resource.data.authorIsAdmin is bool
+          && request.resource.data.createdAt is string;
+
+        allow update: if false;
+        allow delete: if isAdmin()
+          || (canUseProCommunity() && resource.data.authorId == request.auth.uid);
+      }
+    }
+
     // PepGuide Pro — Ask a Professional (private user ↔ admin consults)
     match /proConsults/{consultId} {
       allow read: if isSignedIn()

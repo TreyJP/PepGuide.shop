@@ -14,6 +14,7 @@ import {
   Settings,
   Shield,
   Sparkles,
+  Star,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -46,6 +47,13 @@ const PRO_NAV = [
     href: '/pro/ask',
     label: 'Ask a Professional',
     icon: MessageCircleQuestion,
+  },
+  {
+    href: '/pro/vendor-reviews',
+    label: 'Vendor Reviews',
+    icon: Star,
+    /** Open to every signed-in member (not Pro-locked / coming soon). */
+    openToAll: true,
   },
 ] as const;
 
@@ -176,7 +184,9 @@ export function AppSidebar() {
               </p>
             </div>
 
-            {PRO_NAV.map(({ href, label, icon }) => {
+            {PRO_NAV.map((item) => {
+              const { href, label, icon } = item;
+              const openToAll = 'openToAll' in item && item.openToAll;
               const active =
                 pathname === href || pathname.startsWith(`${href}/`);
               return (
@@ -186,8 +196,8 @@ export function AppSidebar() {
                   label={label}
                   icon={icon}
                   active={active}
-                  locked={proLocked}
-                  comingSoon={proComingSoon}
+                  locked={!openToAll && proLocked}
+                  comingSoon={!openToAll && proComingSoon}
                   onNavigate={closeSidebar}
                 />
               );

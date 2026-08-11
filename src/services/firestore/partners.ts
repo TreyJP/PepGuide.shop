@@ -331,20 +331,46 @@ async function listMock(): Promise<AffiliatePartner[]> {
 }
 
 async function listLive(): Promise<AffiliatePartner[]> {
-  await syncCatalogPartnersLive();
+  // Catalog sync writes docs — non-admins can't write. Never let that
+  // block listing partners for the rest of the app.
+  try {
+    await syncCatalogPartnersLive();
+  } catch {
+    // Read-only clients still get whatever is already in Firestore.
+  }
+
   const snap = await getDocs(query(partnersCol(), orderBy('sortOrder', 'asc')));
   if (snap.empty) {
-    const seeded = seedPartners();
-    await Promise.all(
-      seeded.map((partner) =>
-        setDoc(doc(requireDb(), 'affiliatePartners', partner.id), partner),
-      ),
-    );
-    return seeded;
+    // Seed only works for admins; otherwise fall back to offline catalogs.
+    try {
+      const seeded = seedPartners();
+      await Promise.all(
+        seeded.map((partner) =>
+          setDoc(doc(requireDb(), 'affiliatePartners', partner.id), partner),
+        ),
+      );
+      return seeded;
+    } catch {
+      return CATALOG_PARTNERS.map((def) => buildCatalogPartner(def));
+    }
   }
-  return snap.docs
+
+  const live = snap.docs
     .map((item) => mapPartner(item.id, item.data() as Record<string, unknown>))
     .filter((partner) => !FAKE_SLOT_IDS.has(partner.id));
+
+  // If Firestore only has inactive/hidden rows, still expose catalog vendors
+  // so review/pricing UIs have something to show.
+  if (live.length === 0) {
+    return CATALOG_PARTNERS.map((def) => buildCatalogPartner(def));
+  }
+
+  return live;
+}
+
+/** Offline / catalog vendor names for UIs that need a vendor picker. */
+export function listCatalogVendorOptions(): Array<{ id: string; label: string }> {
+  return CATALOG_PARTNERS.map((def) => ({ id: def.id, label: def.label }));
 }
 
 async function upsertMock(
