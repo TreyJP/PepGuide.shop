@@ -12,16 +12,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const setInitializing = useAuthStore((state) => state.setInitializing);
 
   useEffect(() => {
+    let settled = false;
     setInitializing(true);
 
     const unsubscribe = authService.subscribe((user) => {
+      settled = true;
       setUser(user);
       setInitializing(false);
     });
 
+    // Safety valve: never leave the app on the loading screen forever.
+    const timeoutId = window.setTimeout(() => {
+      if (!settled) setInitializing(false);
+    }, 8000);
+
     void initFirebaseAnalytics();
 
-    return unsubscribe;
+    return () => {
+      window.clearTimeout(timeoutId);
+      unsubscribe();
+    };
   }, [setUser, setInitializing]);
 
   return (

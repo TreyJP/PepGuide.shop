@@ -81,35 +81,49 @@ export const firebaseAuthService = {
     }
 
     let generation = 0;
-    let unsubscribed = false;
-    let unsubscribeAuth: (() => void) | null = null;
 
-    // Finish Google redirect sign-in before attaching the listener so we don't
-    // briefly emit null and reopen the sign-in UI after a successful login.
-    void (async () => {
-      try {
-        await getRedirectResult(auth);
-      } catch (error) {
-        console.error('Google redirect sign-in failed', error);
-      }
-      if (unsubscribed) return;
+    // Resolve Google redirect in the background — never block auth hydration on it.
+    // Awaiting getRedirectResult before onAuthStateChanged can leave the app stuck
+    // on "Loading PepGuide…" after a successful login.
+    void getRedirectResult(auth).catch((error) => {
+      console.error('Google redirect sign-in failed', error);
+    });
 
-      unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-        const current = ++generation;
-        void (async () => {
-          if (!firebaseUser) {
-            if (current === generation) listener(null);
-            return;
-          }
-          const profile = await toProfile(firebaseUser);
-          if (current === generation) listener(profile);
-        })();
-      });
-    })();
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      const current = ++generation;
+      void (async () => {
+        if (!firebaseUser) {
+          if (current === generation) listener(null);
+          return;
+        }
+
+        // Don't let a slow Firestore profile sync hang the whole app shell.
+        let timedOut = false;
+        const profile = await Promise.race([
+          toProfile(firebaseUser),
+          new Promise<UserProfile>((resolve) => {
+            setTimeout(() => {
+              timedOut = true;
+              resolve(fallbackProfile(firebaseUser));
+            }, 4000);
+          }),
+        ]);
+
+        if (current === generation) listener(profile);
+
+        // If we raced with the fallback, still try to sync the real profile.
+        if (timedOut) {
+          void toProfile(firebaseUser)
+            .then((synced) => {
+              if (current === generation) listener(synced);
+            })
+            .catch(() => undefined);
+        }
+      })();
+    });
 
     return () => {
-      unsubscribed = true;
-      unsubscribeAuth?.();
+      unsubscribeAuth();
     };
   },
 

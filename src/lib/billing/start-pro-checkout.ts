@@ -38,5 +38,9 @@ export async function startProCheckout(): Promise<void> {
     throw new Error(data.error || 'Unable to start checkout.');
   }
 
-  window.location.assign(data.url);
+  // Prefer a new tab so PepGuide stays open; fall back if the popup is blocked.
+  const checkoutTab = window.open(data.url, '_blank', 'noopener,noreferrer');
+  if (!checkoutTab) {
+    window.location.assign(data.url);
+  }
 }

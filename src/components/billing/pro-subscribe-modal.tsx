@@ -123,6 +123,8 @@ export function ProSubscribeModal() {
     setError(null);
     try {
       await startProCheckout();
+      setLoading(false);
+      closeProSubscribeModal();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to start checkout.');
       setLoading(false);
