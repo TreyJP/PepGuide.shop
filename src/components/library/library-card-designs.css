@@ -294,7 +294,8 @@
 }
 
 .lib-vg__size-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   width: 100%;
   align-items: center;
   gap: 0.35rem;
@@ -308,20 +309,29 @@
   cursor: pointer;
 }
 
+.lib-vg__size-row--price-only {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.lib-vg__size-row--price-only .lib-vg__price {
+  justify-self: start;
+  margin-top: 0;
+}
+
 .lib-vg__size-row:hover {
   background: color-mix(in srgb, var(--lib-blue) 8%, white);
 }
 
 .lib-vg__size-row .lib-vg__sku {
-  flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.25;
 }
 
 .lib-vg__size-row .lib-vg__price {
   flex-shrink: 0;
+  justify-self: end;
 }
 
 .lib-vg__size-row .lib-vg__icon {
@@ -346,10 +356,9 @@
 .lib-vg__vendor {
   min-width: 0;
   max-width: 100%;
-  padding-right: 1.25rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.25;
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--lib-navy);
@@ -397,9 +406,9 @@
 .lib-vg__sku {
   font-size: 0.68rem;
   color: var(--foreground-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.25;
 }
 
 .lib-vg__price {
@@ -409,6 +418,7 @@
   align-items: baseline;
   gap: 0.3rem 0.45rem;
   max-width: 100%;
+  flex-shrink: 0;
 }
 
 .lib-offer-price__sale {
@@ -429,17 +439,18 @@
 .lib-vg__coupon {
   border: 1px dashed color-mix(in srgb, var(--lib-pref, #0f766e) 35%, var(--lib-line));
   background: color-mix(in srgb, var(--lib-pref-soft, #ecfdf8) 80%, white);
-  border-radius: 999px;
-  padding: 0.18rem 0.45rem;
-  font-size: 0.58rem;
+  border-radius: 8px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--lib-pref, #0f766e);
   cursor: pointer;
   max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+  text-align: left;
 }
 
 .lib-vg__coupon:hover {
@@ -870,13 +881,20 @@
 }
 
 .lib-vg--tile {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 520px) {
+  .lib-vg--tile {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .lib-vg--tile .lib-vg__cell {
   border-radius: 12px;
-  padding: 0.5rem 0.55rem 0.55rem;
+  padding: 0.55rem 0.6rem 0.6rem;
   min-height: auto;
+  overflow: visible;
 }
 
 .lib-vg--tile .lib-vg__sku {
@@ -889,14 +907,15 @@
 }
 
 .lib-vg--tile .lib-vg__size-row {
-  padding: 0.22rem 0.35rem;
+  padding: 0.28rem 0.4rem;
+  gap: 0.3rem;
 }
 
 .lib-vg--tile .lib-vg__cell--best,
 .lib-vg--tile .lib-vg__cell--preferred {
   position: relative;
-  overflow: hidden;
-  padding-top: 1.05rem;
+  overflow: visible;
+  padding-top: 1.15rem;
 }
 
 .lib-vg--tile .lib-vg__cell--best {
@@ -947,8 +966,8 @@
 }
 
 .lib-vg--tile .lib-vg__coupon {
-  font-size: 0.55rem;
-  padding: 0.16rem 0.4rem;
+  font-size: 0.62rem;
+  padding: 0.18rem 0.42rem;
 }
 
 .lib-vg--deck .lib-vg__cell,

@@ -51,10 +51,6 @@ async function copyCoupon(code: string) {
   }
 }
 
-function sizeLabel(offer: AffiliateOffer): string {
-  return offer.testAmount || offer.productName || 'Standard';
-}
-
 function priceRangeLabel(group: VendorOfferGroup): string {
   const low = formatAffiliateUsd(group.lowestSalePriceUsd);
   if (group.highestSalePriceUsd <= group.lowestSalePriceUsd) return low;
@@ -169,14 +165,13 @@ export function LibVendorGrid({
                     <button
                       key={offer.id}
                       type="button"
-                      className="lib-vg__size-row"
+                      className="lib-vg__size-row lib-vg__size-row--price-only"
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
                         openVendor(offer, peptideId, peptideName);
                       }}
                     >
-                      <span className="lib-vg__sku">{sizeLabel(offer)}</span>
                       <OfferPrice
                         offer={offer}
                         size="sm"
@@ -188,14 +183,13 @@ export function LibVendorGrid({
                 ) : primary ? (
                   <button
                     type="button"
-                    className="lib-vg__size-row"
+                    className="lib-vg__size-row lib-vg__size-row--price-only"
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
                       openVendor(primary, peptideId, peptideName);
                     }}
                   >
-                    <span className="lib-vg__sku">Price range</span>
                     <span className="lib-vg__price font-[family-name:var(--font-display)] font-semibold tabular-nums text-foreground text-sm">
                       {priceRangeLabel(group)}
                     </span>

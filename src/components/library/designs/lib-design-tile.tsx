@@ -56,7 +56,7 @@ export function LibDesignTile(props: LibraryDesignViewProps) {
                   offers={offers}
                   peptideId={peptide.id}
                   peptideName={peptide.name}
-                  previewCount={1}
+                  previewCount={2}
                 />
               </article>
             );
