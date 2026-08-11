@@ -1,6 +1,5 @@
 'use client';
 
-import { ProComingSoon } from '@/src/components/pro/pro-coming-soon';
 import { BookmarksPanel } from '@/src/components/pro/bookmarks-panel';
 import { ProLockedPreview } from '@/src/components/pro/pro-locked-preview';
 import { PRO_COMING_SOON } from '@/src/constants/billing';
@@ -11,8 +10,7 @@ export default function ProBookmarksPage() {
   const { loading, isPro } = useProAccess();
   const { isAdmin, loading: adminLoading } = useAdminAccess();
   const waiting = loading || adminLoading;
-  const showComingSoon = PRO_COMING_SOON && !isAdmin;
-  const canAccess = isPro || isAdmin;
+  const unlocked = isAdmin || (isPro && !PRO_COMING_SOON);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -29,9 +27,7 @@ export default function ProBookmarksPage() {
         <div className="mx-auto w-full max-w-3xl">
           {waiting ? (
             <p className="text-sm text-foreground-secondary">Loading…</p>
-          ) : showComingSoon ? (
-            <ProComingSoon feature="Bookmarks" />
-          ) : canAccess ? (
+          ) : unlocked ? (
             <BookmarksPanel />
           ) : (
             <ProLockedPreview feature="Bookmarks">

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/src/components/ui/button';
+import { PRO_COMING_SOON } from '@/src/constants/billing';
 import { PEPTIDE_OF_THE_WEEK } from '@/src/data/pro/peptide-of-the-week';
 import { startProCheckout } from '@/src/lib/billing/start-pro-checkout';
 import { parseProExplainerVideoUrl } from '@/src/lib/pro-explainer-video';
@@ -46,6 +47,11 @@ export function PeptideOfWeekBanner() {
 
   async function handleUnlockProDirect() {
     setCheckoutError(null);
+    // While Pro is in coming-soon mode, never jump straight to Stripe.
+    if (PRO_COMING_SOON) {
+      openProDetails();
+      return;
+    }
     if (!user) {
       setOpen(false);
       openSignInModal(
@@ -179,9 +185,11 @@ export function PeptideOfWeekBanner() {
                   disabled={checkoutBusy}
                   onClick={() => void handleUnlockProDirect()}
                 >
-                  {checkoutBusy
-                    ? 'Redirecting to Stripe…'
-                    : 'Unlock Pro to access all educational videos'}
+                  {PRO_COMING_SOON
+                    ? 'Coming soon'
+                    : checkoutBusy
+                      ? 'Redirecting to Stripe…'
+                      : 'Unlock Pro to access all educational videos'}
                 </button>
                 {checkoutError ? (
                   <p className="w-full text-center text-xs text-red-200 sm:text-left">

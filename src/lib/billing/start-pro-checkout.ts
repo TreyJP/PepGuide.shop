@@ -1,5 +1,6 @@
 'use client';
 
+import { PRO_COMING_SOON } from '@/src/constants/billing';
 import { getFirebaseAuth } from '@/src/services/firebase/config';
 
 /**
@@ -7,6 +8,10 @@ import { getFirebaseAuth } from '@/src/services/firebase/config';
  * Throws with a user-facing message on failure.
  */
 export async function startProCheckout(): Promise<void> {
+  if (PRO_COMING_SOON) {
+    throw new Error('PepGuide Pro checkout is coming soon.');
+  }
+
   const token = await getFirebaseAuth()?.currentUser?.getIdToken();
   if (!token) {
     throw new Error('Sign in again to continue checkout.');

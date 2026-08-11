@@ -5,7 +5,6 @@ import { use, useState } from 'react';
 
 import { AddProtocolToCycleModal } from '@/src/components/cycle/add-protocol-to-cycle-modal';
 import { BookmarkToggleButton } from '@/src/components/pro/bookmark-toggle-button';
-import { ProComingSoon } from '@/src/components/pro/pro-coming-soon';
 import { ProtocolPeptideLibrary } from '@/src/components/pro/protocol-peptide-library';
 import { ProLockedPreview } from '@/src/components/pro/pro-locked-preview';
 import { Badge } from '@/src/components/ui/badge';
@@ -152,8 +151,7 @@ export default function ProtocolShopPage({
   const { loading, isPro } = useProAccess();
   const { isAdmin, loading: adminLoading } = useAdminAccess();
   const waiting = loading || adminLoading;
-  const showComingSoon = PRO_COMING_SOON && !isAdmin;
-  const canAccess = isPro || isAdmin;
+  const unlocked = isAdmin || (isPro && !PRO_COMING_SOON);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -170,9 +168,7 @@ export default function ProtocolShopPage({
         <div className="mx-auto w-full max-w-2xl sm:max-w-3xl">
           {waiting ? (
             <p className="text-sm text-foreground-secondary">Loading…</p>
-          ) : showComingSoon ? (
-            <ProComingSoon feature="Protocols" />
-          ) : canAccess ? (
+          ) : unlocked ? (
             <ProtocolShopContent protocolId={protocolId} />
           ) : (
             <ProLockedPreview feature="Protocols">

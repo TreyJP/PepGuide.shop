@@ -1,5 +1,5 @@
 /** When true, Pro nav/pages show Coming soon — no checkout. Flip to false to sell. */
-export const PRO_COMING_SOON = false;
+export const PRO_COMING_SOON = true;
 
 export const PRO_BILLING = {
   productName: 'PepGuide Pro',

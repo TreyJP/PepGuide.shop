@@ -268,6 +268,7 @@ export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics
 
   return buildAdminDashboardMetrics({
     users: users.map((row) => ({
+      email: typeof row.email === 'string' ? row.email : undefined,
       createdAt: typeof row.createdAt === 'string' ? row.createdAt : undefined,
       subscriptionTier:
         typeof row.subscriptionTier === 'string'

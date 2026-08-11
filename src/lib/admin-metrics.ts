@@ -1,7 +1,9 @@
 import { PRO_BILLING } from '@/src/constants/billing';
+import { isTestAccountEmail } from '@/src/constants/test-accounts';
 import type { AdminDashboardMetrics, AnalyticsEvent } from '@/src/types/analytics';
 
 type UserRow = {
+  email?: string;
   createdAt?: string;
   subscriptionTier?: string;
   accountStatus?: string;
@@ -67,13 +69,20 @@ export function buildAdminDashboardMetrics(input: {
   let withAbuseStrikes = 0;
 
   for (const user of input.users) {
-    if (user.subscriptionTier === 'pro') pro += 1;
+    const isTest = isTestAccountEmail(user.email);
+    // Test / QA accounts keep Pro access in-app but do not count as paid.
+    if (!isTest && user.subscriptionTier === 'pro') pro += 1;
     else free += 1;
 
     if (isWithin(user.createdAt, since7d)) new7d += 1;
     if (isWithin(user.createdAt, since30d)) new30d += 1;
 
-    if (user.stripeSubscriptionId || user.stripeCustomerId) withStripe += 1;
+    if (
+      !isTest &&
+      (user.stripeSubscriptionId || user.stripeCustomerId)
+    ) {
+      withStripe += 1;
+    }
 
     const status = (user.accountStatus ?? 'active') as keyof typeof byStatus;
     if (status in byStatus) byStatus[status] += 1;
@@ -92,7 +101,10 @@ export function buildAdminDashboardMetrics(input: {
   const couponCopies = input.events.filter((e) => e.name === 'coupon_copy');
   const checkoutStarted = input.events.filter((e) => e.name === 'checkout_started');
   const checkoutCompleted = input.events.filter(
-    (e) => e.name === 'checkout_completed',
+    (e) => e.name === 'checkout_completed' && !isTestAccountEmail(e.email),
+  );
+  const checkoutStartedPaid = checkoutStarted.filter(
+    (e) => !isTestAccountEmail(e.email),
   );
 
   const clicks7d = affiliateClicks.filter((e) => isWithin(e.createdAt, since7d));
@@ -182,7 +194,7 @@ export function buildAdminDashboardMetrics(input: {
     sales: {
       proSubscribers: pro,
       estimatedMrrUsd: pro * PRO_BILLING.priceUsd,
-      checkoutStarted7d: checkoutStarted.filter((e) =>
+      checkoutStarted7d: checkoutStartedPaid.filter((e) =>
         isWithin(e.createdAt, since7d),
       ).length,
       checkoutCompleted7d: checkoutCompleted.filter((e) =>
