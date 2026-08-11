@@ -150,3 +150,85 @@ export function getLowestPartnerPrice(
   if (offers.length === 0) return null;
   return Math.min(...offers.map((offer) => getOfferSalePriceUsd(offer)));
 }
+
+export type VendorOfferGroup = {
+  vendorId: string;
+  vendorLabel: string;
+  couponCode: string;
+  discountLabel: string;
+  discountPercent?: number;
+  /** Size / SKU rows for this vendor, cheapest first. */
+  sizes: AffiliateOffer[];
+  /** Cheapest sale price across sizes (for “Lowest” badges). */
+  lowestSalePriceUsd: number;
+  /** Highest sale price across sizes (for unlabeled price ranges). */
+  highestSalePriceUsd: number;
+  /**
+   * True when at least one SKU has a real size label (e.g. "10 mg").
+   * When false, UI should show a single low–high price range instead of
+   * repeating generic "Standard" rows.
+   */
+  hasKnownSizes: boolean;
+};
+
+/** True when the label looks like a real vial / dose size. */
+export function isKnownSizeLabel(
+  testAmount: string | null | undefined,
+): boolean {
+  const label = (testAmount || '').trim();
+  if (!label) return false;
+  if (/^(standard|default|n\/?a|—|--|-|size|vial)$/i.test(label)) return false;
+  return /\d/.test(label);
+}
+
+function vendorHasKnownSizes(sizes: AffiliateOffer[]): boolean {
+  return sizes.some((offer) => isKnownSizeLabel(offer.testAmount));
+}
+
+/** Collapse SKU rows into one group per vendor, sizes sorted cheap → expensive. */
+export function groupOffersByVendor(
+  offers: AffiliateOffer[],
+): VendorOfferGroup[] {
+  const byVendor = new Map<string, AffiliateOffer[]>();
+  for (const offer of offers) {
+    const list = byVendor.get(offer.vendorId) ?? [];
+    list.push(offer);
+    byVendor.set(offer.vendorId, list);
+  }
+
+  const groups: VendorOfferGroup[] = [];
+  for (const sizes of byVendor.values()) {
+    const sorted = [...sizes].sort((a, b) => {
+      const saleDiff = getOfferSalePriceUsd(a) - getOfferSalePriceUsd(b);
+      if (saleDiff !== 0) return saleDiff;
+      return a.testAmount.localeCompare(b.testAmount, undefined, {
+        numeric: true,
+      });
+    });
+    const primary = sorted[0];
+    const last = sorted[sorted.length - 1];
+    if (!primary || !last) continue;
+    groups.push({
+      vendorId: primary.vendorId,
+      vendorLabel: primary.vendorLabel,
+      couponCode: primary.couponCode,
+      discountLabel: primary.discountLabel,
+      discountPercent: primary.discountPercent,
+      sizes: sorted,
+      lowestSalePriceUsd: getOfferSalePriceUsd(primary),
+      highestSalePriceUsd: getOfferSalePriceUsd(last),
+      hasKnownSizes: vendorHasKnownSizes(sorted),
+    });
+  }
+
+  return groups.sort((a, b) => {
+    const aPreferred = isPreferredPartner(a.vendorId, a.vendorLabel) ? 0 : 1;
+    const bPreferred = isPreferredPartner(b.vendorId, b.vendorLabel) ? 0 : 1;
+    if (aPreferred !== bPreferred) return aPreferred - bPreferred;
+    if (a.lowestSalePriceUsd !== b.lowestSalePriceUsd) {
+      return a.lowestSalePriceUsd - b.lowestSalePriceUsd;
+    }
+    return a.vendorLabel.localeCompare(b.vendorLabel);
+  });
+}
+

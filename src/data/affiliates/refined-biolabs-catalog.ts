@@ -291,6 +291,6 @@ export const REFINED_BIOLABS_PARTNER = {
   label: 'Refined Biolabs',
   href: `${RB_BASE}/shop`,
   couponCode: 'PEPGUIDE',
-  discountLabel: '30% off',
-  discountPercent: 30,
+  discountLabel: '20% off',
+  discountPercent: 20,
 } as const;

@@ -1,11 +1,18 @@
 'use client';
 
-import Link from 'next/link';
+import { RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import { AddProtocolToCycleModal } from '@/src/components/cycle/add-protocol-to-cycle-modal';
+import { BookmarkToggleButton } from '@/src/components/pro/bookmark-toggle-button';
+import { ProtocolPeptideLibrary } from '@/src/components/pro/protocol-peptide-library';
 import { Badge } from '@/src/components/ui/badge';
+import { Button } from '@/src/components/ui/button';
 import { PRO_PROTOCOLS, type ProProtocol } from '@/src/data/pro/protocols';
+import { useProAccess } from '@/src/hooks/use-pro-access';
 import { cn } from '@/src/lib/utils';
+import { useAuthStore } from '@/src/stores/auth-store';
+import { useUiStore } from '@/src/stores/ui-store';
 
 const DIFFICULTY_FILTERS = [
   'All levels',
@@ -37,50 +44,27 @@ function FocusTags({ protocol }: { protocol: ProProtocol }) {
   );
 }
 
-function StackDetails({ protocol }: { protocol: ProProtocol }) {
+function ProtocolActions({
+  protocol,
+  onAddToCycle,
+}: {
+  protocol: ProProtocol;
+  onAddToCycle: () => void;
+}) {
   return (
-    <div className="space-y-4">
-      <ul className="space-y-3">
-        {protocol.peptides.map((peptide, index) => (
-          <li
-            key={peptide.peptideId}
-            className="rounded-[14px] bg-surface-secondary/70 px-3.5 py-3.5"
-          >
-            <div className="flex items-start gap-3">
-              <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-muted text-[11px] font-semibold text-accent">
-                {index + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <p className="text-sm font-semibold text-foreground">
-                    {peptide.name}
-                  </p>
-                  <p className="text-xs text-accent">{peptide.role}</p>
-                </div>
-                <p className="mt-1.5 text-xs leading-relaxed text-foreground-secondary">
-                  {peptide.researchNote}
-                </p>
-                <Link
-                  href={`/library/${peptide.peptideId}`}
-                  className="mt-2.5 inline-block text-xs font-semibold text-accent hover:underline"
-                >
-                  Open in Library →
-                </Link>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-      <ul className="space-y-2">
-        {protocol.notes.map((note) => (
-          <li
-            key={note}
-            className="text-xs leading-relaxed text-foreground-secondary"
-          >
-            · {note}
-          </li>
-        ))}
-      </ul>
+    <div className="flex flex-wrap items-center gap-2">
+      <BookmarkToggleButton
+        input={{
+          kind: 'protocol',
+          protocolId: protocol.id,
+          title: protocol.name,
+          subtitle: protocol.goal,
+        }}
+      />
+      <Button type="button" size="sm" variant="secondary" onClick={onAddToCycle}>
+        <RefreshCw className="size-3.5" />
+        Add stack to cycle
+      </Button>
     </div>
   );
 }
@@ -143,7 +127,7 @@ function ProtocolPicker({
   }
 
   return (
-    <aside className="border-b border-border lg:border-b-0 lg:border-r">
+    <aside className="border-b border-border lg:border-b-0 lg:border-r lg:min-h-0 lg:overflow-y-auto">
       <div className="border-b border-border px-4 py-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground-secondary">
           Stacks
@@ -180,9 +164,62 @@ function ProtocolPicker({
   );
 }
 
+function ProtocolDetail({
+  protocol,
+  onAddToCycle,
+  cycleNotice,
+}: {
+  protocol: ProProtocol;
+  onAddToCycle: () => void;
+  cycleNotice: string | null;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="font-[family-name:var(--font-display)] text-xl font-semibold leading-snug text-foreground sm:text-2xl">
+            {protocol.name}
+          </h3>
+          <Badge variant="accent">{protocol.goal}</Badge>
+          <Badge variant="muted">{protocol.difficulty}</Badge>
+        </div>
+        <p className="text-sm leading-relaxed text-foreground-secondary">
+          {protocol.summary}
+        </p>
+        <FocusTags protocol={protocol} />
+        <ProtocolActions protocol={protocol} onAddToCycle={onAddToCycle} />
+        {cycleNotice ? (
+          <p className="text-sm text-accent">{cycleNotice}</p>
+        ) : null}
+      </div>
+
+      <ProtocolPeptideLibrary protocol={protocol} />
+
+      <ul className="space-y-1.5">
+        {protocol.notes.map((note) => (
+          <li
+            key={note}
+            className="text-xs leading-relaxed text-foreground-secondary"
+          >
+            · {note}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function ProtocolsPanel() {
+  const user = useAuthStore((state) => state.user);
+  const { isPro } = useProAccess();
+  const openSignInModal = useUiStore((state) => state.openSignInModal);
+  const openProSubscribeModal = useUiStore(
+    (state) => state.openProSubscribeModal,
+  );
   const [difficulty, setDifficulty] = useState<DifficultyFilter>('All levels');
   const [activeId, setActiveId] = useState(PRO_PROTOCOLS[0]?.id ?? '');
+  const [cycleOpen, setCycleOpen] = useState(false);
+  const [cycleNotice, setCycleNotice] = useState<string | null>(null);
 
   const protocols = useMemo(() => {
     const filtered =
@@ -204,6 +241,19 @@ export function ProtocolsPanel() {
 
   const active =
     protocols.find((item) => item.id === activeId) ?? protocols[0] ?? null;
+
+  function handleAddToCycle() {
+    if (!user) {
+      openSignInModal('Sign in to add protocol stacks to your cycle log.');
+      return;
+    }
+    if (!isPro) {
+      openProSubscribeModal('Protocols');
+      return;
+    }
+    setCycleNotice(null);
+    setCycleOpen(true);
+  }
 
   return (
     <div className="space-y-5 sm:space-y-6">
@@ -258,7 +308,6 @@ export function ProtocolsPanel() {
         </p>
       ) : (
         <>
-          {/* Mobile: open layout, no nested chrome */}
           <div className="space-y-6 lg:hidden">
             <ProtocolPicker
               protocols={protocols}
@@ -266,51 +315,28 @@ export function ProtocolsPanel() {
               onSelect={setActiveId}
               variant="mobile"
             />
-
-            <div className="space-y-4 border-t border-border pt-6">
-              <div className="space-y-2">
-                <h3 className="font-[family-name:var(--font-display)] text-xl font-semibold leading-snug text-foreground">
-                  {active.name}
-                </h3>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="accent">{active.goal}</Badge>
-                  <Badge variant="muted">{active.difficulty}</Badge>
-                </div>
-              </div>
-              <p className="text-sm leading-relaxed text-foreground-secondary">
-                {active.summary}
-              </p>
-              <FocusTags protocol={active} />
-              <StackDetails protocol={active} />
+            <div className="border-t border-border pt-6">
+              <ProtocolDetail
+                protocol={active}
+                onAddToCycle={handleAddToCycle}
+                cycleNotice={cycleNotice}
+              />
             </div>
           </div>
 
-          {/* Desktop: nested bordered split that looked good */}
-          <div className="hidden min-h-[480px] overflow-hidden rounded-[20px] border border-border bg-surface lg:grid lg:grid-cols-[260px_1fr]">
+          <div className="hidden overflow-hidden rounded-[20px] border border-border bg-surface lg:grid lg:grid-cols-[240px_1fr] lg:min-h-[560px]">
             <ProtocolPicker
               protocols={protocols}
               selectedId={active.id}
               onSelect={setActiveId}
               variant="desktop"
             />
-
-            <div className="p-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-foreground">
-                  {active.name}
-                </h3>
-                <Badge variant="accent">{active.goal}</Badge>
-                <Badge variant="muted">{active.difficulty}</Badge>
-              </div>
-              <p className="mt-2 text-sm text-foreground-secondary">
-                {active.summary}
-              </p>
-              <div className="mt-3">
-                <FocusTags protocol={active} />
-              </div>
-              <div className="mt-5">
-                <StackDetails protocol={active} />
-              </div>
+            <div className="min-h-0 overflow-y-auto p-6">
+              <ProtocolDetail
+                protocol={active}
+                onAddToCycle={handleAddToCycle}
+                cycleNotice={cycleNotice}
+              />
             </div>
           </div>
         </>
@@ -318,8 +344,22 @@ export function ProtocolsPanel() {
 
       <p className="text-xs text-foreground-secondary">
         Stacks are educational research outlines only — not prescriptions or
-        personal medical protocols.
+        personal medical protocols. Vendor links are research shopping
+        references.
       </p>
+
+      <AddProtocolToCycleModal
+        open={cycleOpen}
+        protocol={active}
+        onClose={() => setCycleOpen(false)}
+        onAdded={(count) => {
+          setCycleNotice(
+            count === 1
+              ? 'Added 1 peptide to your cycle log.'
+              : `Added ${count} peptides to your cycle log.`,
+          );
+        }}
+      />
     </div>
   );
 }

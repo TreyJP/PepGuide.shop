@@ -71,7 +71,7 @@ export function LibraryWorkspace() {
       map[peptide.id] = resolvePartnerOffers(
         partners,
         peptide.id,
-        'lowestPerVendor',
+        'allSkus',
       );
     }
     return map;

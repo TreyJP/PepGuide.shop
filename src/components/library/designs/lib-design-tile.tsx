@@ -6,6 +6,7 @@ import { LibDesignShell } from '@/src/components/library/designs/lib-design-shel
 import { LibVendorGrid } from '@/src/components/library/designs/lib-vendor-grid';
 import type { LibraryDesignViewProps } from '@/src/components/library/designs/types';
 import { LibraryFromPrice } from '@/src/components/library/library-from-price';
+import { BookmarkToggleButton } from '@/src/components/pro/bookmark-toggle-button';
 
 export function LibDesignTile(props: LibraryDesignViewProps) {
   const { loading, peptides, offersById, pricingById } = props;
@@ -27,20 +28,35 @@ export function LibDesignTile(props: LibraryDesignViewProps) {
                 className="lib-tile__card lib-card-rise"
                 style={{ animationDelay: `${Math.min(index, 16) * 28}ms` }}
               >
-                <Link href={`/library/${peptide.id}`} className="lib-tile__top">
-                  <h2>{peptide.name}</h2>
-                  <LibraryFromPrice
-                    pricing={pricing}
-                    size="sm"
-                    className="lib-tile__from"
+                <div className="lib-tile__header">
+                  <Link
+                    href={`/library/${peptide.id}`}
+                    className="lib-tile__top"
+                  >
+                    <h2>{peptide.name}</h2>
+                    <LibraryFromPrice
+                      pricing={pricing}
+                      size="sm"
+                      className="lib-tile__from"
+                    />
+                  </Link>
+                  <BookmarkToggleButton
+                    compact
+                    className="lib-tile__bookmark"
+                    input={{
+                      kind: 'peptide',
+                      peptideId: peptide.id,
+                      title: peptide.name,
+                      subtitle: peptide.classification,
+                    }}
                   />
-                </Link>
+                </div>
                 <LibVendorGrid
                   variant="tile"
                   offers={offers}
                   peptideId={peptide.id}
                   peptideName={peptide.name}
-                  previewCount={2}
+                  previewCount={1}
                 />
               </article>
             );

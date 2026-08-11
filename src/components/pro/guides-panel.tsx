@@ -3,6 +3,7 @@
 import { Play, Video } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { BookmarkToggleButton } from '@/src/components/pro/bookmark-toggle-button';
 import { Badge } from '@/src/components/ui/badge';
 import {
   PRO_GUIDE_COURSES,
@@ -139,30 +140,45 @@ export function GuidesPanel() {
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {course.lessons.map((lesson) => (
-                  <button
-                    key={lesson.id}
-                    type="button"
-                    onClick={() => playLesson(lesson)}
-                    className="group text-left"
-                    title={
-                      lesson.videoUrl ? 'Play lesson' : 'Video uploading soon'
-                    }
-                  >
-                    <div className="relative overflow-hidden rounded-[16px]">
-                      <Thumb label={`${lesson.durationMinutes} min`} />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
-                        <span className="inline-flex size-12 items-center justify-center rounded-full bg-white/95 text-accent shadow-lg">
-                          <Play className="size-5 fill-current" />
-                        </span>
+                  <div key={lesson.id} className="group text-left">
+                    <button
+                      type="button"
+                      onClick={() => playLesson(lesson)}
+                      className="w-full text-left"
+                      title={
+                        lesson.videoUrl ? 'Play lesson' : 'Video uploading soon'
+                      }
+                    >
+                      <div className="relative overflow-hidden rounded-[16px]">
+                        <Thumb label={`${lesson.durationMinutes} min`} />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+                          <span className="inline-flex size-12 items-center justify-center rounded-full bg-white/95 text-accent shadow-lg">
+                            <Play className="size-5 fill-current" />
+                          </span>
+                        </div>
                       </div>
+                      <p className="mt-2 line-clamp-2 text-sm font-medium text-foreground">
+                        {lesson.title}
+                      </p>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-foreground-secondary">
+                        {lesson.summary}
+                      </p>
+                    </button>
+                    <div className="mt-1.5">
+                      <BookmarkToggleButton
+                        size="sm"
+                        className="-ml-2"
+                        input={{
+                          kind: 'video',
+                          courseId: course.id,
+                          lessonId: lesson.id,
+                          title: lesson.title,
+                          videoUrl: lesson.videoUrl || null,
+                          subtitle: `${course.title} · ${lesson.durationMinutes} min`,
+                        }}
+                      />
                     </div>
-                    <p className="mt-2 line-clamp-2 text-sm font-medium text-foreground">
-                      {lesson.title}
-                    </p>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-foreground-secondary">
-                      {lesson.summary}
-                    </p>
-                  </button>
+                  </div>
                 ))}
               </div>
             </section>

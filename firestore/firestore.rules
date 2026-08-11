@@ -93,6 +93,10 @@ service cloud.firestore {
       match /cycleItems/{itemId} {
         allow read, write: if isOwner(userId);
       }
+
+      match /bookmarks/{bookmarkId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /peptides/{peptideId} {
@@ -288,6 +292,72 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if isAdmin()
           || (canUseProCommunity() && resource.data.authorId == request.auth.uid);
+      }
+    }
+
+    // PepGuide Pro — Ask a Professional (private user ↔ admin consults)
+    match /proConsults/{consultId} {
+      allow read: if isSignedIn()
+        && (
+          resource.data.userId == request.auth.uid
+          || isAdmin()
+        );
+
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userId is string
+        && request.resource.data.userDisplayName is string
+        && request.resource.data.subject is string
+        && request.resource.data.subject.size() > 0
+        && request.resource.data.subject.size() <= 120
+        && request.resource.data.status == 'open'
+        && request.resource.data.messageCount is int
+        && request.resource.data.messageCount == 1
+        && request.resource.data.lastMessagePreview is string
+        && request.resource.data.searchText is string
+        && request.resource.data.createdAt is string
+        && request.resource.data.updatedAt is string;
+
+      allow update: if isSignedIn()
+        && request.resource.data.userId == resource.data.userId
+        && (
+          resource.data.userId == request.auth.uid
+          || isAdmin()
+        )
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'updatedAt', 'lastMessagePreview', 'messageCount']);
+
+      allow delete: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn()
+          && (
+            get(/databases/$(database)/documents/proConsults/$(consultId)).data.userId
+              == request.auth.uid
+            || isAdmin()
+          );
+
+        allow create: if isSignedIn()
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.body is string
+          && request.resource.data.body.size() > 0
+          && request.resource.data.body.size() <= 8000
+          && request.resource.data.authorDisplayName is string
+          && request.resource.data.authorIsAdmin is bool
+          && request.resource.data.createdAt is string
+          && (
+            get(/databases/$(database)/documents/proConsults/$(consultId)).data.userId
+              == request.auth.uid
+            || isAdmin()
+          );
+
+        allow update: if false;
+        allow delete: if isAdmin()
+          || (
+            isSignedIn()
+            && resource.data.authorId == request.auth.uid
+          );
       }
     }
   }

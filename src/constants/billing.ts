@@ -1,15 +1,18 @@
 /** When true, Pro nav/pages show Coming soon — no checkout. Flip to false to sell. */
-export const PRO_COMING_SOON = true;
+export const PRO_COMING_SOON = false;
 
 export const PRO_BILLING = {
   productName: 'PepGuide Pro',
   priceUsd: 20,
   interval: 'month' as const,
   priceLabel: '$20/mo',
-  tagline: 'Education & Research lessons and goal-built Protocol stacks',
+  tagline:
+    'Education & Research, Protocols, Bookmarks, and Ask a Professional',
   features: [
     'Education & Research video lessons',
     'Goal-built Protocol stacks',
+    'Bookmarks for peptides, videos, and protocols',
+    'Ask a Professional one-on-one help',
     'Cancel anytime',
   ],
   /**

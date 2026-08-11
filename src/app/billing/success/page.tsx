@@ -64,7 +64,7 @@ function BillingSuccessContent() {
         if (!cancelled) {
           setStatus('ready');
           setMessage(
-            'PepGuide Pro is active. Education & Research and Protocols are unlocked.',
+            'PepGuide Pro is active. Education, Protocols, Bookmarks, and Ask a Professional are unlocked.',
           );
         }
       } catch (error) {

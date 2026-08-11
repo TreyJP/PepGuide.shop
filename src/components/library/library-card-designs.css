@@ -279,6 +279,65 @@
   cursor: pointer;
 }
 
+.lib-vg__vendor-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.lib-vg__sizes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  margin-top: 0.4rem;
+}
+
+.lib-vg__size-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--lib-navy) 3.5%, white);
+  padding: 0.28rem 0.4rem;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lib-vg__size-row:hover {
+  background: color-mix(in srgb, var(--lib-blue) 8%, white);
+}
+
+.lib-vg__size-row .lib-vg__sku {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lib-vg__size-row .lib-vg__price {
+  flex-shrink: 0;
+}
+
+.lib-vg__size-row .lib-vg__icon {
+  position: static;
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.lib-vg__cell--preferred .lib-vg__size-row {
+  background: color-mix(in srgb, var(--lib-pref) 8%, white);
+}
+
+.lib-vg__cell--best .lib-vg__size-row {
+  background: color-mix(in srgb, var(--lib-sky) 35%, white);
+}
+
 .lib-vg__cell:hover {
   border-color: color-mix(in srgb, var(--lib-blue) 40%, var(--border));
   background: white;
@@ -762,6 +821,24 @@
   min-height: 100%;
 }
 
+.lib-tile__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  margin-bottom: 0.65rem;
+}
+
+.lib-tile__header .lib-tile__top {
+  margin-bottom: 0;
+  min-width: 0;
+  flex: 1;
+}
+
+.lib-tile__bookmark {
+  flex-shrink: 0;
+  margin-top: -0.15rem;
+}
+
 .lib-tile__top {
   display: flex;
   align-items: baseline;
@@ -799,15 +876,20 @@
 .lib-vg--tile .lib-vg__cell {
   border-radius: 12px;
   padding: 0.5rem 0.55rem 0.55rem;
-  min-height: 6.5rem;
+  min-height: auto;
 }
 
 .lib-vg--tile .lib-vg__sku {
-  display: none;
+  display: block;
+  font-size: 0.68rem;
 }
 
 .lib-vg--tile .lib-vg__price {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+}
+
+.lib-vg--tile .lib-vg__size-row {
+  padding: 0.22rem 0.35rem;
 }
 
 .lib-vg--tile .lib-vg__cell--best,

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { ProExplainerVideo } from '@/src/components/billing/pro-explainer-video';
 import { Button } from '@/src/components/ui/button';
 import { PRO_BILLING, PRO_COMING_SOON } from '@/src/constants/billing';
-import { getFirebaseAuth } from '@/src/services/firebase/config';
+import { startProCheckout } from '@/src/lib/billing/start-pro-checkout';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useUiStore } from '@/src/stores/ui-store';
 
@@ -47,7 +47,7 @@ export function ProSubscribeModal() {
     if (!user) {
       closeProSubscribeModal();
       openSignInModal(
-        'Sign in to subscribe to PepGuide Pro and unlock Education & Research and Protocols.',
+        'Sign in to subscribe to PepGuide Pro and unlock Education & Research, Protocols, Bookmarks, and Ask a Professional.',
       );
       return;
     }
@@ -55,28 +55,7 @@ export function ProSubscribeModal() {
     setLoading(true);
     setError(null);
     try {
-      const token = await getFirebaseAuth()?.currentUser?.getIdToken();
-      if (!token) {
-        throw new Error('Sign in again to continue checkout.');
-      }
-
-      const { trackAnalyticsEvent } = await import(
-        '@/src/services/firestore/analytics'
-      );
-      void trackAnalyticsEvent({ name: 'checkout_started' });
-
-      const response = await fetch('/api/billing/checkout', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = (await response.json()) as { url?: string; error?: string };
-      if (!response.ok || !data.url) {
-        throw new Error(data.error || 'Unable to start checkout.');
-      }
-      window.location.href = data.url;
+      await startProCheckout();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to start checkout.');
       setLoading(false);
@@ -144,11 +123,15 @@ export function ProSubscribeModal() {
 
           {error ? <p className="text-sm text-critical">{error}</p> : null}
 
-          <Button className="w-full" onClick={() => void handleSubscribe()} disabled={loading}>
+          <Button
+            className="w-full"
+            onClick={() => void handleSubscribe()}
+            disabled={loading}
+          >
             {loading
-              ? 'Redirecting to checkout…'
+              ? 'Redirecting to Stripe…'
               : user
-                ? `Subscribe — ${PRO_BILLING.priceLabel}`
+                ? `Continue to Stripe — ${PRO_BILLING.priceLabel}`
                 : 'Sign in to subscribe'}
           </Button>
 

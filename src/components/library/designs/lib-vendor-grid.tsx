@@ -1,13 +1,19 @@
 'use client';
 
 import { ExternalLink } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { OfferPrice } from '@/src/components/affiliates/offer-price';
 import { PartnerLabScore } from '@/src/components/affiliates/partner-lab-score';
 import { isPreferredPartner } from '@/src/data/affiliates/preferred-partners';
-import type { AffiliateOffer } from '@/src/data/affiliates/slots';
-import { getOfferSalePriceUsd } from '@/src/lib/offer-pricing';
+import {
+  formatAffiliateUsd,
+  type AffiliateOffer,
+} from '@/src/data/affiliates/slots';
+import {
+  groupOffersByVendor,
+  type VendorOfferGroup,
+} from '@/src/lib/affiliate-offers';
 import { trackAnalyticsEvent } from '@/src/services/firestore/analytics';
 
 function openVendor(
@@ -45,12 +51,22 @@ async function copyCoupon(code: string) {
   }
 }
 
+function sizeLabel(offer: AffiliateOffer): string {
+  return offer.testAmount || offer.productName || 'Standard';
+}
+
+function priceRangeLabel(group: VendorOfferGroup): string {
+  const low = formatAffiliateUsd(group.lowestSalePriceUsd);
+  if (group.highestSalePriceUsd <= group.lowestSalePriceUsd) return low;
+  return `${low} – ${formatAffiliateUsd(group.highestSalePriceUsd)}`;
+}
+
 export function LibVendorGrid({
   offers,
   peptideId,
   peptideName,
   variant = 'deck',
-  previewCount = 2,
+  previewCount = 1,
 }: {
   offers: AffiliateOffer[];
   peptideId: string;
@@ -62,7 +78,9 @@ export function LibVendorGrid({
   const [expanded, setExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  if (offers.length === 0) {
+  const groups = useMemo(() => groupOffersByVendor(offers), [offers]);
+
+  if (groups.length === 0) {
     return (
       <p className={`lib-vg__empty lib-vg__empty--${variant}`}>
         No vendor prices yet
@@ -71,22 +89,22 @@ export function LibVendorGrid({
   }
 
   const cheapestSale = Math.min(
-    ...offers.map((offer) => getOfferSalePriceUsd(offer)),
+    ...groups.map((group) => group.lowestSalePriceUsd),
   );
-  const canExpand = offers.length > previewCount;
-  const visible = expanded ? offers : offers.slice(0, previewCount);
-  const hiddenCount = offers.length - previewCount;
+  const canExpand = groups.length > previewCount;
+  const visible = expanded ? groups : groups.slice(0, previewCount);
+  const hiddenCount = groups.length - previewCount;
 
   return (
     <div className={`lib-vg-wrap lib-vg-wrap--${variant}`}>
       <div className={`lib-vg lib-vg--${variant}`}>
-        {visible.map((offer) => {
+        {visible.map((group) => {
           const preferred = isPreferredPartner(
-            offer.vendorId,
-            offer.vendorLabel,
+            group.vendorId,
+            group.vendorLabel,
           );
-          const salePrice = getOfferSalePriceUsd(offer);
-          const isCheapest = !preferred && salePrice === cheapestSale;
+          const isCheapest =
+            !preferred && group.lowestSalePriceUsd === cheapestSale;
           const cellClass = [
             'lib-vg__cell',
             preferred ? 'lib-vg__cell--preferred' : null,
@@ -94,10 +112,11 @@ export function LibVendorGrid({
           ]
             .filter(Boolean)
             .join(' ');
+          const primary = group.sizes[0];
 
           return (
             <div
-              key={offer.id}
+              key={group.vendorId}
               className={cellClass}
               data-preferred={preferred ? 'true' : undefined}
               data-cheapest={isCheapest ? 'true' : undefined}
@@ -107,51 +126,80 @@ export function LibVendorGrid({
               ) : isCheapest ? (
                 <span className="lib-vg__best-tag">Lowest</span>
               ) : null}
-              <button
-                type="button"
-                className="lib-vg__open"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  openVendor(offer, peptideId, peptideName);
-                }}
-              >
-                <span className="lib-vg__vendor">{offer.vendorLabel}</span>
-                {offer.productName || offer.testAmount ? (
-                  <span className="lib-vg__sku">
-                    {offer.productName || offer.testAmount}
-                  </span>
-                ) : null}
-                <OfferPrice offer={offer} size="sm" className="lib-vg__price" />
-                <ExternalLink className="lib-vg__icon" aria-hidden />
-              </button>
-              <div className="lib-vg__meta">
-                <div
-                  className="lib-vg__lab"
-                  onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => event.stopPropagation()}
-                >
-                  <PartnerLabScore vendorId={offer.vendorId} />
+
+              <div className="lib-vg__vendor-head">
+                <span className="lib-vg__vendor">{group.vendorLabel}</span>
+                <div className="lib-vg__meta">
+                  <div
+                    className="lib-vg__lab"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    <PartnerLabScore vendorId={group.vendorId} />
+                  </div>
+                  {group.couponCode ? (
+                    <button
+                      type="button"
+                      className={
+                        preferred
+                          ? 'lib-vg__coupon'
+                          : 'lib-vg__coupon lib-vg__coupon--muted'
+                      }
+                      title="Copy coupon code"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void copyCoupon(group.couponCode).then(() => {
+                          setCopiedId(group.vendorId);
+                          window.setTimeout(() => setCopiedId(null), 1400);
+                        });
+                      }}
+                    >
+                      {copiedId === group.vendorId
+                        ? 'Copied'
+                        : `${group.couponCode} · ${group.discountLabel}`}
+                    </button>
+                  ) : null}
                 </div>
-                {offer.couponCode ? (
+              </div>
+
+              <div className="lib-vg__sizes">
+                {group.hasKnownSizes ? (
+                  group.sizes.map((offer) => (
+                    <button
+                      key={offer.id}
+                      type="button"
+                      className="lib-vg__size-row"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        openVendor(offer, peptideId, peptideName);
+                      }}
+                    >
+                      <span className="lib-vg__sku">{sizeLabel(offer)}</span>
+                      <OfferPrice
+                        offer={offer}
+                        size="sm"
+                        className="lib-vg__price"
+                      />
+                      <ExternalLink className="lib-vg__icon" aria-hidden />
+                    </button>
+                  ))
+                ) : primary ? (
                   <button
                     type="button"
-                    className={
-                      preferred ? 'lib-vg__coupon' : 'lib-vg__coupon lib-vg__coupon--muted'
-                    }
-                    title="Copy coupon code"
+                    className="lib-vg__size-row"
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
-                      void copyCoupon(offer.couponCode).then(() => {
-                        setCopiedId(offer.id);
-                        window.setTimeout(() => setCopiedId(null), 1400);
-                      });
+                      openVendor(primary, peptideId, peptideName);
                     }}
                   >
-                    {copiedId === offer.id
-                      ? 'Copied'
-                      : `${offer.couponCode} · ${offer.discountLabel}`}
+                    <span className="lib-vg__sku">Price range</span>
+                    <span className="lib-vg__price font-[family-name:var(--font-display)] font-semibold tabular-nums text-foreground text-sm">
+                      {priceRangeLabel(group)}
+                    </span>
+                    <ExternalLink className="lib-vg__icon" aria-hidden />
                   </button>
                 ) : null}
               </div>
@@ -169,7 +217,11 @@ export function LibVendorGrid({
             setExpanded((current) => !current);
           }}
         >
-          {expanded ? 'Show less' : `Show more (${hiddenCount})`}
+          {expanded
+            ? 'Show less'
+            : hiddenCount === 1
+              ? 'Show more (1)'
+              : `Show more (${hiddenCount})`}
         </button>
       ) : null}
     </div>

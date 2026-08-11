@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 
+import { BookmarkToggleButton } from '@/src/components/pro/bookmark-toggle-button';
 import { ModalShell } from '@/src/components/ui/modal-shell';
 import { getResearchGuideByIds } from '@/src/data/knowledge/research-guide';
 
@@ -32,7 +33,7 @@ export function MorePeptidesModal({
       titleId="more-peptides-title"
       eyebrow="More options"
       title="All research peptides"
-      description="Compare prices or add a peptide to your cycle log"
+      description="Compare prices, bookmark for later, or add a peptide to your cycle log"
       className="max-w-2xl"
     >
       <div className="space-y-2">
@@ -72,15 +73,26 @@ export function MorePeptidesModal({
                 View prices →
               </span>
             </button>
-            {onAddToCycle ? (
-              <button
-                type="button"
-                onClick={() => onAddToCycle(entry.id)}
-                className="mt-2 text-xs font-semibold text-foreground-secondary hover:text-foreground"
-              >
-                Add to cycle
-              </button>
-            ) : null}
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              {onAddToCycle ? (
+                <button
+                  type="button"
+                  onClick={() => onAddToCycle(entry.id)}
+                  className="text-xs font-semibold text-foreground-secondary hover:text-foreground"
+                >
+                  Add to cycle
+                </button>
+              ) : null}
+              <BookmarkToggleButton
+                compact
+                input={{
+                  kind: 'peptide',
+                  peptideId: entry.id,
+                  title: entry.name,
+                  subtitle: entry.mainEffectsLabel,
+                }}
+              />
+            </div>
           </div>
         ))}
       </div>

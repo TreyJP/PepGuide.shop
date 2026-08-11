@@ -1,5 +1,6 @@
 'use client';
 
+import { BookmarkToggleButton } from '@/src/components/pro/bookmark-toggle-button';
 import { getResearchGuideByIds } from '@/src/data/knowledge/research-guide';
 import { cn } from '@/src/lib/utils';
 
@@ -100,7 +101,7 @@ export function DosingGuide({
               </div>
             </button>
 
-            <div className="mt-3 flex flex-wrap gap-3">
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
               <button
                 type="button"
                 onClick={() => onSelect?.(entry.id)}
@@ -117,6 +118,15 @@ export function DosingGuide({
                   Add to cycle
                 </button>
               ) : null}
+              <BookmarkToggleButton
+                compact
+                input={{
+                  kind: 'peptide',
+                  peptideId: entry.id,
+                  title: entry.name,
+                  subtitle: entry.mainEffectsLabel,
+                }}
+              />
             </div>
           </div>
         ))}

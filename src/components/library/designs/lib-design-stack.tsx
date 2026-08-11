@@ -49,7 +49,7 @@ export function LibDesignStack(props: LibraryDesignViewProps) {
                   offers={offers}
                   peptideId={peptide.id}
                   peptideName={peptide.name}
-                  previewCount={2}
+                  previewCount={1}
                 />
               </article>
             );

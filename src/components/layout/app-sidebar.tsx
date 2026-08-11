@@ -1,11 +1,13 @@
 'use client';
 
 import {
+  Bookmark,
   BookOpen,
   Calculator,
   FlaskConical,
   Library,
   Lock,
+  MessageCircleQuestion,
   MessageSquare,
   MessagesSquare,
   RefreshCw,
@@ -39,6 +41,12 @@ const MAIN_NAV = [
 const PRO_NAV = [
   { href: '/pro/guides', label: 'Education & Research', icon: BookOpen },
   { href: '/pro/protocols', label: 'Protocols', icon: FlaskConical },
+  { href: '/pro/bookmarks', label: 'Bookmarks', icon: Bookmark },
+  {
+    href: '/pro/ask',
+    label: 'Ask a Professional',
+    icon: MessageCircleQuestion,
+  },
 ] as const;
 
 function NavLink({

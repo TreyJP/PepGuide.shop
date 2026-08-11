@@ -12,6 +12,8 @@ export type ProFeatureName =
   | 'Education & Research'
   | 'Guides'
   | 'Protocols'
+  | 'Bookmarks'
+  | 'Ask a Professional'
   | 'Forum'
   | 'Questions & Discussion';
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 
 import { AdminAffiliatesPanel } from '@/src/components/admin/admin-affiliates-panel';
+import { AdminConsultsPanel } from '@/src/components/admin/admin-consults-panel';
 import { AdminDashboard } from '@/src/components/admin/admin-dashboard';
 import { Button } from '@/src/components/ui/button';
 import {
@@ -27,7 +28,7 @@ import { useAuthStore } from '@/src/stores/auth-store';
 import { usePartnersStore } from '@/src/stores/partners-store';
 import type { AffiliatePartner, PartnerTestAmount } from '@/src/types/affiliates';
 
-type AdminTab = 'dashboard' | 'partners' | 'affiliates' | 'access';
+type AdminTab = 'dashboard' | 'partners' | 'affiliates' | 'consults' | 'access';
 
 function emptyLabs(): Record<PartnerLabTestId, boolean | null> {
   return Object.fromEntries(
@@ -346,7 +347,8 @@ export default function AdminPage() {
           Admin
         </h1>
         <p className="mt-1 text-sm text-foreground-secondary">
-          Site metrics, partners, referral affiliates, and admin access.
+          Site metrics, partners, referral affiliates, Ask a Professional inbox,
+          and admin access.
         </p>
         <div className="mt-4 flex flex-wrap gap-1.5">
           {(
@@ -354,6 +356,7 @@ export default function AdminPage() {
               { id: 'dashboard', label: 'Dashboard' },
               { id: 'partners', label: 'Partners' },
               { id: 'affiliates', label: 'Affiliates' },
+              { id: 'consults', label: 'Ask a Pro' },
               { id: 'access', label: 'Access' },
             ] as const
           ).map((item) => (
@@ -381,6 +384,8 @@ export default function AdminPage() {
       ) : null}
 
       {tab === 'affiliates' ? <AdminAffiliatesPanel /> : null}
+
+      {tab === 'consults' ? <AdminConsultsPanel /> : null}
 
       {tab === 'partners' ? (
       <div className="mx-auto grid max-w-5xl gap-6 p-6 lg:grid-cols-[1fr_1.2fr]">

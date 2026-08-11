@@ -3,8 +3,8 @@ import type { AffiliateOffer } from '@/src/data/affiliates/slots';
 /** PepGuide trusted partner — pinned first across pricing UIs. */
 export const PREFERRED_PARTNER_ID = 'refined-biolabs';
 
-export const TRUSTED_PARTNER_DISCOUNT_PERCENT = 30;
-export const TRUSTED_PARTNER_DISCOUNT_LABEL = '30% off';
+export const TRUSTED_PARTNER_DISCOUNT_PERCENT = 20;
+export const TRUSTED_PARTNER_DISCOUNT_LABEL = '20% off';
 export const TRUSTED_PARTNER_COUPON = 'PEPGUIDE';
 
 export function isPreferredPartner(

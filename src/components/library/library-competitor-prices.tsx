@@ -47,9 +47,9 @@ export function LibraryCompetitorPrices({
           </p>
         </div>
         <p className="text-xs font-semibold text-foreground-secondary">
-          {offers.length} listing{offers.length === 1 ? '' : 's'}
-          {vendorCount > 0
-            ? ` · ${vendorCount} vendor${vendorCount === 1 ? '' : 's'}`
+          {vendorCount} vendor{vendorCount === 1 ? '' : 's'}
+          {offers.length > vendorCount
+            ? ` · ${offers.length} size${offers.length === 1 ? '' : 's'}`
             : ''}
         </p>
       </div>

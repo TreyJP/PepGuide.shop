@@ -5,6 +5,7 @@ import { use, useEffect, useState } from 'react';
 
 import { LibraryCompetitorPrices } from '@/src/components/library/library-competitor-prices';
 import '@/src/components/library/library-catalog.css';
+import { BookmarkToggleButton } from '@/src/components/pro/bookmark-toggle-button';
 import { Button } from '@/src/components/ui/button';
 import { EmptyState } from '@/src/components/ui/empty-state';
 import { peptideRepository } from '@/src/services/firestore/peptides';
@@ -52,14 +53,26 @@ export default function PeptideProfilePage({
         <Link href="/library" className="lib-detail__back">
           ← Back to all peptides
         </Link>
-        <h1>{peptide.name}</h1>
-        {peptide.aliases.length > 0 ? (
-          <div className="lib-detail__aliases">
-            {peptide.aliases.map((alias) => (
-              <span key={alias}>{alias}</span>
-            ))}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1>{peptide.name}</h1>
+            {peptide.aliases.length > 0 ? (
+              <div className="lib-detail__aliases">
+                {peptide.aliases.map((alias) => (
+                  <span key={alias}>{alias}</span>
+                ))}
+              </div>
+            ) : null}
           </div>
-        ) : null}
+          <BookmarkToggleButton
+            input={{
+              kind: 'peptide',
+              peptideId: peptide.id,
+              title: peptide.name,
+              subtitle: peptide.classification,
+            }}
+          />
+        </div>
       </header>
 
       <div className="lib-detail__body">
