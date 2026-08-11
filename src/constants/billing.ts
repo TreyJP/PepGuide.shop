@@ -13,6 +13,7 @@ export const PRO_BILLING = {
     'Goal-built Protocol stacks',
     'Bookmarks for peptides, videos, and protocols',
     'Ask a Professional one-on-one help',
+    'Vendor Reviews from the PepGuide community',
     'Cancel anytime',
   ],
   /**

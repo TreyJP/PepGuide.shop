@@ -13,6 +13,7 @@ export type ProFeatureName =
   | 'Protocols'
   | 'Bookmarks'
   | 'Ask a Professional'
+  | 'Vendor Reviews'
   | 'Forum'
   | 'Questions & Discussion'
   | 'PepGuide Pro';

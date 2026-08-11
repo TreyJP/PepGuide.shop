@@ -52,8 +52,6 @@ const PRO_NAV = [
     href: '/pro/vendor-reviews',
     label: 'Vendor Reviews',
     icon: Star,
-    /** Open to every signed-in member (not Pro-locked / coming soon). */
-    openToAll: true,
   },
 ] as const;
 
@@ -184,9 +182,7 @@ export function AppSidebar() {
               </p>
             </div>
 
-            {PRO_NAV.map((item) => {
-              const { href, label, icon } = item;
-              const openToAll = 'openToAll' in item && item.openToAll;
+            {PRO_NAV.map(({ href, label, icon }) => {
               const active =
                 pathname === href || pathname.startsWith(`${href}/`);
               return (
@@ -196,8 +192,8 @@ export function AppSidebar() {
                   label={label}
                   icon={icon}
                   active={active}
-                  locked={!openToAll && proLocked}
-                  comingSoon={!openToAll && proComingSoon}
+                  locked={proLocked}
+                  comingSoon={proComingSoon}
                   onNavigate={closeSidebar}
                 />
               );
