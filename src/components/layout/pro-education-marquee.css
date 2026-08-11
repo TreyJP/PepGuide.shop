@@ -1,9 +1,9 @@
 .pro-marquee {
+  position: relative;
   display: block;
   width: 100%;
   flex-shrink: 0;
   margin: 0;
-  border: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
   background: linear-gradient(
     90deg,
@@ -11,14 +11,51 @@
     color-mix(in srgb, var(--accent) 7%, white) 50%,
     color-mix(in srgb, var(--accent) 12%, white) 100%
   );
-  padding: 0;
+}
+
+.pro-marquee__cta {
+  display: block;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  padding: 0 2.25rem 0 0;
+  background: transparent;
   text-align: left;
   cursor: pointer;
 }
 
-.pro-marquee:focus-visible {
+.pro-marquee__cta:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+
+.pro-marquee__dismiss {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: color-mix(in srgb, var(--accent) 70%, var(--foreground-secondary));
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.pro-marquee__dismiss:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--foreground);
+}
+
+.pro-marquee__dismiss:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .pro-marquee__viewport {
@@ -44,7 +81,7 @@
   animation: pro-marquee-scroll 42s linear infinite;
 }
 
-.pro-marquee:hover .pro-marquee__track {
+.pro-marquee__cta:hover .pro-marquee__track {
   animation-play-state: paused;
 }
 

@@ -8,6 +8,7 @@ import { BookmarkToggleButton } from '@/src/components/pro/bookmark-toggle-butto
 import { ProtocolPeptideLibrary } from '@/src/components/pro/protocol-peptide-library';
 import { Badge } from '@/src/components/ui/badge';
 import { Button } from '@/src/components/ui/button';
+import { ModalShell } from '@/src/components/ui/modal-shell';
 import { PRO_PROTOCOLS, type ProProtocol } from '@/src/data/pro/protocols';
 import { useProAccess } from '@/src/hooks/use-pro-access';
 import { cn } from '@/src/lib/utils';
@@ -168,24 +169,36 @@ function ProtocolDetail({
   protocol,
   onAddToCycle,
   cycleNotice,
+  compactHeader = false,
 }: {
   protocol: ProProtocol;
   onAddToCycle: () => void;
   cycleNotice: string | null;
+  /** When true, skip the large title/summary (e.g. already shown in a modal chrome). */
+  compactHeader?: boolean;
 }) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-[family-name:var(--font-display)] text-xl font-semibold leading-snug text-foreground sm:text-2xl">
-            {protocol.name}
-          </h3>
-          <Badge variant="accent">{protocol.goal}</Badge>
-          <Badge variant="muted">{protocol.difficulty}</Badge>
-        </div>
-        <p className="text-sm leading-relaxed text-foreground-secondary">
-          {protocol.summary}
-        </p>
+        {compactHeader ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="accent">{protocol.goal}</Badge>
+            <Badge variant="muted">{protocol.difficulty}</Badge>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-[family-name:var(--font-display)] text-xl font-semibold leading-snug text-foreground sm:text-2xl">
+                {protocol.name}
+              </h3>
+              <Badge variant="accent">{protocol.goal}</Badge>
+              <Badge variant="muted">{protocol.difficulty}</Badge>
+            </div>
+            <p className="text-sm leading-relaxed text-foreground-secondary">
+              {protocol.summary}
+            </p>
+          </>
+        )}
         <FocusTags protocol={protocol} />
         <ProtocolActions protocol={protocol} onAddToCycle={onAddToCycle} />
         {cycleNotice ? (
@@ -218,6 +231,7 @@ export function ProtocolsPanel() {
   );
   const [difficulty, setDifficulty] = useState<DifficultyFilter>('All levels');
   const [activeId, setActiveId] = useState(PRO_PROTOCOLS[0]?.id ?? '');
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [cycleOpen, setCycleOpen] = useState(false);
   const [cycleNotice, setCycleNotice] = useState<string | null>(null);
 
@@ -308,20 +322,17 @@ export function ProtocolsPanel() {
         </p>
       ) : (
         <>
-          <div className="space-y-6 lg:hidden">
+          <div className="lg:hidden">
             <ProtocolPicker
               protocols={protocols}
               selectedId={active.id}
-              onSelect={setActiveId}
+              onSelect={(id) => {
+                setActiveId(id);
+                setCycleNotice(null);
+                setMobileDetailOpen(true);
+              }}
               variant="mobile"
             />
-            <div className="border-t border-border pt-6">
-              <ProtocolDetail
-                protocol={active}
-                onAddToCycle={handleAddToCycle}
-                cycleNotice={cycleNotice}
-              />
-            </div>
           </div>
 
           <div className="hidden overflow-hidden rounded-[20px] border border-border bg-surface lg:grid lg:grid-cols-[240px_1fr] lg:min-h-[560px]">
@@ -347,6 +358,28 @@ export function ProtocolsPanel() {
         personal medical protocols. Vendor links are research shopping
         references.
       </p>
+
+      <div className="lg:hidden">
+        <ModalShell
+          open={mobileDetailOpen && Boolean(active)}
+          title={active?.name ?? 'Protocol'}
+          titleId="mobile-protocol-detail-title"
+          eyebrow="Protocol stack"
+          description={active?.summary}
+          onClose={() => setMobileDetailOpen(false)}
+          className="max-h-[92vh] max-w-2xl"
+          footer="Educational research outline only — not a prescription."
+        >
+          {active ? (
+            <ProtocolDetail
+              protocol={active}
+              onAddToCycle={handleAddToCycle}
+              cycleNotice={cycleNotice}
+              compactHeader
+            />
+          ) : null}
+        </ModalShell>
+      </div>
 
       <AddProtocolToCycleModal
         open={cycleOpen}

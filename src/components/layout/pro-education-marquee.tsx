@@ -1,14 +1,14 @@
 'use client';
 
-import { Sparkles } from 'lucide-react';
+import { Sparkles, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-import { PRO_COMING_SOON } from '@/src/constants/billing';
-import { useProAccess } from '@/src/hooks/use-pro-access';
 import { useUiStore } from '@/src/stores/ui-store';
 
 import './pro-education-marquee.css';
 
 const MESSAGE = 'New Educational Videos Unlocked Every Week With Pro';
+const DISMISS_KEY = 'pepguide.pro-education-marquee.dismissed';
 
 function MarqueeTrack() {
   return (
@@ -25,25 +25,52 @@ function MarqueeTrack() {
 
 /** Continuous top ticker promoting weekly Pro education releases. */
 export function ProEducationMarquee() {
-  const { isPro } = useProAccess();
   const openProSubscribeModal = useUiStore(
     (state) => state.openProSubscribeModal,
   );
+  const [dismissed, setDismissed] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  if (isPro && !PRO_COMING_SOON) return null;
+  useEffect(() => {
+    try {
+      setDismissed(window.localStorage.getItem(DISMISS_KEY) === '1');
+    } catch {
+      setDismissed(false);
+    }
+    setReady(true);
+  }, []);
+
+  if (!ready || dismissed) return null;
 
   return (
-    <button
-      type="button"
-      className="pro-marquee"
-      onClick={() => openProSubscribeModal('Education & Research')}
-      aria-label={`${MESSAGE}. Open PepGuide Pro details.`}
-    >
-      <span className="sr-only">{MESSAGE}</span>
-      <div className="pro-marquee__viewport">
-        <MarqueeTrack />
-        <MarqueeTrack />
-      </div>
-    </button>
+    <div className="pro-marquee">
+      <button
+        type="button"
+        className="pro-marquee__cta"
+        onClick={() => openProSubscribeModal('Education & Research')}
+        aria-label={`${MESSAGE}. Open PepGuide Pro details.`}
+      >
+        <span className="sr-only">{MESSAGE}</span>
+        <div className="pro-marquee__viewport">
+          <MarqueeTrack />
+          <MarqueeTrack />
+        </div>
+      </button>
+      <button
+        type="button"
+        className="pro-marquee__dismiss"
+        aria-label="Dismiss banner"
+        onClick={() => {
+          try {
+            window.localStorage.setItem(DISMISS_KEY, '1');
+          } catch {
+            // ignore quota / private mode
+          }
+          setDismissed(true);
+        }}
+      >
+        <X className="size-3.5" aria-hidden />
+      </button>
+    </div>
   );
 }
