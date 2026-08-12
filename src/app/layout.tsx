@@ -20,14 +20,41 @@ const display = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: BRAND.name,
+  metadataBase: new URL('https://www.pepguide.shop'),
+  title: {
+    default: BRAND.name,
+    template: `%s · ${BRAND.name}`,
+  },
   description: BRAND.description,
+  applicationName: BRAND.name,
   icons: {
     icon: [
       { url: '/brand/favicon-32.png', sizes: '32x32', type: 'image/png' },
       { url: '/brand/icon-light.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [{ url: '/brand/apple-touch-icon.png', sizes: '180x180' }],
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://www.pepguide.shop',
+    siteName: BRAND.name,
+    title: BRAND.name,
+    description: BRAND.description,
+    images: [
+      {
+        url: '/brand/og-share.png',
+        width: 1200,
+        height: 630,
+        alt: BRAND.name,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: BRAND.name,
+    description: BRAND.description,
+    images: ['/brand/og-share.png'],
   },
 };
 

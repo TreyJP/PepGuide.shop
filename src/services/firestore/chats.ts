@@ -373,6 +373,17 @@ const firestoreRepository = {
   },
 
   async loadSharedThread(chatId: string): Promise<LoadedChatThread | null> {
+    // Wait briefly for Auth so owner vs viewer is correct on first paint (mobile cold start).
+    const auth = getFirebaseAuth();
+    if (auth) {
+      await Promise.race([
+        auth.authStateReady(),
+        new Promise<void>((resolve) => {
+          window.setTimeout(resolve, 1500);
+        }),
+      ]);
+    }
+
     const currentUid = getFirebaseAuth()?.currentUser?.uid ?? null;
 
     // Prefer own chat when signed in (works even before a share index exists).

@@ -216,12 +216,17 @@ export const firebaseAuthService = {
         throw error;
       }
 
-      // Popup blocked / COOP / flaky mobile → full-page redirect.
+      // Popup blocked / flaky mobile → full-page redirect.
+      // Don't redirect on empty/unknown codes — that often means COOP/storage
+      // issues that also hang on /__/auth/handler.
+      const isMobile =
+        typeof navigator !== 'undefined' &&
+        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (
         code === 'auth/popup-blocked' ||
-        code === 'auth/internal-error' ||
-        code === 'auth/network-request-failed' ||
-        !code
+        (isMobile &&
+          (code === 'auth/internal-error' ||
+            code === 'auth/network-request-failed'))
       ) {
         await signInWithRedirect(auth, provider);
         return null;

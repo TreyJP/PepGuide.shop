@@ -16,12 +16,14 @@ const nextConfig: NextConfig = {
 
   /**
    * Allow Google/Firebase auth popups to communicate with the opener window.
-   * Without this, browsers (and some hosts) break signInWithPopup.
+   * Do NOT apply COOP to /__/auth/* — that handler must finish the OAuth
+   * redirect without opener isolation or the tab hangs after Google login.
+   * @see https://github.com/firebase/firebase-js-sdk/issues/6199
    */
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: '/((?!__/auth/|__/firebase/).*)',
         headers: [
           {
             key: 'Cross-Origin-Opener-Policy',
@@ -34,7 +36,7 @@ const nextConfig: NextConfig = {
 
   /**
    * Same-origin Firebase Auth helper proxy (required for Safari / iOS).
-   * Without this, signInWithRedirect/popup helper storage is third-party and gets blocked.
+   * Pair with authDomain = www.pepguide.shop (see firebase config).
    * @see https://firebase.google.com/docs/auth/web/redirect-best-practices
    */
   async rewrites() {

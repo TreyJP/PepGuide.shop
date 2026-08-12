@@ -13,12 +13,26 @@ import { type Functions, getFunctions } from 'firebase/functions';
 
 import { useMockServices } from '@/src/utils/env';
 
+/**
+ * authDomain must match the page origin when /__/auth is proxied through the
+ * app (Firebase redirect best practice). On pepguide.shop that means the
+ * shop host — not *.firebaseapp.com — or Google finishes on /__/auth/handler
+ * and the tab never returns to the app.
+ */
+function resolveAuthDomain(): string | undefined {
+  const fromEnv = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim();
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname.toLowerCase();
+    if (host === 'www.pepguide.shop' || host === 'pepguide.shop') {
+      return host;
+    }
+  }
+  return fromEnv || undefined;
+}
+
 // Next.js only inlines NEXT_PUBLIC_* when accessed as static property paths.
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  // Keep the Firebase-hosted authDomain. Custom-host authDomain requires
-  // Google OAuth redirect URIs for every deploy host and breaks easily on mobile.
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
@@ -45,7 +59,17 @@ export function getFirebaseApp(): FirebaseApp | null {
   if (!isFirebaseConfigured()) return null;
   if (app) return app;
 
-  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  app = getApps().length
+    ? getApp()
+    : initializeApp({
+        apiKey: firebaseConfig.apiKey,
+        authDomain: resolveAuthDomain(),
+        projectId: firebaseConfig.projectId,
+        storageBucket: firebaseConfig.storageBucket,
+        messagingSenderId: firebaseConfig.messagingSenderId,
+        appId: firebaseConfig.appId,
+        measurementId: firebaseConfig.measurementId,
+      });
   return app;
 }
 

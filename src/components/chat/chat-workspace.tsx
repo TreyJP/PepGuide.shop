@@ -95,13 +95,13 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const sendLockRef = useRef(false);
   const user = useAuthStore((state) => state.user);
-  const initializing = useAuthStore((state) => state.initializing);
   const updateUser = useAuthStore((state) => state.updateUser);
   const openSignInModal = useUiStore((state) => state.openSignInModal);
   const { isPro } = useProAccess();
   const chatBlocked = isChatSendingBlocked(user);
   const [isOwner, setIsOwner] = useState(true);
   const [threadMissing, setThreadMissing] = useState(false);
+  const [threadLoading, setThreadLoading] = useState(Boolean(chatId));
   const [shareCopied, setShareCopied] = useState(false);
   const viewOnly = Boolean(chatId) && !isOwner;
 
@@ -171,49 +171,78 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   const messages = resolvedChatId ? (messagesByChat[resolvedChatId] ?? []) : [];
 
   useEffect(() => {
-    if (!chatId || initializing) return;
+    if (!chatId) {
+      setThreadLoading(false);
+      return;
+    }
+
     setActiveChatId(chatId);
     setThreadMissing(false);
+    const hasCached =
+      (useChatStore.getState().messagesByChat[chatId] ?? []).length > 0;
+    setThreadLoading(!hasCached);
     let cancelled = false;
 
     void (async () => {
-      try {
-        const loaded = await chatRepository.loadSharedThread(chatId);
-        if (cancelled) return;
+      const maxAttempts = 3;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+          const loaded = await chatRepository.loadSharedThread(chatId);
+          if (cancelled) return;
 
-        if (!loaded) {
-          setIsOwner(false);
-          setThreadMissing(true);
-          setMessages(chatId, []);
+          if (!loaded) {
+            // Don't wipe a successful first paint if a later auth refresh races.
+            const existing =
+              useChatStore.getState().messagesByChat[chatId] ?? [];
+            if (existing.length === 0) {
+              setIsOwner(false);
+              setThreadMissing(true);
+              setMessages(chatId, []);
+            }
+            setThreadLoading(false);
+            return;
+          }
+
+          setIsOwner(loaded.isOwner);
+          setThreadMissing(false);
+          const state = useChatStore.getState();
+          const local = state.messagesByChat[chatId] ?? [];
+          const preferLocalOrder =
+            loaded.isOwner &&
+            (state.isStreaming ||
+              local.some(
+                (message) =>
+                  message.status === 'streaming' ||
+                  message.status === 'sending',
+              ));
+
+          setMessages(
+            chatId,
+            mergeChatMessages(loaded.messages, loaded.isOwner ? local : [], {
+              preferLocalOrder,
+            }),
+          );
+          setThreadLoading(false);
           return;
-        }
-
-        setIsOwner(loaded.isOwner);
-        const state = useChatStore.getState();
-        const local = state.messagesByChat[chatId] ?? [];
-        const preferLocalOrder =
-          loaded.isOwner &&
-          (state.isStreaming ||
-            local.some(
-              (message) =>
-                message.status === 'streaming' || message.status === 'sending',
-            ));
-
-        // Keep optimistic / in-flight messages and never scramble turn order.
-        setMessages(
-          chatId,
-          mergeChatMessages(loaded.messages, loaded.isOwner ? local : [], {
-            preferLocalOrder,
-          }),
-        );
-      } catch (error) {
-        console.error('[PepGuide chat] Failed to load messages', error);
-        if (cancelled) return;
-        const local = useChatStore.getState().messagesByChat[chatId] ?? [];
-        if (local.length === 0) {
-          setIsOwner(false);
-          setThreadMissing(true);
-          setMessages(chatId, []);
+        } catch (error) {
+          console.error(
+            `[PepGuide chat] Failed to load messages (attempt ${attempt})`,
+            error,
+          );
+          if (cancelled) return;
+          if (attempt < maxAttempts) {
+            await new Promise((resolve) => {
+              window.setTimeout(resolve, 250 * attempt);
+            });
+            continue;
+          }
+          const local = useChatStore.getState().messagesByChat[chatId] ?? [];
+          if (local.length === 0) {
+            setIsOwner(false);
+            setThreadMissing(true);
+            setMessages(chatId, []);
+          }
+          setThreadLoading(false);
         }
       }
     })();
@@ -221,7 +250,8 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
     return () => {
       cancelled = true;
     };
-  }, [chatId, initializing, setActiveChatId, setMessages, user?.id]);
+    // Re-run when chat changes or auth identity settles (owner vs viewer).
+  }, [chatId, setActiveChatId, setMessages, user?.id]);
 
   const handleShareChat = useCallback(async () => {
     if (!chatId || !isOwner) return;
@@ -592,7 +622,11 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         ref={scrollRef}
         className="scrollbar-theme min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 py-3 sm:px-4 sm:py-6"
       >
-        {messages.length === 0 ? (
+        {threadLoading && messages.length === 0 ? (
+          <div className="mx-auto max-w-3xl px-4 py-10 text-center text-sm text-foreground-secondary">
+            Loading conversation…
+          </div>
+        ) : messages.length === 0 ? (
           viewOnly ? (
             <div className="mx-auto max-w-3xl px-4 py-10 text-center text-sm text-foreground-secondary">
               {threadMissing
