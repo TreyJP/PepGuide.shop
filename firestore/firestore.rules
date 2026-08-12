@@ -73,12 +73,27 @@ service cloud.firestore {
       allow delete: if isOwner(userId) || isAdmin();
 
       match /chats/{chatId} {
-        allow read, write: if isOwner(userId);
+        // Owner can list all chats. Anyone with the chat link can get one chat
+        // when a sharedChatRefs/{chatId} pointer exists (share-by-link).
+        allow get: if isOwner(userId)
+          || (
+            exists(/databases/$(database)/documents/sharedChatRefs/$(chatId))
+            && get(/databases/$(database)/documents/sharedChatRefs/$(chatId)).data.ownerUid
+              == userId
+          );
+        allow list: if isOwner(userId);
+        allow create, update, delete: if isOwner(userId);
 
         match /messages/{messageId} {
           // Temporary: allow client-written assistant messages until
           // Cloud Functions own the AI response write path.
-          allow read, write: if isOwner(userId);
+          allow read: if isOwner(userId)
+            || (
+              exists(/databases/$(database)/documents/sharedChatRefs/$(chatId))
+              && get(/databases/$(database)/documents/sharedChatRefs/$(chatId)).data.ownerUid
+                == userId
+            );
+          allow write: if isOwner(userId);
         }
       }
 
@@ -97,6 +112,17 @@ service cloud.firestore {
       match /bookmarks/{bookmarkId} {
         allow read, write: if isOwner(userId);
       }
+    }
+
+    // Share-by-link pointers: /chat/{chatId} → ownerUid (unguessable ids).
+    match /sharedChatRefs/{chatId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasAll(['ownerUid']);
+      allow delete: if isSignedIn()
+        && resource.data.ownerUid == request.auth.uid;
     }
 
     match /peptides/{peptideId} {

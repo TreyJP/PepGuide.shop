@@ -1,8 +1,8 @@
 'use client';
 
-import { Plus, ShieldAlert } from 'lucide-react';
+import { Check, Link2, Plus, ShieldAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { AiMessage } from '@/src/components/chat/ai-message';
 import { EmptyChat } from '@/src/components/chat/empty-chat';
@@ -95,10 +95,15 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const sendLockRef = useRef(false);
   const user = useAuthStore((state) => state.user);
+  const initializing = useAuthStore((state) => state.initializing);
   const updateUser = useAuthStore((state) => state.updateUser);
   const openSignInModal = useUiStore((state) => state.openSignInModal);
   const { isPro } = useProAccess();
   const chatBlocked = isChatSendingBlocked(user);
+  const [isOwner, setIsOwner] = useState(true);
+  const [threadMissing, setThreadMissing] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const viewOnly = Boolean(chatId) && !isOwner;
 
   const requireAuth = useCallback(
     (message?: string) => {
@@ -166,34 +171,48 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   const messages = resolvedChatId ? (messagesByChat[resolvedChatId] ?? []) : [];
 
   useEffect(() => {
-    if (!chatId || !user) return;
+    if (!chatId || initializing) return;
     setActiveChatId(chatId);
+    setThreadMissing(false);
     let cancelled = false;
 
     void (async () => {
       try {
-        const loaded = await chatRepository.listMessages(chatId);
+        const loaded = await chatRepository.loadSharedThread(chatId);
         if (cancelled) return;
 
+        if (!loaded) {
+          setIsOwner(false);
+          setThreadMissing(true);
+          setMessages(chatId, []);
+          return;
+        }
+
+        setIsOwner(loaded.isOwner);
         const state = useChatStore.getState();
         const local = state.messagesByChat[chatId] ?? [];
         const preferLocalOrder =
-          state.isStreaming ||
-          local.some(
-            (message) =>
-              message.status === 'streaming' || message.status === 'sending',
-          );
+          loaded.isOwner &&
+          (state.isStreaming ||
+            local.some(
+              (message) =>
+                message.status === 'streaming' || message.status === 'sending',
+            ));
 
         // Keep optimistic / in-flight messages and never scramble turn order.
         setMessages(
           chatId,
-          mergeChatMessages(loaded, local, { preferLocalOrder }),
+          mergeChatMessages(loaded.messages, loaded.isOwner ? local : [], {
+            preferLocalOrder,
+          }),
         );
       } catch (error) {
         console.error('[PepGuide chat] Failed to load messages', error);
         if (cancelled) return;
         const local = useChatStore.getState().messagesByChat[chatId] ?? [];
         if (local.length === 0) {
+          setIsOwner(false);
+          setThreadMissing(true);
           setMessages(chatId, []);
         }
       }
@@ -202,7 +221,23 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
     return () => {
       cancelled = true;
     };
-  }, [chatId, setActiveChatId, setMessages, user]);
+  }, [chatId, initializing, setActiveChatId, setMessages, user?.id]);
+
+  const handleShareChat = useCallback(async () => {
+    if (!chatId || !isOwner) return;
+    try {
+      await chatRepository.ensureShareable(chatId);
+      const url =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/chat/${chatId}`
+          : `/chat/${chatId}`;
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 2000);
+    } catch (error) {
+      console.error('[PepGuide chat] Failed to copy share link', error);
+    }
+  }, [chatId, isOwner]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -230,6 +265,7 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
 
   const handleSend = useCallback(
     async (content: string) => {
+      if (viewOnly) return;
       if (sendLockRef.current || useChatStore.getState().isStreaming) {
         console.warn('[PepGuide chat] Ignoring duplicate send while in flight');
         return;
@@ -493,13 +529,30 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
       updateMessage,
       upsertChat,
       upsertMessage,
+      viewOnly,
     ],
   );
 
   return (
     <div className="chat-design-root">
       {/* Desktop only — on mobile, New lives in the top bar next to the menu. */}
-      <header className="chat-header hidden items-center justify-end border-b px-4 py-2 lg:flex">
+      <header className="chat-header hidden items-center justify-end gap-1 border-b px-4 py-2 lg:flex">
+        {chatId && isOwner ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => void handleShareChat()}
+            aria-label="Copy share link"
+            className="shrink-0 gap-1.5"
+          >
+            {shareCopied ? (
+              <Check className="size-4" />
+            ) : (
+              <Link2 className="size-4" />
+            )}
+            <span>{shareCopied ? 'Copied' : 'Share'}</span>
+          </Button>
+        ) : null}
         <Button
           size="sm"
           variant="ghost"
@@ -513,7 +566,20 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         </Button>
       </header>
 
-      {user && chatBlocked ? (
+      {viewOnly ? (
+        <div className="border-b border-border bg-surface-secondary px-4 py-3">
+          <div className="mx-auto flex max-w-3xl items-start gap-2.5 text-sm text-foreground">
+            <Link2 className="mt-0.5 size-4 shrink-0 text-accent" />
+            <p>
+              {threadMissing
+                ? 'This shared chat isn’t available. It may have been deleted or isn’t shared yet.'
+                : 'View only — you can read this shared chat, but you can’t send messages here.'}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {user && chatBlocked && !viewOnly ? (
         <div className="border-b border-border bg-surface-secondary px-4 py-3">
           <div className="mx-auto flex max-w-3xl items-start gap-2.5 text-sm text-foreground">
             <ShieldAlert className="mt-0.5 size-4 shrink-0 text-accent" />
@@ -527,9 +593,17 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         className="scrollbar-theme min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 py-3 sm:px-4 sm:py-6"
       >
         {messages.length === 0 ? (
-          <EmptyChat
-            onSelectPrompt={chatBlocked ? () => undefined : handleSend}
-          />
+          viewOnly ? (
+            <div className="mx-auto max-w-3xl px-4 py-10 text-center text-sm text-foreground-secondary">
+              {threadMissing
+                ? 'No messages to show for this link.'
+                : 'This shared chat doesn’t have any messages yet.'}
+            </div>
+          ) : (
+            <EmptyChat
+              onSelectPrompt={chatBlocked ? () => undefined : handleSend}
+            />
+          )
         ) : (
           <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-6 pb-4 sm:gap-7">
             {messages.map((message) =>
@@ -547,12 +621,14 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
                   createdAt={message.createdAt}
                   peptideIds={message.peptideIds}
                   suggestedQuestions={
-                    message.id === messages[messages.length - 1]?.id
+                    message.id === messages[messages.length - 1]?.id && !viewOnly
                       ? message.suggestedQuestions
                       : undefined
                   }
                   onSelectQuestion={
-                    chatBlocked || isStreaming ? undefined : handleSend
+                    viewOnly || chatBlocked || isStreaming
+                      ? undefined
+                      : handleSend
                   }
                 />
               ),
@@ -561,11 +637,17 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
         )}
       </div>
 
-      <MessageComposer
-        onSubmit={handleSend}
-        loading={isStreaming}
-        disabled={chatBlocked}
-      />
+      {viewOnly ? (
+        <div className="border-t border-border px-4 py-3 text-center text-xs text-foreground-secondary">
+          Shared chat · read only
+        </div>
+      ) : (
+        <MessageComposer
+          onSubmit={handleSend}
+          loading={isStreaming}
+          disabled={chatBlocked}
+        />
+      )}
     </div>
   );
 }

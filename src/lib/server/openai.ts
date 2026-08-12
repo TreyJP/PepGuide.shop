@@ -17,7 +17,7 @@ import {
   getWeightLossGuideIds,
   METABOLIC_TIER_GUIDE,
 } from '@/src/data/knowledge/metabolic-guide';
-import { getMuscleTopIds } from '@/src/data/knowledge/muscle-guide';
+import { getMuscleTopIds, MUSCLE_RESEARCH_GUIDE } from '@/src/data/knowledge/muscle-guide';
 import type { KnowledgeCategory, KnowledgeCompound } from '@/src/data/knowledge/types';
 import { PEP_GUIDE_KNOWLEDGE_PREAMBLE } from '@/src/data/knowledge/system-context';
 import {
@@ -75,12 +75,113 @@ function lastDiscoveryGuidanceContent(
   return turn?.content ?? null;
 }
 
+function isPlainEnglishExplainRequest(text: string): boolean {
+  return (
+    /\bin plain english\b/i.test(text) ||
+    /\bexplain (the )?(#\s*1|number one|top) option\b/i.test(text)
+  );
+}
+
+function resolvePlainEnglishTargetId(
+  userMessage: string,
+  history: ResearchChatTurn[] = [],
+): string {
+  const mentioned = findMentionedCompoundIds(userMessage);
+  if (mentioned[0]) return mentioned[0]!;
+
+  const appetiteContext = history.some(
+    (turn) =>
+      turn.role === 'assistant' &&
+      /\b(hunger|cagrilintide|\bcag\b|satiety|amylin)\b/i.test(turn.content),
+  );
+  const muscleContext = history.some(
+    (turn) =>
+      turn.role === 'assistant' &&
+      /\b(size \/ lean-mass|GH-axis|ipamorelin|muscle)\b/i.test(turn.content),
+  );
+
+  if (appetiteContext) return getHungerGuideIds(1)[0] ?? 'cagrilintide';
+  if (muscleContext) return getMuscleTopIds(1)[0] ?? 'ipamorelin';
+  return getWeightLossGuideIds(1)[0] ?? 'retatrutide';
+}
+
+function buildPlainEnglishExplainerResponse(
+  userMessage: string,
+  history: ResearchChatTurn[] = [],
+): PepGuideAiResponse {
+  const peptideId = resolvePlainEnglishTargetId(userMessage, history);
+  const compound = getCompoundById(peptideId);
+  const metabolic = METABOLIC_TIER_GUIDE.find((entry) => entry.id === peptideId);
+  const muscle = MUSCLE_RESEARCH_GUIDE.find((entry) => entry.id === peptideId);
+  const name = compound?.name ?? metabolic?.name ?? muscle?.name ?? 'This option';
+  const why =
+    metabolic?.why ??
+    muscle?.why ??
+    compound?.summary ??
+    'It’s one of the main research options people compare for this goal.';
+  const dosing =
+    metabolic?.researchDosing ??
+    muscle?.researchDosing ??
+    'Check the card for published research ranges.';
+  const simpleSummary =
+    compound?.summary?.replace(/\s+/g, ' ').trim() ||
+    'Researchers study it for this goal; details are still evolving.';
+
+  return pepGuideResponseSchema.parse({
+    answer: [
+      `**${name}**, in plain English:`,
+      '',
+      simpleSummary.length > 220
+        ? `${simpleSummary.slice(0, 217).trim()}…`
+        : simpleSummary,
+      '',
+      `• Why it ranks highly: ${why}`,
+      `• Research dosing talk: ${dosing}`,
+      '',
+      'Research framing only — not personal medical advice.',
+    ].join('\n'),
+    classification: 'compound_comparison',
+    safetyAction: 'allow',
+    evidenceCards: compound
+      ? [
+          {
+            peptideId: compound.id,
+            name: compound.name,
+            aliases: compound.aliases,
+            researchCategory: compound.researchAreas[0] ?? 'Research',
+            relevanceSummary: compound.summary,
+            proposedMechanism: compound.proposedMechanism,
+            humanEvidenceGrade: compound.humanEvidenceGrade,
+            preclinicalEvidenceGrade: compound.preclinicalEvidenceGrade,
+            regulatoryStatus: compound.regulatoryStatus,
+            regulatoryDetail: compound.regulatoryDetail,
+            knownRisks: compound.risks,
+            uncertainties: compound.uncertainties,
+            citationCount: compound.references.length,
+            lastReviewedAt: compound.lastReviewedAt,
+          },
+        ]
+      : [],
+    citations: compound?.references ?? [],
+    suggestedQuestions: [
+      `How does ${name} compare to the next option?`,
+      `What are the main risks people research for ${name}?`,
+    ],
+    peptideIds: [peptideId],
+  });
+}
+
 /** Prefer LLM-normalized intent; fall back to keyword heuristics. */
 function routeFromIntent(
   intent: ResearchIntent,
   userMessage: string,
   history: ResearchChatTurn[],
 ): PepGuideAiResponse | null {
+  // Chip / follow-up: “explain #1 / X in plain English” — never re-dump the picks list.
+  if (isPlainEnglishExplainRequest(userMessage)) {
+    return buildPlainEnglishExplainerResponse(userMessage, history);
+  }
+
   // Cap the quiz: guidance once, then deliver options (≤2–3 total replies).
   const deliverResult = shouldDeliverDiscoveryResult(history, userMessage);
   const priorGuidance = lastDiscoveryGuidanceContent(history);
@@ -200,6 +301,7 @@ function isMuscleQuery(text: string): boolean {
 
 /** Discovery ask for muscle / size / GH-axis picks (not a deep dive). */
 function shouldReturnMusclePicks(userMessage: string): boolean {
+  if (isPlainEnglishExplainRequest(userMessage)) return false;
   if (!isMuscleQuery(userMessage)) return false;
   if (isDualWeightMuscleQuery(userMessage)) return false;
   if (isWeightLossQuery(userMessage)) return false;
@@ -392,6 +494,7 @@ function shouldReturnWeightLossPicks(
   userMessage: string,
   _history: ResearchChatTurn[] = [],
 ): boolean {
+  if (isPlainEnglishExplainRequest(userMessage)) return false;
   if (!isWeightLossQuery(userMessage)) return false;
   // Dual goals get a split answer (one metabolic + one muscle), not weight-only picks.
   if (isDualWeightMuscleQuery(userMessage)) return false;
@@ -758,6 +861,7 @@ function buildWeightLossPicksResponse(
   const cardSource = peptideIds
     .map((id) => getCompoundById(id))
     .filter((compound): compound is NonNullable<typeof compound> => Boolean(compound));
+  const topName = cardSource[0]?.name ?? 'the top option';
 
   const lead = appetiteFocus
     ? 'Got it — for **hunger**, research usually leads with **cagrilintide (cag)** on the satiety / amylin path. Peers to compare are below:'
@@ -793,8 +897,8 @@ function buildWeightLossPicksResponse(
           'How is cag researched with semaglutide?',
         ]
       : [
-          'Explain the #1 option in plain English',
-          'What if I’m still hungry on the top option?',
+          `Explain ${topName} in plain English`,
+          `What if I'm still hungry on ${topName}?`,
         ],
     peptideIds,
   });
@@ -1086,6 +1190,10 @@ function buildFallbackFromKnowledge(
   classification: PepGuideAiResponse['classification'] = 'research_goal_exploration',
   history: ResearchChatTurn[] = [],
 ): PepGuideAiResponse {
+  if (isPlainEnglishExplainRequest(userMessage)) {
+    return buildPlainEnglishExplainerResponse(userMessage, history);
+  }
+
   if (isDualWeightMuscleQuery(userMessage)) {
     return buildDualGoalResponse();
   }

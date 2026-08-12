@@ -1,8 +1,9 @@
 'use client';
 
-import { Menu, SquarePen } from 'lucide-react';
+import { Check, Link2, Menu, SquarePen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 import { Button } from '@/src/components/ui/button';
 import {
@@ -26,8 +27,15 @@ export function MobileTopBar() {
   const setMessages = useChatStore((state) => state.setMessages);
   const chats = useChatStore((state) => state.chats);
   const activeChatId = useChatStore((state) => state.activeChatId);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const onChatRoute = pathname === '/chat' || pathname.startsWith('/chat/');
+  const sharedChatId = pathname.startsWith('/chat/')
+    ? pathname.slice('/chat/'.length).split('/')[0] || null
+    : null;
+  const ownsActiveChat = Boolean(
+    user && sharedChatId && chats.some((chat) => chat.id === sharedChatId),
+  );
   const chatBlocked = isChatSendingBlocked(user);
   const activeTitle =
     chats.find((chat) => chat.id === activeChatId)?.title?.trim() || 'PepGuide';
@@ -49,6 +57,19 @@ export function MobileTopBar() {
     router.push(`/chat/${chat.id}`);
   };
 
+  const handleShare = async () => {
+    if (!sharedChatId || !ownsActiveChat) return;
+    try {
+      await chatRepository.ensureShareable(sharedChatId);
+      const url = `${window.location.origin}/chat/${sharedChatId}`;
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 2000);
+    } catch (error) {
+      console.error('[PepGuide chat] Failed to copy share link', error);
+    }
+  };
+
   return (
     <header className="flex h-12 shrink-0 items-center gap-1 bg-white px-1.5 lg:hidden">
       <Button
@@ -68,6 +89,23 @@ export function MobileTopBar() {
       >
         {onChatRoute ? activeTitle : 'PepGuide'}
       </Link>
+
+      {onChatRoute && ownsActiveChat ? (
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="size-10 shrink-0 rounded-full text-foreground"
+          aria-label="Copy share link"
+          onClick={() => void handleShare()}
+        >
+          {shareCopied ? (
+            <Check className="size-5" strokeWidth={1.75} />
+          ) : (
+            <Link2 className="size-5" strokeWidth={1.75} />
+          )}
+        </Button>
+      ) : null}
 
       {onChatRoute ? (
         <Button

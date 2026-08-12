@@ -35,6 +35,20 @@ import type {
 } from '@/src/types';
 import { createId } from '@/src/utils/dates';
 
+export type SharedChatRef = {
+  ownerUid: string;
+  title?: string;
+  updatedAt?: string;
+};
+
+export type LoadedChatThread = {
+  chatId: string;
+  ownerUid: string;
+  isOwner: boolean;
+  messages: ChatMessage[];
+  title?: string;
+};
+
 async function resolveIsAdmin(email: string): Promise<boolean> {
   if (isEnvAdminEmail(email)) return true;
   try {
@@ -61,6 +75,7 @@ async function bumpRankingForNewChat() {
 
 const mockChats = new Map<string, ChatSummary>();
 const mockMessages = new Map<string, ChatMessage[]>();
+const mockSharedRefs = new Map<string, SharedChatRef>();
 
 function requireUid() {
   const uid = getFirebaseAuth()?.currentUser?.uid;
@@ -80,6 +95,10 @@ function chatsCol(uid: string) {
 
 function messagesCol(uid: string, chatId: string) {
   return collection(requireDb(), 'users', uid, 'chats', chatId, 'messages');
+}
+
+function sharedChatRefDoc(chatId: string) {
+  return doc(requireDb(), 'sharedChatRefs', chatId);
 }
 
 function mapChat(id: string, data: Record<string, unknown>): ChatSummary {
@@ -131,6 +150,40 @@ function mapMessage(
   };
 }
 
+async function upsertSharedChatRef(
+  chatId: string,
+  ownerUid: string,
+  title?: string,
+) {
+  await setDoc(
+    sharedChatRefDoc(chatId),
+    {
+      ownerUid,
+      title: title ?? DEFAULT_CHAT_TITLE,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true },
+  );
+}
+
+async function listMessagesForOwner(
+  ownerUid: string,
+  chatId: string,
+  options?: { limit?: number },
+): Promise<ChatMessage[]> {
+  const messagesQuery = options?.limit
+    ? query(
+        messagesCol(ownerUid, chatId),
+        orderBy('createdAt', 'asc'),
+        fsLimit(options.limit),
+      )
+    : query(messagesCol(ownerUid, chatId), orderBy('createdAt', 'asc'));
+  const snap = await getDocs(messagesQuery);
+  return snap.docs.map((item) =>
+    mapMessage(item.id, chatId, item.data() as Record<string, unknown>),
+  );
+}
+
 const mockRepository = {
   async listChats(): Promise<ChatSummary[]> {
     return Array.from(mockChats.values()).sort(
@@ -160,6 +213,11 @@ const mockRepository = {
     };
     mockChats.set(chat.id, chat);
     mockMessages.set(chat.id, []);
+    mockSharedRefs.set(chat.id, {
+      ownerUid: 'mock-user',
+      title: chat.title,
+      updatedAt: now,
+    });
     void bumpRankingForNewChat();
     return chat;
   },
@@ -172,17 +230,44 @@ const mockRepository = {
       updatedAt: new Date().toISOString(),
     };
     mockChats.set(chatId, updated);
+    mockSharedRefs.set(chatId, {
+      ownerUid: 'mock-user',
+      title: updated.title,
+      updatedAt: updated.updatedAt,
+    });
     return updated;
   },
   async deleteChat(chatId: string) {
     mockChats.delete(chatId);
     mockMessages.delete(chatId);
+    mockSharedRefs.delete(chatId);
     void publicProfileRepository.recordChatDeleted().catch(() => undefined);
   },
   async listMessages(chatId: string, options?: { limit?: number }) {
     const all = mockMessages.get(chatId) ?? [];
     if (!options?.limit) return all;
     return all.slice(Math.max(0, all.length - options.limit));
+  },
+  async loadSharedThread(chatId: string): Promise<LoadedChatThread | null> {
+    const ref = mockSharedRefs.get(chatId);
+    const currentUid = getFirebaseAuth()?.currentUser?.uid ?? 'mock-user';
+    if (!ref && !mockChats.has(chatId)) return null;
+    const ownerUid = ref?.ownerUid ?? currentUid;
+    return {
+      chatId,
+      ownerUid,
+      isOwner: ownerUid === currentUid,
+      messages: mockMessages.get(chatId) ?? [],
+      title: mockChats.get(chatId)?.title ?? ref?.title,
+    };
+  },
+  async ensureShareable(chatId: string, title?: string) {
+    const uid = getFirebaseAuth()?.currentUser?.uid ?? 'mock-user';
+    mockSharedRefs.set(chatId, {
+      ownerUid: uid,
+      title: title ?? mockChats.get(chatId)?.title ?? DEFAULT_CHAT_TITLE,
+      updatedAt: new Date().toISOString(),
+    });
   },
   async appendMessage(message: ChatMessage) {
     const list = mockMessages.get(message.chatId) ?? [];
@@ -205,6 +290,11 @@ const mockRepository = {
         safetyStatus: message.safetyAction,
         title: nextTitle,
       });
+      mockSharedRefs.set(message.chatId, {
+        ownerUid: getFirebaseAuth()?.currentUser?.uid ?? 'mock-user',
+        title: nextTitle,
+        updatedAt: message.createdAt,
+      });
     }
     return message;
   },
@@ -219,7 +309,6 @@ const firestoreRepository = {
       .filter((chat) => !chat.archived)
       .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt));
   },
-
 
   async createChat(input?: {
     title?: string;
@@ -245,6 +334,7 @@ const firestoreRepository = {
       safetyStatus: 'allow',
     };
     await setDoc(ref, chat);
+    await upsertSharedChatRef(chat.id, uid, chat.title);
     void bumpRankingForNewChat();
     return chat;
   },
@@ -259,7 +349,9 @@ const firestoreRepository = {
     });
     const snap = await getDoc(chatRef);
     if (!snap.exists()) throw new Error('Chat not found');
-    return mapChat(chatId, snap.data() as Record<string, unknown>);
+    const mapped = mapChat(chatId, snap.data() as Record<string, unknown>);
+    await upsertSharedChatRef(chatId, uid, mapped.title);
+    return mapped;
   },
 
   async deleteChat(chatId: string) {
@@ -267,24 +359,72 @@ const firestoreRepository = {
     const messagesSnap = await getDocs(messagesCol(uid, chatId));
     await Promise.all(messagesSnap.docs.map((item) => deleteDoc(item.ref)));
     await deleteDoc(doc(requireDb(), 'users', uid, 'chats', chatId));
+    try {
+      await deleteDoc(sharedChatRefDoc(chatId));
+    } catch {
+      // Index may not exist for older chats.
+    }
     void publicProfileRepository.recordChatDeleted().catch(() => undefined);
   },
 
   async listMessages(chatId: string, options?: { limit?: number }) {
     const uid = requireUid();
-    const messagesQuery = options?.limit
-      ? query(
-          messagesCol(uid, chatId),
-          orderBy('createdAt', 'asc'),
-          fsLimit(options.limit),
-        )
-      : query(messagesCol(uid, chatId), orderBy('createdAt', 'asc'));
-    const snap = await getDocs(messagesQuery);
-    return snap.docs.map((item) =>
-      mapMessage(item.id, chatId, item.data() as Record<string, unknown>),
-    );
+    return listMessagesForOwner(uid, chatId, options);
   },
 
+  async loadSharedThread(chatId: string): Promise<LoadedChatThread | null> {
+    const currentUid = getFirebaseAuth()?.currentUser?.uid ?? null;
+
+    // Prefer own chat when signed in (works even before a share index exists).
+    if (currentUid) {
+      try {
+        const ownChat = await getDoc(
+          doc(requireDb(), 'users', currentUid, 'chats', chatId),
+        );
+        if (ownChat.exists()) {
+          const data = ownChat.data() as Record<string, unknown>;
+          const messages = await listMessagesForOwner(currentUid, chatId);
+          void upsertSharedChatRef(
+            chatId,
+            currentUid,
+            String(data.title ?? DEFAULT_CHAT_TITLE),
+          ).catch(() => undefined);
+          return {
+            chatId,
+            ownerUid: currentUid,
+            isOwner: true,
+            messages,
+            title: String(data.title ?? DEFAULT_CHAT_TITLE),
+          };
+        }
+      } catch {
+        // Fall through to shared lookup.
+      }
+    }
+
+    const refSnap = await getDoc(sharedChatRefDoc(chatId));
+    if (!refSnap.exists()) return null;
+    const data = refSnap.data() as Record<string, unknown>;
+    const ownerUid = String(data.ownerUid ?? '');
+    if (!ownerUid) return null;
+
+    const messages = await listMessagesForOwner(ownerUid, chatId);
+    return {
+      chatId,
+      ownerUid,
+      isOwner: Boolean(currentUid && currentUid === ownerUid),
+      messages,
+      title:
+        typeof data.title === 'string' && data.title.trim()
+          ? data.title
+          : undefined,
+    };
+  },
+
+  async ensureShareable(chatId: string, title?: string) {
+    const uid = requireUid();
+    await upsertSharedChatRef(chatId, uid, title);
+  },
 
   async appendMessage(message: ChatMessage) {
     const uid = requireUid();
@@ -324,19 +464,25 @@ const firestoreRepository = {
       safeUpdate.messageCount = increment(1);
     }
 
+    let nextTitle = existing?.title;
     if (
       message.role === 'user' &&
       (!existing || isDefaultChatTitle(existing.title))
     ) {
-      safeUpdate.title = deriveChatTitle(message.content);
+      nextTitle = deriveChatTitle(message.content);
+      safeUpdate.title = nextTitle;
     }
 
     await updateDoc(chatRef, safeUpdate);
+    await upsertSharedChatRef(
+      message.chatId,
+      uid,
+      nextTitle ?? existing?.title ?? DEFAULT_CHAT_TITLE,
+    );
 
     return message;
   },
 };
-
 
 export const chatRepository = {
   listChats() {
@@ -368,6 +514,16 @@ export const chatRepository = {
     return shouldUseMockServices()
       ? mockRepository.listMessages(chatId, options)
       : firestoreRepository.listMessages(chatId, options);
+  },
+  loadSharedThread(chatId: string) {
+    return shouldUseMockServices()
+      ? mockRepository.loadSharedThread(chatId)
+      : firestoreRepository.loadSharedThread(chatId);
+  },
+  ensureShareable(chatId: string, title?: string) {
+    return shouldUseMockServices()
+      ? mockRepository.ensureShareable(chatId, title)
+      : firestoreRepository.ensureShareable(chatId, title);
   },
   appendMessage(message: ChatMessage) {
     return shouldUseMockServices()
