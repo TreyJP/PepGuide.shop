@@ -118,8 +118,14 @@
 }
 
 .ps-compound__from {
-  flex-shrink: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 46%;
   padding-top: 0.15rem;
+}
+
+.ps-compound__from .lib-from-price {
+  align-items: flex-end;
 }
 
 .ps-compound__note {

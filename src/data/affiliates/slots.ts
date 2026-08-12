@@ -23,6 +23,14 @@ import {
   VITALCHEMS_CATALOG,
   VITALCHEMS_PARTNER,
 } from '@/src/data/affiliates/vitalchems-catalog';
+import {
+  ELYTRA_LABS_CATALOG,
+  ELYTRA_LABS_PARTNER,
+} from '@/src/data/affiliates/elytra-labs-catalog';
+import {
+  AMP_PEPTIDES_CATALOG,
+  AMP_PEPTIDES_PARTNER,
+} from '@/src/data/affiliates/amp-peptides-catalog';
 import { getOfferSalePriceUsd } from '@/src/lib/offer-pricing';
 import type { PartnerProduct } from '@/src/types/affiliates';
 
@@ -116,6 +124,24 @@ const OFFLINE_CATALOGS: OfflineCatalog[] = [
     discountPercent: VITALCHEMS_PARTNER.discountPercent,
     products: VITALCHEMS_CATALOG,
   },
+  {
+    id: ELYTRA_LABS_PARTNER.id,
+    label: ELYTRA_LABS_PARTNER.label,
+    href: ELYTRA_LABS_PARTNER.href,
+    couponCode: ELYTRA_LABS_PARTNER.couponCode,
+    discountLabel: ELYTRA_LABS_PARTNER.discountLabel,
+    discountPercent: ELYTRA_LABS_PARTNER.discountPercent,
+    products: ELYTRA_LABS_CATALOG,
+  },
+  {
+    id: AMP_PEPTIDES_PARTNER.id,
+    label: AMP_PEPTIDES_PARTNER.label,
+    href: AMP_PEPTIDES_PARTNER.href,
+    couponCode: AMP_PEPTIDES_PARTNER.couponCode,
+    discountLabel: AMP_PEPTIDES_PARTNER.discountLabel,
+    discountPercent: AMP_PEPTIDES_PARTNER.discountPercent,
+    products: AMP_PEPTIDES_CATALOG,
+  },
 ];
 
 /** Keep one row per partner — cheapest listing only (no vial-size variants). */
@@ -154,17 +180,35 @@ function collectOfflineOffers(peptideId: string): AffiliateOffer[] {
           priceUsd: product.priceUsd,
           priceMaxUsd: null,
           href: product.href || catalog.href,
-          couponCode: catalog.couponCode || DEFAULT_AFFILIATE_COUPON.code,
-          discountLabel:
-            catalog.discountLabel || DEFAULT_AFFILIATE_COUPON.discountLabel,
-          discountPercent:
-            catalog.discountPercent ?? DEFAULT_AFFILIATE_COUPON.discountPercent,
+          ...offlineCouponFields(catalog),
         }),
       );
     }
   }
 
   return offers;
+}
+
+function offlineCouponFields(catalog: OfflineCatalog): {
+  couponCode: string;
+  discountLabel: string;
+  discountPercent: number;
+} {
+  const code = (catalog.couponCode ?? '').trim();
+  if (!code) {
+    return {
+      couponCode: '',
+      discountLabel: (catalog.discountLabel ?? '').trim(),
+      discountPercent: 0,
+    };
+  }
+  return {
+    couponCode: DEFAULT_AFFILIATE_COUPON.code,
+    discountLabel:
+      catalog.discountLabel || DEFAULT_AFFILIATE_COUPON.discountLabel,
+    discountPercent:
+      catalog.discountPercent ?? DEFAULT_AFFILIATE_COUPON.discountPercent,
+  };
 }
 
 /** Offline fallback — one lowest-priced listing per partner. */

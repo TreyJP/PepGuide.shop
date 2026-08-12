@@ -35,7 +35,7 @@ export function LibDesignLedger(props: LibraryDesignViewProps) {
                     ) : null}
                   </Link>
                   <div className="lib-ledger__summary">
-                    <span>Lowest</span>
+                    <span>Lowest price</span>
                     <LibraryFromPrice pricing={pricing} size="md" />
                   </div>
                 </header>

@@ -289,33 +289,34 @@
 .lib-vg__sizes {
   display: flex;
   flex-direction: column;
-  gap: 0.22rem;
+  gap: 0.28rem;
   margin-top: 0.4rem;
+  min-width: 0;
 }
 
 .lib-vg__size-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.12rem;
   width: 100%;
-  align-items: center;
-  gap: 0.35rem;
+  min-width: 0;
   margin: 0;
   border: 0;
   border-radius: 8px;
   background: color-mix(in srgb, var(--lib-navy) 3.5%, white);
-  padding: 0.28rem 0.4rem;
+  padding: 0.35rem 0.45rem;
   color: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.lib-vg__size-row--price-only {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.lib-vg__size-row--price-only .lib-vg__price {
-  justify-self: start;
-  margin-top: 0;
+.lib-vg__size-row__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .lib-vg__size-row:hover {
@@ -324,19 +325,30 @@
 
 .lib-vg__size-row .lib-vg__sku {
   min-width: 0;
-  overflow-wrap: anywhere;
-  white-space: normal;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   line-height: 1.25;
+  font-size: 0.65rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--foreground-secondary);
 }
 
 .lib-vg__size-row .lib-vg__price {
-  flex-shrink: 0;
-  justify-self: end;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 0;
+  justify-content: flex-start;
 }
 
 .lib-vg__size-row .lib-vg__icon {
   position: static;
   flex-shrink: 0;
+  width: 0.75rem;
+  height: 0.75rem;
   opacity: 0.55;
 }
 
@@ -406,19 +418,49 @@
 .lib-vg__sku {
   font-size: 0.68rem;
   color: var(--foreground-secondary);
-  overflow-wrap: anywhere;
-  white-space: normal;
   line-height: 1.25;
 }
 
 .lib-vg__price {
-  margin-top: 0.2rem;
   display: inline-flex !important;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.3rem 0.45rem;
+  gap: 0.25rem 0.4rem;
   max-width: 100%;
-  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* Stacked “From $X / size” block used in card headers */
+.lib-from-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  min-width: 0;
+  max-width: 100%;
+  text-align: right;
+}
+
+.lib-from-price__prefix {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--foreground-secondary);
+}
+
+.lib-from-price__size,
+.offer-size-label {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--foreground-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .lib-offer-price__sale {
@@ -587,10 +629,12 @@
 
 .lib-deck__from {
   text-align: right;
-  flex-shrink: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 42%;
 }
 
-.lib-deck__from span {
+.lib-deck__from > span:first-child {
   display: block;
   font-size: 0.65rem;
   font-weight: 700;
@@ -608,6 +652,11 @@
 
 .lib-deck__from .lib-offer-price__sale {
   color: var(--lib-blue);
+}
+
+.lib-deck__top > div:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .lib-vg--deck {
@@ -684,6 +733,15 @@
 .lib-market__from-price,
 .lib-market__from-price .lib-offer-price__sale {
   color: white;
+}
+
+.lib-market__from-price .lib-from-price {
+  align-items: flex-start;
+}
+
+.lib-market__from-price .lib-from-price__size,
+.lib-market__from-price .offer-size-label {
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .lib-market__from-price .lib-offer-price__list {
@@ -870,10 +928,15 @@
 }
 
 .lib-tile__top .lib-tile__from {
-  flex-shrink: 0;
-  max-width: 55%;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 42%;
   justify-content: flex-end;
   text-align: right;
+}
+
+.lib-tile__top .lib-tile__from .lib-from-price {
+  align-items: flex-end;
 }
 
 .lib-tile__top .lib-offer-price__sale {
@@ -979,14 +1042,33 @@
 .lib-vg--deck .lib-vg__cell--preferred .lib-vg__preferred-tag,
 .lib-vg--market .lib-vg__cell--preferred .lib-vg__preferred-tag,
 .lib-vg--stack .lib-vg__cell--preferred .lib-vg__preferred-tag,
-.lib-vg--ledger .lib-vg__cell--preferred .lib-vg__preferred-tag {
+.lib-vg--ledger .lib-vg__cell--preferred .lib-vg__preferred-tag,
+.lib-vg--deck .lib-vg__cell--best .lib-vg__best-tag,
+.lib-vg--market .lib-vg__cell--best .lib-vg__best-tag,
+.lib-vg--stack .lib-vg__cell--best .lib-vg__best-tag,
+.lib-vg--ledger .lib-vg__cell--best .lib-vg__best-tag {
   display: inline-flex;
   width: fit-content;
+  max-width: 100%;
   font-size: 0.58rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.lib-vg--deck .lib-vg__cell--preferred .lib-vg__preferred-tag,
+.lib-vg--market .lib-vg__cell--preferred .lib-vg__preferred-tag,
+.lib-vg--stack .lib-vg__cell--preferred .lib-vg__preferred-tag,
+.lib-vg--ledger .lib-vg__cell--preferred .lib-vg__preferred-tag {
   color: var(--lib-pref);
+}
+
+.lib-vg--deck .lib-vg__cell--best .lib-vg__best-tag,
+.lib-vg--market .lib-vg__cell--best .lib-vg__best-tag,
+.lib-vg--stack .lib-vg__cell--best .lib-vg__best-tag,
+.lib-vg--ledger .lib-vg__cell--best .lib-vg__best-tag {
+  color: color-mix(in srgb, var(--lib-blue) 75%, var(--lib-navy));
 }
 
 /* Ledger */

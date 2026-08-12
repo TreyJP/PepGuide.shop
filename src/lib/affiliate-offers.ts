@@ -34,13 +34,23 @@ function partnerCouponFields(partner: AffiliatePartner): {
 } {
   if (isPreferredPartner(partner.id)) {
     return {
-      couponCode: partner.couponCode || TRUSTED_PARTNER_COUPON,
+      couponCode: TRUSTED_PARTNER_COUPON,
       discountLabel: TRUSTED_PARTNER_DISCOUNT_LABEL,
       discountPercent: TRUSTED_PARTNER_DISCOUNT_PERCENT,
     };
   }
+  const code = (partner.couponCode ?? '').trim();
+  // Empty string means "no copyable coupon" (e.g. Elytra aff-link tracking).
+  if (!code) {
+    return {
+      couponCode: '',
+      discountLabel: (partner.discountLabel ?? '').trim(),
+      discountPercent: 0,
+    };
+  }
   return {
-    couponCode: partner.couponCode || DEFAULT_AFFILIATE_COUPON.code,
+    // PepGuide partner codes are always PEPGUIDE (normalize case / variants).
+    couponCode: DEFAULT_AFFILIATE_COUPON.code,
     discountLabel:
       partner.discountLabel || DEFAULT_AFFILIATE_COUPON.discountLabel,
     discountPercent: partnerDiscountPercent(partner),

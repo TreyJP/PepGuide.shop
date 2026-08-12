@@ -5,6 +5,10 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { OfferPrice } from '@/src/components/affiliates/offer-price';
+import {
+  LowestPriceBadge,
+  TrustedSourceBadge,
+} from '@/src/components/affiliates/partner-badges';
 import { PartnerLabScore } from '@/src/components/affiliates/partner-lab-score';
 import { LibraryFromPrice } from '@/src/components/library/library-from-price';
 import { BookmarkToggleButton } from '@/src/components/pro/bookmark-toggle-button';
@@ -99,17 +103,17 @@ function ProtocolVendorCard({
       <div className="ps-vendor__top">
         <p className="ps-vendor__name">{group.vendorLabel}</p>
         {preferred ? (
-          <span className="ps-vendor__tag ps-vendor__tag--trusted">Trusted</span>
+          <TrustedSourceBadge className="ps-vendor__tag ps-vendor__tag--trusted" />
         ) : isCheapest ? (
-          <span className="ps-vendor__tag ps-vendor__tag--lowest">Lowest</span>
+          <LowestPriceBadge className="ps-vendor__tag ps-vendor__tag--lowest" />
         ) : null}
         <PartnerLabScore vendorId={group.vendorId} />
-        {group.couponCode ? (
+        {group.couponCode.trim() ? (
           <button
             type="button"
             className="ps-vendor__coupon"
             onClick={() => {
-              void copyCoupon(group.couponCode).then(() => {
+              void copyCoupon(group.couponCode.toUpperCase()).then(() => {
                 setCopied(true);
                 window.setTimeout(() => setCopied(false), 1400);
               });
@@ -117,7 +121,7 @@ function ProtocolVendorCard({
           >
             {copied
               ? 'Copied'
-              : `${group.couponCode} · ${group.discountLabel}`}
+              : `${group.couponCode.toUpperCase()} · ${group.discountLabel}`}
           </button>
         ) : null}
       </div>

@@ -451,12 +451,17 @@
 
 .lib-price-chip {
   display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: flex-end;
-  gap: 0.3rem 0.45rem;
-  max-width: 9.5rem;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 0.1rem;
+  min-width: 0;
+  max-width: 11rem;
   text-align: right;
+}
+
+.lib-price-chip .lib-from-price {
+  align-items: flex-end;
 }
 
 .lib-price-chip__from {

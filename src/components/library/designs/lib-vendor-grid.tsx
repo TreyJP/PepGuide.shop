@@ -4,6 +4,10 @@ import { ExternalLink } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { OfferPrice } from '@/src/components/affiliates/offer-price';
+import {
+  LowestPriceBadge,
+  TrustedSourceBadge,
+} from '@/src/components/affiliates/partner-badges';
 import { PartnerLabScore } from '@/src/components/affiliates/partner-lab-score';
 import { isPreferredPartner } from '@/src/data/affiliates/preferred-partners';
 import {
@@ -15,6 +19,10 @@ import {
   type VendorOfferGroup,
 } from '@/src/lib/affiliate-offers';
 import { trackAnalyticsEvent } from '@/src/services/firestore/analytics';
+
+function sizeLabel(offer: AffiliateOffer): string {
+  return offer.testAmount || offer.productName || 'Standard';
+}
 
 function openVendor(
   offer: AffiliateOffer,
@@ -118,9 +126,9 @@ export function LibVendorGrid({
               data-cheapest={isCheapest ? 'true' : undefined}
             >
               {preferred ? (
-                <span className="lib-vg__preferred-tag">Trusted</span>
+                <TrustedSourceBadge className="lib-vg__preferred-tag" />
               ) : isCheapest ? (
-                <span className="lib-vg__best-tag">Lowest</span>
+                <LowestPriceBadge className="lib-vg__best-tag" />
               ) : null}
 
               <div className="lib-vg__vendor-head">
@@ -133,7 +141,7 @@ export function LibVendorGrid({
                   >
                     <PartnerLabScore vendorId={group.vendorId} />
                   </div>
-                  {group.couponCode ? (
+                  {group.couponCode.trim() ? (
                     <button
                       type="button"
                       className={
@@ -145,15 +153,19 @@ export function LibVendorGrid({
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
-                        void copyCoupon(group.couponCode).then(() => {
-                          setCopiedId(group.vendorId);
-                          window.setTimeout(() => setCopiedId(null), 1400);
-                        });
+                        void copyCoupon(group.couponCode.toUpperCase()).then(
+                          () => {
+                            setCopiedId(group.vendorId);
+                            window.setTimeout(() => setCopiedId(null), 1400);
+                          },
+                        );
                       }}
                     >
                       {copiedId === group.vendorId
                         ? 'Copied'
-                        : `${group.couponCode} · ${group.discountLabel}`}
+                        : group.discountLabel
+                          ? `${group.couponCode.toUpperCase()} · ${group.discountLabel}`
+                          : group.couponCode.toUpperCase()}
                     </button>
                   ) : null}
                 </div>
@@ -165,19 +177,22 @@ export function LibVendorGrid({
                     <button
                       key={offer.id}
                       type="button"
-                      className="lib-vg__size-row lib-vg__size-row--price-only"
+                      className="lib-vg__size-row"
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
                         openVendor(offer, peptideId, peptideName);
                       }}
                     >
+                      <span className="lib-vg__size-row__top">
+                        <span className="lib-vg__sku">{sizeLabel(offer)}</span>
+                        <ExternalLink className="lib-vg__icon" aria-hidden />
+                      </span>
                       <OfferPrice
                         offer={offer}
                         size="sm"
                         className="lib-vg__price"
                       />
-                      <ExternalLink className="lib-vg__icon" aria-hidden />
                     </button>
                   ))
                 ) : primary ? (
@@ -190,10 +205,13 @@ export function LibVendorGrid({
                       openVendor(primary, peptideId, peptideName);
                     }}
                   >
+                    <span className="lib-vg__size-row__top">
+                      <span className="lib-vg__sku">Price</span>
+                      <ExternalLink className="lib-vg__icon" aria-hidden />
+                    </span>
                     <span className="lib-vg__price font-[family-name:var(--font-display)] font-semibold tabular-nums text-foreground text-sm">
                       {priceRangeLabel(group)}
                     </span>
-                    <ExternalLink className="lib-vg__icon" aria-hidden />
                   </button>
                 ) : null}
               </div>

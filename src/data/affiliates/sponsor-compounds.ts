@@ -1,3 +1,5 @@
+import { AMP_PEPTIDES_CATALOG } from '@/src/data/affiliates/amp-peptides-catalog';
+import { ELYTRA_LABS_CATALOG } from '@/src/data/affiliates/elytra-labs-catalog';
 import { NEUROLABS_CATALOG } from '@/src/data/affiliates/neurolabs-catalog';
 import { PRISTINE_PEPTIDE_CATALOG } from '@/src/data/affiliates/pristine-peptide-catalog';
 import { REFINED_BIOLABS_CATALOG } from '@/src/data/affiliates/refined-biolabs-catalog';
@@ -11,6 +13,8 @@ const SPONSOR_CATALOGS: PartnerProduct[][] = [
   PRISTINE_PEPTIDE_CATALOG,
   REFINED_BIOLABS_CATALOG,
   VITALCHEMS_CATALOG,
+  ELYTRA_LABS_CATALOG,
+  AMP_PEPTIDES_CATALOG,
 ];
 
 /** Every compound ID referenced by any sponsor catalog product. */

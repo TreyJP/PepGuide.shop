@@ -4,7 +4,10 @@ import { ExternalLink } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 
 import { Button } from '@/src/components/ui/button';
-import { OfferPrice } from '@/src/components/affiliates/offer-price';
+import {
+  OfferPrice,
+  OfferSizeLabel,
+} from '@/src/components/affiliates/offer-price';
 import { formatAffiliateUsd } from '@/src/data/affiliates/slots';
 import { resolvePartnerOffers } from '@/src/lib/affiliate-offers';
 import { getOfferSalePriceUsd } from '@/src/lib/offer-pricing';
@@ -41,10 +44,16 @@ export function AffiliateOfferPanel({
     () => resolvePartnerOffers(partners, peptideId, 'lowestPerVendor'),
     [partners, peptideId],
   );
-  const fromPrice =
+  const cheapestOffer =
     offers.length > 0
-      ? Math.min(...offers.map((offer) => getOfferSalePriceUsd(offer)))
+      ? offers.reduce((best, offer) =>
+          getOfferSalePriceUsd(offer) < getOfferSalePriceUsd(best)
+            ? offer
+            : best,
+        )
       : null;
+  const fromPrice =
+    cheapestOffer != null ? getOfferSalePriceUsd(cheapestOffer) : null;
   const featured = rank === 1;
 
   return (
@@ -79,7 +88,7 @@ export function AffiliateOfferPanel({
           >
             #{rank}
           </span>
-          {fromPrice != null ? (
+          {fromPrice != null && cheapestOffer ? (
             <div className="text-right">
               <p className="text-[11px] uppercase tracking-[0.14em] text-foreground-secondary">
                 From
@@ -87,6 +96,10 @@ export function AffiliateOfferPanel({
               <p className="font-[family-name:var(--font-display)] text-xl font-semibold tracking-tight text-foreground">
                 {formatAffiliateUsd(fromPrice)}
               </p>
+              <OfferSizeLabel
+                offer={cheapestOffer}
+                className="mt-0.5 block text-[11px] font-semibold text-foreground-secondary"
+              />
             </div>
           ) : null}
         </div>
@@ -130,12 +143,18 @@ export function AffiliateOfferPanel({
                   </p>
                 ) : null}
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <OfferPrice offer={offer} size="sm" />
+              <div className="flex shrink-0 items-center gap-2">
+                <div className="text-right">
+                  <OfferPrice offer={offer} size="sm" />
+                  <OfferSizeLabel
+                    offer={offer}
+                    className="mt-0.5 block text-[10px] font-semibold text-foreground-secondary"
+                  />
+                </div>
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="size-8 p-0"
+                  className="size-8 shrink-0 p-0"
                   onClick={(event) => {
                     event.stopPropagation();
                     void trackAnalyticsEvent({

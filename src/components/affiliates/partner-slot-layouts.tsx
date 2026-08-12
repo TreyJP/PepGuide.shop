@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 
 import { CouponCodeButton } from '@/src/components/affiliates/coupon-code-button';
 import { OfferPrice } from '@/src/components/affiliates/offer-price';
+import { TrustedSourceBadge } from '@/src/components/affiliates/partner-badges';
 import { PartnerLabScore } from '@/src/components/affiliates/partner-lab-score';
 import { isPreferredPartner } from '@/src/data/affiliates/preferred-partners';
 import {
@@ -92,24 +93,24 @@ export function PartnerSlotList({
                 {group.vendorLabel}
               </p>
               {preferred ? (
-                <span className="inline-flex items-center rounded-[6px] bg-teal-700/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-teal-800">
-                  Trusted
-                </span>
+                <TrustedSourceBadge className="inline-flex items-center rounded-[6px] bg-teal-700/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-teal-800" />
               ) : null}
               <PartnerLabScore vendorId={group.vendorId} />
             </div>
 
-            <div className="w-full max-w-full sm:max-w-[11rem]">
-              <CouponCodeButton
-                code={group.couponCode}
-                discountLabel={group.discountLabel}
-                partnerId={group.vendorId}
-                partnerLabel={group.vendorLabel}
-                peptideId={peptideId}
-                peptideName={peptideName}
-                className="w-full max-w-full"
-              />
-            </div>
+            {group.couponCode.trim() ? (
+              <div className="w-full max-w-full sm:max-w-[11rem]">
+                <CouponCodeButton
+                  code={group.couponCode}
+                  discountLabel={group.discountLabel}
+                  partnerId={group.vendorId}
+                  partnerLabel={group.vendorLabel}
+                  peptideId={peptideId}
+                  peptideName={peptideName}
+                  className="w-full max-w-full"
+                />
+              </div>
+            ) : null}
 
             <div className="space-y-1.5">
               {group.hasKnownSizes ? (

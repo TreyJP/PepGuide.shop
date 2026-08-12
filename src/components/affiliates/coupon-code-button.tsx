@@ -34,15 +34,16 @@ export function CouponCodeButton({
 }: CouponCodeButtonProps) {
   const [copied, setCopied] = useState(false);
   const percent = toMinusPercent(discountLabel);
+  const normalizedCode = code.trim().toUpperCase() || 'PEPGUIDE';
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(normalizedCode);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
       const input = document.createElement('input');
-      input.value = code;
+      input.value = normalizedCode;
       document.body.appendChild(input);
       input.select();
       document.execCommand('copy');
@@ -54,7 +55,7 @@ export function CouponCodeButton({
     void trackAnalyticsEvent({
       name: 'coupon_copy',
       meta: {
-        code,
+        code: normalizedCode,
         partnerId: partnerId ?? null,
         partnerLabel: partnerLabel ?? null,
         peptideId: peptideId ?? null,
@@ -79,7 +80,7 @@ export function CouponCodeButton({
         ) : (
           <>
             <span className="text-accent">{percent}</span>{' '}
-            <span>{code}</span>
+            <span>{normalizedCode}</span>
           </>
         )}
       </span>

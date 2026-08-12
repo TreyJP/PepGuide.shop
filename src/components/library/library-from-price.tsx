@@ -1,6 +1,9 @@
 'use client';
 
-import { OfferPrice } from '@/src/components/affiliates/offer-price';
+import {
+  OfferPrice,
+  OfferSizeLabel,
+} from '@/src/components/affiliates/offer-price';
 import type { LibraryPricingInfo } from '@/src/components/library/designs/types';
 import { formatAffiliateUsd } from '@/src/data/affiliates/slots';
 import { cn } from '@/src/lib/utils';
@@ -11,12 +14,15 @@ export function LibraryFromPrice({
   size = 'sm',
   prefix,
   emptyLabel = 'View',
+  showSize = true,
 }: {
   pricing?: LibraryPricingInfo;
   className?: string;
   size?: 'sm' | 'md';
   prefix?: string;
   emptyLabel?: string;
+  /** Show vial size on its own line under the price. */
+  showSize?: boolean;
 }) {
   if (!pricing?.fromOffer && pricing?.fromPriceUsd == null) {
     return (
@@ -28,24 +34,24 @@ export function LibraryFromPrice({
 
   if (pricing.fromOffer) {
     return (
-      <span className={cn('inline-flex flex-wrap items-baseline gap-1', className)}>
+      <span className={cn('lib-from-price', className)}>
         {prefix ? (
-          <span className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-foreground-secondary">
-            {prefix}
-          </span>
+          <span className="lib-from-price__prefix">{prefix}</span>
         ) : null}
         <OfferPrice offer={pricing.fromOffer} size={size} />
+        {showSize ? (
+          <OfferSizeLabel
+            offer={pricing.fromOffer}
+            className="lib-from-price__size"
+          />
+        ) : null}
       </span>
     );
   }
 
   return (
-    <span className={cn('inline-flex items-baseline gap-1', className)}>
-      {prefix ? (
-        <span className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-foreground-secondary">
-          {prefix}
-        </span>
-      ) : null}
+    <span className={cn('lib-from-price', className)}>
+      {prefix ? <span className="lib-from-price__prefix">{prefix}</span> : null}
       <span
         className={cn(
           'font-[family-name:var(--font-display)] font-semibold tabular-nums text-foreground',

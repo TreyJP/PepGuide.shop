@@ -1,6 +1,7 @@
 'use client';
 
 import type { AffiliateOffer } from '@/src/data/affiliates/slots';
+import { isKnownSizeLabel } from '@/src/lib/affiliate-offers';
 import { formatOfferPriceParts } from '@/src/lib/offer-pricing';
 import { cn } from '@/src/lib/utils';
 
@@ -63,6 +64,22 @@ export function OfferPrice({
       >
         -{parts.discountPercent}%
       </span>
+    </span>
+  );
+}
+
+/** Compact size caption for stacked price layouts (avoids inline clipping). */
+export function OfferSizeLabel({
+  offer,
+  className,
+}: {
+  offer: Pick<AffiliateOffer, 'testAmount'>;
+  className?: string;
+}) {
+  if (!isKnownSizeLabel(offer.testAmount)) return null;
+  return (
+    <span className={cn('offer-size-label', className)}>
+      {offer.testAmount.trim()}
     </span>
   );
 }

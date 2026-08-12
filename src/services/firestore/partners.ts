@@ -37,6 +37,14 @@ import {
   VITALCHEMS_PARTNER,
 } from '@/src/data/affiliates/vitalchems-catalog';
 import {
+  ELYTRA_LABS_CATALOG,
+  ELYTRA_LABS_PARTNER,
+} from '@/src/data/affiliates/elytra-labs-catalog';
+import {
+  AMP_PEPTIDES_CATALOG,
+  AMP_PEPTIDES_PARTNER,
+} from '@/src/data/affiliates/amp-peptides-catalog';
+import {
   getFirestoreDb,
   shouldUseMockServices,
 } from '@/src/services/firebase/config';
@@ -87,6 +95,16 @@ const CATALOG_PARTNERS: CatalogPartnerDef[] = [
     sortOrder: 4,
     products: VITALCHEMS_CATALOG,
   },
+  {
+    ...ELYTRA_LABS_PARTNER,
+    sortOrder: 5,
+    products: ELYTRA_LABS_CATALOG,
+  },
+  {
+    ...AMP_PEPTIDES_PARTNER,
+    sortOrder: 6,
+    products: AMP_PEPTIDES_CATALOG,
+  },
 ];
 
 function emptyLabTests(): Record<PartnerLabTestId, boolean | null> {
@@ -95,23 +113,10 @@ function emptyLabTests(): Record<PartnerLabTestId, boolean | null> {
   ) as Record<PartnerLabTestId, boolean | null>;
 }
 
+/** Unknown / custom partners — do not invent COA coverage. */
 function defaultLabTests(): Record<PartnerLabTestId, boolean | null> {
-  const labTests = emptyLabTests();
-  labTests.net_content = true;
-  labTests.net_purity = true;
-  labTests.identification = true;
-  labTests.endotoxins = true;
-  labTests.sterility = true;
-  labTests.heavy_metals = null;
-  labTests.fentanyl = null;
-  return labTests;
+  return emptyLabTests();
 }
-
-/** Partners that always show a complete 7/7 COA panel. */
-const FULL_LAB_PANEL_PARTNER_IDS = new Set<string>([
-  PREFERRED_PARTNER_ID,
-  'vitalchems',
-]);
 
 /** Full COA panel (all seven checks passed). */
 function fullLabTests(): Record<PartnerLabTestId, boolean | null> {
@@ -122,26 +127,88 @@ function fullLabTests(): Record<PartnerLabTestId, boolean | null> {
   return labTests;
 }
 
-/** NeuroLabs public panel: LC-MS, HPLC-UV, quant, LAL, PCR microbial, fentanyl. */
-function neurolabsLabTests(): Record<PartnerLabTestId, boolean | null> {
-  return {
-    ...emptyLabTests(),
-    identification: true, // Identity · LC-MS
-    net_purity: true, // Purity · HPLC-UV >99%
-    net_content: true, // Net content · Quantitation
-    endotoxins: true, // Endotoxin · LAL USP <85>
-    sterility: true, // Microbial · PCR
-    fentanyl: true, // Fentanyl screen · confirmed negative
-    heavy_metals: null, // Not listed on their public panel
-  };
-}
-
+/**
+ * Forced catalog COA panels from public product COAs / testing pages.
+ * `true` = documented pass, `null` = not reported on public COA.
+ */
 function catalogLabTests(
   partnerId: string,
 ): Record<PartnerLabTestId, boolean | null> | null {
-  if (FULL_LAB_PANEL_PARTNER_IDS.has(partnerId)) return fullLabTests();
-  if (partnerId === 'neurolabs') return neurolabsLabTests();
-  return null;
+  switch (partnerId) {
+    // Refined Biolabs + VitalChems: full 7/7 public panels (HPLC, ID, quant,
+    // endotoxin, sterility, heavy metals, fentanyl).
+    case PREFERRED_PARTNER_ID:
+    case 'vitalchems':
+      return fullLabTests();
+
+    // NeuroLabs: six-way panel (no heavy metals on public COAs).
+    case 'neurolabs':
+      return {
+        ...emptyLabTests(),
+        net_content: true,
+        net_purity: true,
+        identification: true,
+        endotoxins: true,
+        sterility: true,
+        fentanyl: true,
+        heavy_metals: null,
+      };
+
+    // Pristine Peptide sample COA (BT Labs): potency, purity, identity, endotoxin.
+    case 'pristine-peptide':
+      return {
+        ...emptyLabTests(),
+        net_content: true,
+        net_purity: true,
+        identification: true,
+        endotoxins: true,
+        sterility: null,
+        heavy_metals: null,
+        fentanyl: null,
+      };
+
+    // SomaChems Freedom/Peptigrity COAs: content, purity, identity only.
+    case 'somachems':
+      return {
+        ...emptyLabTests(),
+        net_content: true,
+        net_purity: true,
+        identification: true,
+        endotoxins: null,
+        sterility: null,
+        heavy_metals: null,
+        fentanyl: null,
+      };
+
+    // Elytra Labs Freedom COAs: net content, HPLC purity, LC-MS identity.
+    case 'elytra-labs':
+      return {
+        ...emptyLabTests(),
+        net_content: true,
+        net_purity: true,
+        identification: true,
+        endotoxins: null,
+        sterility: null,
+        heavy_metals: null,
+        fentanyl: null,
+      };
+
+    // Amp Peptides / Janoshik: HPLC purity, ESI-MS identity, mass/content.
+    case 'amp-peptides':
+      return {
+        ...emptyLabTests(),
+        net_content: true,
+        net_purity: true,
+        identification: true,
+        endotoxins: null,
+        sterility: null,
+        heavy_metals: null,
+        fentanyl: null,
+      };
+
+    default:
+      return null;
+  }
 }
 
 function labTestsForPartner(
@@ -276,12 +343,9 @@ async function syncCatalogPartnerLive(def: CatalogPartnerDef): Promise<void> {
       labTests: forcedLabs ?? current.labTests,
       active: current.active,
       sortOrder: preferred ? next.sortOrder : (current.sortOrder ?? next.sortOrder),
-      couponCode: preferred
-        ? next.couponCode
-        : current.couponCode || next.couponCode,
-      discountLabel: preferred
-        ? next.discountLabel
-        : current.discountLabel || next.discountLabel,
+      // Catalog partners always take coupon/discount from code (keeps PEPGUIDE + %).
+      couponCode: next.couponCode,
+      discountLabel: next.discountLabel,
       href: current.href || next.href,
       updatedAt: now,
     });
@@ -319,8 +383,8 @@ async function listMock(): Promise<AffiliatePartner[]> {
         ...next,
         labTests: forcedLabs ?? existing.labTests,
         active: existing.active,
-        couponCode: preferred ? next.couponCode : existing.couponCode,
-        discountLabel: preferred ? next.discountLabel : existing.discountLabel,
+        couponCode: next.couponCode,
+        discountLabel: next.discountLabel,
         href: existing.href,
       };
     }),
