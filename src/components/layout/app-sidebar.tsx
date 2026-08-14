@@ -26,6 +26,7 @@ import { ChatHistoryNav } from '@/src/components/layout/chat-history-nav';
 import { Button } from '@/src/components/ui/button';
 import { PRO_COMING_SOON } from '@/src/constants/billing';
 import { useAdminAccess } from '@/src/hooks/use-admin-access';
+import { useAdminForumNeedsReply } from '@/src/hooks/use-admin-forum-needs-reply';
 import { useProAccess } from '@/src/hooks/use-pro-access';
 import { cn } from '@/src/lib/utils';
 import { useAuthStore } from '@/src/stores/auth-store';
@@ -62,6 +63,7 @@ function NavLink({
   active,
   locked,
   comingSoon,
+  alert,
   onNavigate,
 }: {
   href: string;
@@ -70,6 +72,8 @@ function NavLink({
   active: boolean;
   locked?: boolean;
   comingSoon?: boolean;
+  /** Yellow label (e.g. admin: forum needs reply). */
+  alert?: boolean;
   onNavigate?: () => void;
 }) {
   const muted = locked || comingSoon;
@@ -81,7 +85,9 @@ function NavLink({
           ? 'Coming soon'
           : locked
             ? 'PepGuide Pro required'
-            : undefined
+            : alert
+              ? 'Needs an admin reply'
+              : undefined
       }
       onClick={onNavigate}
       className={cn(
@@ -90,9 +96,13 @@ function NavLink({
           ? active
             ? 'bg-surface-secondary text-foreground-secondary/55'
             : 'text-foreground-secondary/45 hover:bg-surface-secondary/70 hover:text-foreground-secondary/60'
-          : active
-            ? 'bg-accent-muted text-accent'
-            : 'text-foreground-secondary hover:bg-surface-secondary hover:text-foreground',
+          : alert
+            ? active
+              ? 'bg-[#eab308]/20 text-[#854d0e] hover:bg-[#eab308]/28 hover:text-[#713f12]'
+              : 'text-[#ca8a04] hover:bg-[#eab308]/15 hover:text-[#854d0e]'
+            : active
+              ? 'bg-accent-muted text-accent'
+              : 'text-foreground-secondary hover:bg-surface-secondary hover:text-foreground',
       )}
     >
       <Icon className={cn('size-4 shrink-0', muted && 'opacity-60')} />
@@ -116,6 +126,7 @@ export function AppSidebar() {
   const sidebarOpen = useUiStore((state) => state.sidebarOpen);
   const closeSidebar = useUiStore((state) => state.closeSidebar);
   const { isAdmin } = useAdminAccess();
+  const forumNeedsAdminReply = useAdminForumNeedsReply();
   const { isPro, loading: proLoading } = useProAccess();
   const proComingSoon = PRO_COMING_SOON && !isAdmin;
   const proLocked = !PRO_COMING_SOON && !proLoading && !isPro;
@@ -211,6 +222,11 @@ export function AppSidebar() {
                   label={label}
                   icon={icon}
                   active={active}
+                  alert={
+                    isAdmin &&
+                    href === '/pro/forum' &&
+                    forumNeedsAdminReply
+                  }
                   onNavigate={closeSidebar}
                 />
               );

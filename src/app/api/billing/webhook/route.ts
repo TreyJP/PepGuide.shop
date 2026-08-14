@@ -78,7 +78,11 @@ export async function POST(request: Request) {
                   : null,
               path: '/billing/success',
               meta: {
-                amountUsd: PRO_BILLING.priceUsd,
+                amountUsd:
+                  typeof session.amount_total === 'number'
+                    ? session.amount_total / 100
+                    : PRO_BILLING.priceUsd,
+                plan: session.metadata?.plan ?? 'monthly',
                 sessionId: session.id,
                 product: 'pepguide_pro',
               },

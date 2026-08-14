@@ -6,8 +6,8 @@ export const KNOWLEDGE_COMPOUNDS: KnowledgeCompound[] = [
   // ─── Metabolic / Weight ───────────────────────────────────────────────────
   {
     id: 'retatrutide',
-    name: 'Retatrutide',
-    aliases: ['LY3437943', 'Triple agonist'],
+    name: 'GL3RT',
+    aliases: ['Retatrutide', 'Reta', 'LY3437943', 'Triple agonist', 'GLP-3', 'GLP3RT', 'GL3RT'],
     isPeptide: true,
     classification: 'Investigational triple incretin/glucagon receptor agonist peptide',
     categories: ['metabolic_weight'],
@@ -16,7 +16,7 @@ export const KNOWLEDGE_COMPOUNDS: KnowledgeCompound[] = [
     proposedMechanism:
       'Simultaneously activates GLP-1, GIP, and glucagon receptors, potentially amplifying effects on appetite, energy expenditure, and glycemic control beyond single- or dual-agonist approaches.',
     researchNotes:
-      'Retatrutide (LY3437943) is among the most discussed investigational obesity agents. Phase 2 data published in NEJM (2023) reported mean weight reductions approaching 24% at higher doses over 48 weeks, alongside improvements in blood pressure, lipids, and liver fat. Researchers have studied its triple-receptor profile as a rationale for superior efficacy versus GLP-1-only agents. Human evidence remains limited to controlled trials; long-term cardiovascular and safety outcomes are still being characterized in ongoing phase 3 programs. Regulatory status is investigational worldwide.',
+      'GL3RT (retatrutide, LY3437943) is among the most discussed investigational obesity agents. Phase 2 data published in NEJM (2023) reported mean weight reductions approaching 24% at higher doses over 48 weeks, alongside improvements in blood pressure, lipids, and liver fat. Researchers have studied its triple-receptor profile as a rationale for superior efficacy versus GLP-1-only agents. Human evidence remains limited to controlled trials; long-term cardiovascular and safety outcomes are still being characterized in ongoing phase 3 programs. Regulatory status is investigational worldwide.',
     humanEvidenceGrade: 'moderate_human',
     preclinicalEvidenceGrade: 'moderate_human',
     regulatoryStatus: 'investigational',
@@ -59,8 +59,8 @@ export const KNOWLEDGE_COMPOUNDS: KnowledgeCompound[] = [
   },
   {
     id: 'semaglutide',
-    name: 'Semaglutide',
-    aliases: ['Ozempic', 'Wegovy', 'Rybelsus', 'GLP-1 RA'],
+    name: 'GL1SM',
+    aliases: ['Semaglutide', 'Sema', 'Ozempic', 'Wegovy', 'Rybelsus', 'GLP-1 RA', 'GLP-1', 'GL1SM'],
     isPeptide: true,
     classification: 'GLP-1 receptor agonist peptide',
     categories: ['metabolic_weight'],
@@ -69,7 +69,7 @@ export const KNOWLEDGE_COMPOUNDS: KnowledgeCompound[] = [
     proposedMechanism:
       'Activates GLP-1 receptors, enhancing glucose-dependent insulin secretion, suppressing glucagon, slowing gastric emptying, and reducing appetite via central and peripheral pathways.',
     researchNotes:
-      'Semaglutide is one of the best-characterized incretin peptides. STEP trials demonstrated ~15% mean weight loss at 68 weeks in adults with obesity (STEP 1, NEJM 2021). SUSTAIN and PIONEER programs established glycemic benefits in type 2 diabetes. FDA-approved for specific indications (e.g., Wegovy for chronic weight management, Ozempic for T2D). Researchers continue studying cardiovascular, renal, and MASH outcomes. Compounded or unapproved versions lack equivalent evidence and regulatory oversight.',
+      'GL1SM (semaglutide) is one of the best-characterized incretin peptides. STEP trials demonstrated ~15% mean weight loss at 68 weeks in adults with obesity (STEP 1, NEJM 2021). SUSTAIN and PIONEER programs established glycemic benefits in type 2 diabetes. FDA-approved for specific indications (e.g., Wegovy for chronic weight management, Ozempic for T2D). Researchers continue studying cardiovascular, renal, and MASH outcomes. Compounded or unapproved versions lack equivalent evidence and regulatory oversight.',
     humanEvidenceGrade: 'strong_human',
     preclinicalEvidenceGrade: 'strong_human',
     regulatoryStatus: 'fda_approved_specific',
@@ -86,8 +86,8 @@ export const KNOWLEDGE_COMPOUNDS: KnowledgeCompound[] = [
   },
   {
     id: 'tirzepatide',
-    name: 'Tirzepatide',
-    aliases: ['Mounjaro', 'Zepbound', 'LY3298176'],
+    name: 'GL2TZ',
+    aliases: ['Tirzepatide', 'Tirz', 'Trz', 'Mounjaro', 'Zepbound', 'LY3298176', 'GLP-2', 'GL2TZ'],
     isPeptide: true,
     classification: 'Dual GIP/GLP-1 receptor agonist peptide',
     categories: ['metabolic_weight'],
@@ -96,7 +96,7 @@ export const KNOWLEDGE_COMPOUNDS: KnowledgeCompound[] = [
     proposedMechanism:
       'Co-activates GIP and GLP-1 receptors; combined incretin signaling may produce greater metabolic effects than GLP-1 agonism alone.',
     researchNotes:
-      'Tirzepatide SURMOUNT trials reported up to ~22% mean weight loss at 72 weeks (SURMOUNT-1). SURPASS programs demonstrated robust HbA1c reductions in T2D. FDA approved as Mounjaro (T2D) and Zepbound (obesity). Available evidence suggests dual incretin activation is a meaningful advance, though head-to-head long-term comparisons with other agents continue. Human evidence is strong within labeled populations.',
+      'GL2TZ (tirzepatide) SURMOUNT trials reported up to ~22% mean weight loss at 72 weeks (SURMOUNT-1). SURPASS programs demonstrated robust HbA1c reductions in T2D. FDA approved as Mounjaro (T2D) and Zepbound (obesity). Available evidence suggests dual incretin activation is a meaningful advance, though head-to-head long-term comparisons with other agents continue. Human evidence is strong within labeled populations.',
     humanEvidenceGrade: 'strong_human',
     preclinicalEvidenceGrade: 'strong_human',
     regulatoryStatus: 'fda_approved_specific',

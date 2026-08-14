@@ -1,5 +1,7 @@
 import Stripe from 'stripe';
 
+import type { ProPlanId } from '@/src/constants/billing';
+
 export function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY?.trim();
   if (!key) {
@@ -10,7 +12,14 @@ export function getStripe(): Stripe {
   });
 }
 
+/** Monthly Stripe Price ID (legacy env name). */
 export function getStripePriceId(): string | null {
-  const priceId = process.env.STRIPE_PRICE_ID?.trim();
-  return priceId || null;
+  return getStripePriceIdForPlan('monthly');
+}
+
+export function getStripePriceIdForPlan(planId: ProPlanId): string | null {
+  if (planId === 'yearly') {
+    return process.env.STRIPE_PRICE_ID_YEARLY?.trim() || null;
+  }
+  return process.env.STRIPE_PRICE_ID?.trim() || null;
 }

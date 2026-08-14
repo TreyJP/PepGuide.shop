@@ -12,9 +12,9 @@ import { usePartnersStore } from '@/src/stores/partners-store';
 import type { Peptide } from '@/src/types';
 
 const QUICK_SEARCHES = [
-  { label: 'Reta', query: 'reta' },
-  { label: 'Tirz', query: 'tirz' },
-  { label: 'Sema', query: 'sema' },
+  { label: 'GL3RT', query: 'gl3rt' },
+  { label: 'GL2TZ', query: 'gl2tz' },
+  { label: 'GL1SM', query: 'gl1sm' },
   { label: 'BPC', query: 'bpc' },
   { label: 'Cag', query: 'cag' },
   { label: 'TB-500', query: 'tb-500' },

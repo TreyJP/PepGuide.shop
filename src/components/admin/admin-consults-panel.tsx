@@ -1,13 +1,16 @@
 'use client';
 
 import { ArrowLeft, CheckCircle2, RefreshCw, Send } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  AdminAiReplyComposer,
+  type AdminAiReplyTarget,
+} from '@/src/components/admin/admin-ai-reply-composer';
 import { AdminBadge } from '@/src/components/pro/admin-badge';
 import { Button } from '@/src/components/ui/button';
 import { EmptyState } from '@/src/components/ui/empty-state';
-import { Textarea } from '@/src/components/ui/textarea';
-import { cn } from '@/src/lib/utils';
+import { cn, getDisplayFirstName } from '@/src/lib/utils';
 import { getFirebaseAuth } from '@/src/services/firebase/config';
 import type { ProConsult, ProConsultMessage } from '@/src/types/consults';
 
@@ -51,9 +54,53 @@ export function AdminConsultsPanel() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [reply, setReply] = useState('');
   const [busy, setBusy] = useState(false);
+  const [selectedAiTargetId, setSelectedAiTargetId] = useState<string | null>(
+    null,
+  );
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const selected = consults.find((item) => item.id === selectedId) ?? null;
+
+  const aiTargets = useMemo((): AdminAiReplyTarget[] => {
+    if (!selected) return [];
+    const memberMessages = messages.filter((message) => !message.authorIsAdmin);
+    if (memberMessages.length === 0) {
+      return [
+        {
+          id: `consult:${selected.id}`,
+          label: `Consult · ${getDisplayFirstName(selected.userDisplayName)}`,
+          preview: selected.subject,
+          context: {
+            title: selected.subject,
+            body: selected.lastMessagePreview || selected.subject,
+            messages: [],
+          },
+        },
+      ];
+    }
+    return memberMessages.map((message, index) => ({
+      id: `message:${message.id}`,
+      label: `Message ${index + 1} · ${getDisplayFirstName(message.authorDisplayName)}`,
+      preview: message.body,
+      context: {
+        title: selected.subject,
+        body: message.body,
+        messages: messages
+          .filter((item) => item.id !== message.id)
+          .slice(-8)
+          .map((item) => ({
+            role: item.authorIsAdmin ? ('admin' as const) : ('member' as const),
+            authorLabel: item.authorDisplayName,
+            content: item.body,
+          })),
+      },
+    }));
+  }, [selected, messages]);
+
+  useEffect(() => {
+    setSelectedAiTargetId(aiTargets[0]?.id ?? null);
+    setReply('');
+  }, [selectedId, aiTargets[0]?.id]);
 
   const loadConsults = useCallback(async () => {
     setLoading(true);
@@ -228,14 +275,23 @@ export function AdminConsultsPanel() {
           <div ref={bottomRef} />
         </div>
 
-        <Textarea
-          label="Reply as admin"
-          value={reply}
-          onChange={(event) => setReply(event.target.value)}
-          placeholder="Educational reply to the member…"
-          rows={4}
-          maxLength={8000}
-        />
+        {!messagesLoading ? (
+          <AdminAiReplyComposer
+            label="Reply as admin"
+            value={reply}
+            onChange={setReply}
+            rows={4}
+            maxLength={8000}
+            disabled={busy}
+            targets={aiTargets}
+            selectedTargetId={selectedAiTargetId}
+            onSelectedTargetIdChange={setSelectedAiTargetId}
+          />
+        ) : (
+          <p className="text-sm text-foreground-secondary">
+            Loading thread before drafting a reply…
+          </p>
+        )}
         {error ? <p className="text-sm text-critical">{error}</p> : null}
         <div className="flex flex-wrap gap-2">
           <Button

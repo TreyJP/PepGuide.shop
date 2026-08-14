@@ -1,13 +1,19 @@
 'use client';
 
-import { PRO_COMING_SOON } from '@/src/constants/billing';
+import {
+  DEFAULT_PRO_PLAN_ID,
+  PRO_COMING_SOON,
+  type ProPlanId,
+} from '@/src/constants/billing';
 import { getFirebaseAuth } from '@/src/services/firebase/config';
 
 /**
- * Starts Stripe Checkout for PepGuide Pro and redirects the browser.
+ * Starts Stripe Checkout for PepGuide Pro and opens it in a new tab.
  * Throws with a user-facing message on failure.
  */
-export async function startProCheckout(): Promise<void> {
+export async function startProCheckout(
+  planId: ProPlanId = DEFAULT_PRO_PLAN_ID,
+): Promise<void> {
   if (PRO_COMING_SOON) {
     throw new Error('PepGuide Pro checkout is coming soon.');
   }
@@ -21,7 +27,10 @@ export async function startProCheckout(): Promise<void> {
     const { trackAnalyticsEvent } = await import(
       '@/src/services/firestore/analytics'
     );
-    void trackAnalyticsEvent({ name: 'checkout_started' });
+    void trackAnalyticsEvent({
+      name: 'checkout_started',
+      meta: { plan: planId },
+    });
   } catch {
     // Analytics should never block checkout.
   }
@@ -32,6 +41,7 @@ export async function startProCheckout(): Promise<void> {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ plan: planId }),
   });
   const data = (await response.json()) as { url?: string; error?: string };
   if (!response.ok || !data.url) {

@@ -181,19 +181,19 @@ export default function LandingPage() {
                 Which peptides are studied for metabolic research?
               </div>
               <div className="rounded-[14px] border border-border bg-surface-elevated p-4 text-sm leading-relaxed text-foreground-secondary">
-                Based on your research question, compounds frequently discussed include semaglutide
-                and retatrutide. Human evidence grades and regulatory status are shown on each card
+                Based on your research question, compounds frequently discussed include GL1SM
+                and GL3RT. Human evidence grades and regulatory status are shown on each card
                 below — not as personal recommendations.
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="rounded-[12px] border border-border p-3">
-                  <p className="text-sm font-medium">Semaglutide</p>
+                  <p className="text-sm font-medium">GL1SM</p>
                   <Badge variant="success" className="mt-2">
                     Strong human evidence
                   </Badge>
                 </div>
                 <div className="rounded-[12px] border border-border p-3">
-                  <p className="text-sm font-medium">Retatrutide</p>
+                  <p className="text-sm font-medium">GL3RT</p>
                   <Badge variant="warning" className="mt-2">
                     Early-stage research
                   </Badge>
@@ -248,9 +248,9 @@ export default function LandingPage() {
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {[
-              { name: 'Semaglutide', category: 'Metabolic research', grade: 'Strong human' },
+              { name: 'GL1SM', category: 'Metabolic research', grade: 'Strong human' },
               { name: 'BPC-157', category: 'Recovery research', grade: 'Limited human' },
-              { name: 'Retatrutide', category: 'Metabolic research', grade: 'Early-stage' },
+              { name: 'GL3RT', category: 'Metabolic research', grade: 'Early-stage' },
             ].map((peptide) => (
               <Card key={peptide.name}>
                 <CardHeader>
@@ -298,8 +298,8 @@ export default function LandingPage() {
                 <thead>
                   <tr className="border-b border-border text-foreground-secondary">
                     <th className="pb-3 pr-4 font-medium">Attribute</th>
-                    <th className="pb-3 pr-4 font-medium">Semaglutide</th>
-                    <th className="pb-3 font-medium">Retatrutide</th>
+                    <th className="pb-3 pr-4 font-medium">GL1SM</th>
+                    <th className="pb-3 font-medium">GL3RT</th>
                   </tr>
                 </thead>
                 <tbody className="text-foreground-secondary">

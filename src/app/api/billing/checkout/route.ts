@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 
-import { PRO_BILLING } from '@/src/constants/billing';
+import {
+  getProPlan,
+  isProPlanId,
+  PRO_BILLING,
+  PRO_COMING_SOON,
+  type ProPlanId,
+} from '@/src/constants/billing';
 import { verifyBearerToken } from '@/src/lib/server/firebase-admin';
-import { getStripe, getStripePriceId } from '@/src/lib/server/stripe';
+import { getStripe, getStripePriceIdForPlan } from '@/src/lib/server/stripe';
 
 function appUrl(request: Request) {
   const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '');
@@ -14,6 +20,13 @@ function appUrl(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (PRO_COMING_SOON) {
+      return NextResponse.json(
+        { error: 'PepGuide Pro checkout is coming soon.' },
+        { status: 503 },
+      );
+    }
+
     if (!process.env.STRIPE_SECRET_KEY?.trim()) {
       return NextResponse.json(
         {
@@ -27,7 +40,17 @@ export async function POST(request: Request) {
     const decoded = await verifyBearerToken(request);
     const stripe = getStripe();
     const base = appUrl(request);
-    const priceId = getStripePriceId();
+
+    let planId: ProPlanId = 'monthly';
+    try {
+      const body = (await request.json()) as { plan?: unknown };
+      if (isProPlanId(body.plan)) planId = body.plan;
+    } catch {
+      // Empty body → monthly (legacy clients).
+    }
+
+    const plan = getProPlan(planId);
+    const priceId = getStripePriceIdForPlan(planId);
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -36,11 +59,13 @@ export async function POST(request: Request) {
       metadata: {
         firebaseUid: decoded.uid,
         product: 'pepguide_pro',
+        plan: planId,
       },
       subscription_data: {
         metadata: {
           firebaseUid: decoded.uid,
           product: 'pepguide_pro',
+          plan: planId,
         },
       },
       line_items: priceId
@@ -50,8 +75,8 @@ export async function POST(request: Request) {
               quantity: 1,
               price_data: {
                 currency: 'usd',
-                unit_amount: PRO_BILLING.priceUsd * 100,
-                recurring: { interval: PRO_BILLING.interval },
+                unit_amount: plan.priceUsd * 100,
+                recurring: { interval: plan.interval },
                 product_data: {
                   name: PRO_BILLING.productName,
                   description: PRO_BILLING.tagline,

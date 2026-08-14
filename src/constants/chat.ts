@@ -3,7 +3,7 @@ export const SUGGESTED_PROMPTS = [
   'Compare BPC-157 and TB-500 research.',
   'Explain GLP-1, GIP, and glucagon receptor activity.',
   'Which peptides have the strongest human evidence?',
-  'Summarize current retatrutide research.',
+  'Summarize current GL3RT research.',
   'Help me create a peptide research report.',
 ] as const;
 

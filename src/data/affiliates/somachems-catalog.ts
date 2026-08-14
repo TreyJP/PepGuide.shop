@@ -1,7 +1,7 @@
 import type { PartnerProduct } from '@/src/types/affiliates';
 
 function somaProduct(slug: string): string {
-  return `https://somachems.com/product/${slug}/`;
+  return `https://somachems.com/product/${slug}/?coupon=PEPGUIDE`;
 }
 
 /**
@@ -92,7 +92,7 @@ export const SOMACHEMS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'soma-cagrilintide-alt',
-    name: 'GLP1 S + Cagrilintide',
+    name: 'GL1SM + Cagrilintide',
     peptideIds: ['cagrilintide', 'semaglutide'],
     priceUsd: 129.99,
     testAmount: 'Blend',
@@ -204,7 +204,7 @@ export const SOMACHEMS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'soma-glp1-sema-b12',
-    name: 'GLP1 SEMA + B12',
+    name: 'GL1SM + B12',
     peptideIds: ['semaglutide'],
     priceUsd: 119.99,
     testAmount: 'Sema + B12',
@@ -212,7 +212,7 @@ export const SOMACHEMS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'soma-glp1-sema',
-    name: 'GLP1 SEMA',
+    name: 'GL1SM',
     peptideIds: ['semaglutide'],
     priceUsd: 99.99,
     priceMaxUsd: 274.99,
@@ -221,7 +221,7 @@ export const SOMACHEMS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'soma-glp2-tirz',
-    name: 'GLP2 TIRZ',
+    name: 'GL2TZ',
     peptideIds: ['tirzepatide'],
     priceUsd: 124.99,
     priceMaxUsd: 299.99,
@@ -230,7 +230,7 @@ export const SOMACHEMS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'soma-glp3-reta',
-    name: 'GLP3 RETA',
+    name: 'GL3RT',
     peptideIds: ['retatrutide'],
     priceUsd: 149.99,
     priceMaxUsd: 349.99,
@@ -531,7 +531,7 @@ export const SOMACHEMS_CATALOG: PartnerProduct[] = [
 export const SOMACHEMS_PARTNER = {
   id: 'somachems',
   label: 'SomaChems',
-  href: 'https://somachems.com/product-category/peptides/',
+  href: 'https://somachems.com/product-category/peptides/?coupon=PEPGUIDE',
   couponCode: 'PEPGUIDE',
   discountLabel: '10% off',
 } as const;

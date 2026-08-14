@@ -32,7 +32,7 @@ export const VITALCHEMS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'vc-glp-3-rt-10',
-    name: 'GLP-3 (RT)',
+    name: 'GL3RT',
     peptideIds: ['retatrutide'],
     priceUsd: 79.99,
     testAmount: '10 mg',
@@ -176,7 +176,7 @@ export const VITALCHEMS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'vc-glp1-sema-10',
-    name: 'GLP-1 (SEMA)',
+    name: 'GL1SM',
     peptideIds: ['semaglutide'],
     priceUsd: 44.99,
     testAmount: '10 mg',
@@ -184,7 +184,7 @@ export const VITALCHEMS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'vc-glp2-tirz-10',
-    name: 'GLP-2 (TIRZ)',
+    name: 'GL2TZ',
     peptideIds: ['tirzepatide'],
     priceUsd: 54.99,
     testAmount: '10 mg',

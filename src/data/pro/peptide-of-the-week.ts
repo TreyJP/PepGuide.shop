@@ -19,11 +19,11 @@ export type PeptideOfTheWeek = {
 
 export const PEPTIDE_OF_THE_WEEK: PeptideOfTheWeek = {
   peptideId: 'retatrutide',
-  name: 'Retatrutide',
+  name: 'GL3RT',
   weekLabel: 'This week’s peptide',
-  headline: 'Retatrutide — metabolic research in focus',
+  headline: 'GL3RT — metabolic research in focus',
   blurb:
-    'A short educational look at how researchers discuss retatrutide’s multi-receptor profile, evidence framing, and open questions.',
+    'A short educational look at how researchers discuss GL3RT’s multi-receptor profile, evidence framing, and open questions.',
   // Replace with your hosted education video when ready.
   videoUrl:
     process.env.NEXT_PUBLIC_PEPTIDE_OF_WEEK_VIDEO_URL?.trim() ||

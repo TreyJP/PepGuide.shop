@@ -1,7 +1,7 @@
 'use client';
 
-import { MessageSquarePlus, Search } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, MessageSquarePlus, Search } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { MarkdownContent } from '@/src/components/chat/markdown-content';
 import { ForumListAgora } from '@/src/components/pro/designs/forum-list-agora';
@@ -22,11 +22,15 @@ import { useAdminAccess } from '@/src/hooks/use-admin-access';
 import { forumRepository } from '@/src/services/firestore/forum';
 import { publicProfileRepository } from '@/src/services/firestore/public-profiles';
 import { useAuthStore } from '@/src/stores/auth-store';
+import { useForumAdminInboxStore } from '@/src/stores/forum-admin-inbox-store';
 import type { ForumPost, ForumReply } from '@/src/types';
 
 export function ForumPanel() {
   const user = useAuthStore((state) => state.user);
   const { isAdmin, loading: adminLoading } = useAdminAccess();
+  const setNeedsAdminReply = useForumAdminInboxStore(
+    (state) => state.setNeedsAdminReply,
+  );
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [query, setQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -36,6 +40,10 @@ export function ForumPanel() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [rankTarget, setRankTarget] = useState<MemberRankTarget | null>(null);
   const [pinBusyId, setPinBusyId] = useState<string | null>(null);
+  const [needsAdminReplyIds, setNeedsAdminReplyIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [needsReplyScanning, setNeedsReplyScanning] = useState(false);
 
   const syncProfile = useCallback(async () => {
     if (!user || adminLoading) return;
@@ -70,6 +78,57 @@ export function ForumPanel() {
   useEffect(() => {
     void loadPosts();
   }, [loadPosts]);
+
+  // Admins: find member threads with no admin reply yet.
+  useEffect(() => {
+    if (!isAdmin || adminLoading || loading) {
+      setNeedsAdminReplyIds(new Set());
+      if (!isAdmin && !adminLoading) {
+        setNeedsAdminReply(false);
+      }
+      return;
+    }
+
+    let cancelled = false;
+    setNeedsReplyScanning(true);
+
+    void (async () => {
+      const pending = new Set<string>();
+      const candidates = posts.filter((post) => !post.authorIsAdmin);
+
+      await Promise.all(
+        candidates.map(async (post) => {
+          try {
+            if (post.replyCount === 0) {
+              pending.add(post.id);
+              return;
+            }
+            const replies = await forumRepository.listReplies(post.id);
+            if (!replies.some((reply) => reply.authorIsAdmin)) {
+              pending.add(post.id);
+            }
+          } catch {
+            // Skip failed lookups — don't block the inbox notice.
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setNeedsAdminReplyIds(pending);
+        setNeedsAdminReply(pending.size > 0);
+        setNeedsReplyScanning(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, adminLoading, loading, posts, setNeedsAdminReply]);
+
+  const needsReplyPosts = useMemo(
+    () => posts.filter((post) => needsAdminReplyIds.has(post.id)),
+    [posts, needsAdminReplyIds],
+  );
 
   const openRank = (authorId: string, displayName: string, authorIsAdmin: boolean) => {
     setRankTarget({
@@ -116,6 +175,49 @@ export function ForumPanel() {
 
   return (
     <div className="forum-root">
+      {isAdmin && (needsReplyScanning || needsReplyPosts.length > 0) ? (
+        <div
+          className="forum-admin-needs-reply"
+          role="status"
+          aria-live="polite"
+        >
+          <AlertTriangle className="size-4 shrink-0" aria-hidden />
+          <div className="min-w-0 flex-1">
+            {needsReplyScanning && needsReplyPosts.length === 0 ? (
+              <p className="text-sm font-medium">
+                Checking for threads that need an admin reply…
+              </p>
+            ) : (
+              <>
+                <p className="text-sm font-medium">
+                  {needsReplyPosts.length === 1
+                    ? '1 discussion needs an admin reply'
+                    : `${needsReplyPosts.length} discussions need an admin reply`}
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {needsReplyPosts.slice(0, 5).map((post) => (
+                    <li key={post.id}>
+                      <button
+                        type="button"
+                        className="forum-admin-needs-reply__link"
+                        onClick={() => setSelectedId(post.id)}
+                      >
+                        {post.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {needsReplyPosts.length > 5 ? (
+                  <p className="mt-1 text-xs opacity-80">
+                    +{needsReplyPosts.length - 5} more in the list below
+                  </p>
+                ) : null}
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+
       <div className="forum-toolbar">
         <form
           className="forum-toolbar__search"
@@ -165,6 +267,7 @@ export function ForumPanel() {
           posts={posts}
           isAdmin={isAdmin}
           pinBusyId={pinBusyId}
+          needsAdminReplyIds={isAdmin ? needsAdminReplyIds : undefined}
           onOpenPost={setSelectedId}
           onOpenRank={openRank}
           onTogglePin={(post) => void togglePin(post)}

@@ -308,6 +308,7 @@
   padding: 0.35rem 0.45rem;
   color: inherit;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -374,6 +375,17 @@
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--lib-navy);
+}
+
+.lib-vg__vendor-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.lib-vg__vendor-link:hover {
+  color: var(--lib-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .lib-vg__lab {
@@ -506,6 +518,27 @@
 }
 
 .lib-vg__coupon--muted:hover {
+  background: var(--lib-sky);
+}
+
+.lib-vg__copy-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  border: 1px solid color-mix(in srgb, var(--lib-blue) 28%, var(--lib-line));
+  background: color-mix(in srgb, var(--lib-sky) 55%, white);
+  border-radius: 8px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--lib-blue);
+  cursor: pointer;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.lib-vg__copy-link:hover {
   background: var(--lib-sky);
 }
 
@@ -1031,6 +1064,11 @@
 .lib-vg--tile .lib-vg__coupon {
   font-size: 0.62rem;
   padding: 0.18rem 0.42rem;
+}
+
+.lib-vg--tile .lib-vg__copy-link {
+  font-size: 0.58rem;
+  padding: 0.18rem 0.4rem;
 }
 
 .lib-vg--deck .lib-vg__cell,

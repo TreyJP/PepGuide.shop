@@ -56,13 +56,30 @@ export default function PeptideProfilePage({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h1>{peptide.name}</h1>
-            {peptide.aliases.length > 0 ? (
-              <div className="lib-detail__aliases">
-                {peptide.aliases.map((alias) => (
-                  <span key={alias}>{alias}</span>
-                ))}
-              </div>
-            ) : null}
+            {(() => {
+              const hideAlias = new Set(
+                [
+                  'retatrutide',
+                  'reta',
+                  'tirzepatide',
+                  'tirz',
+                  'trz',
+                  'semaglutide',
+                  'sema',
+                  peptide.name,
+                ].map((value) => value.toLowerCase()),
+              );
+              const visibleAliases = peptide.aliases.filter(
+                (alias) => !hideAlias.has(alias.trim().toLowerCase()),
+              );
+              return visibleAliases.length > 0 ? (
+                <div className="lib-detail__aliases">
+                  {visibleAliases.map((alias) => (
+                    <span key={alias}>{alias}</span>
+                  ))}
+                </div>
+              ) : null;
+            })()}
           </div>
           <BookmarkToggleButton
             input={{

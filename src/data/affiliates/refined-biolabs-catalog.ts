@@ -1,9 +1,10 @@
 import type { PartnerProduct } from '@/src/types/affiliates';
 
 const RB_BASE = 'https://refinedbiolabs.com';
+const RB_COUPON = 'PEPGUIDE';
 
 function rbProduct(slug: string): string {
-  return `${RB_BASE}/shop/${slug}`;
+  return `${RB_BASE}/shop/${slug}?coupon=${RB_COUPON}`;
 }
 
 /**
@@ -70,7 +71,7 @@ export const REFINED_BIOLABS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'rb-glp3-rt-10',
-    name: 'GLP3-RT',
+    name: 'GL3RT',
     peptideIds: ['retatrutide'],
     priceUsd: 59.99,
     testAmount: '10 mg',
@@ -110,7 +111,7 @@ export const REFINED_BIOLABS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'rb-glp2-tz-10',
-    name: 'GLP2-TZ',
+    name: 'GL2TZ',
     peptideIds: ['tirzepatide'],
     priceUsd: 39.99,
     testAmount: '10 mg',
@@ -118,7 +119,7 @@ export const REFINED_BIOLABS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'rb-glp2-tz-20',
-    name: 'GLP2-TZ',
+    name: 'GL2TZ',
     peptideIds: ['tirzepatide'],
     priceUsd: 69.99,
     testAmount: '20 mg',
@@ -126,7 +127,7 @@ export const REFINED_BIOLABS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'rb-glp2-tz-30',
-    name: 'GLP2-TZ',
+    name: 'GL2TZ',
     peptideIds: ['tirzepatide'],
     priceUsd: 99.99,
     testAmount: '30 mg',
@@ -134,7 +135,7 @@ export const REFINED_BIOLABS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'rb-glp2-tz-60',
-    name: 'GLP2-TZ',
+    name: 'GL2TZ',
     peptideIds: ['tirzepatide'],
     priceUsd: 179.99,
     testAmount: '60 mg',
@@ -289,7 +290,7 @@ export const REFINED_BIOLABS_CATALOG: PartnerProduct[] = [
 export const REFINED_BIOLABS_PARTNER = {
   id: 'refined-biolabs',
   label: 'Refined Biolabs',
-  href: `${RB_BASE}/shop`,
+  href: `${RB_BASE}/shop?coupon=${RB_COUPON}`,
   couponCode: 'PEPGUIDE',
   discountLabel: '20% off',
   discountPercent: 20,

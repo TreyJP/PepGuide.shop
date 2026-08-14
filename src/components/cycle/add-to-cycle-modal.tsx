@@ -115,7 +115,7 @@ export function AddToCycleModal({
             value={name}
             onChange={(event) => setName(event.target.value)}
             className="h-10 w-full rounded-[12px] border border-border bg-surface px-3"
-            placeholder="e.g. Retatrutide"
+            placeholder="e.g. GL3RT"
             autoFocus={isCustomEntry}
           />
         </label>

@@ -13,7 +13,7 @@ function ampProduct(slug: string): string {
  * Amp Peptides catalog (amp-peptides.com/shop).
  * Prices are current storefront sale / display prices.
  * `peptideIds` controls which compound pricing cards/modals show each row.
- * Multi-month GLP3RT supply packs are catalogued without peptideIds so they
+ * Multi-month GL3RT supply packs are catalogued without peptideIds so they
  * do not flood retatrutide offer lists.
  */
 export const AMP_PEPTIDES_CATALOG: PartnerProduct[] = [
@@ -107,7 +107,7 @@ export const AMP_PEPTIDES_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'amp-glp3rt-10',
-    name: 'GLP3RT',
+    name: 'GL3RT',
     peptideIds: ['retatrutide'],
     priceUsd: 125,
     testAmount: '10 mg',
@@ -115,7 +115,7 @@ export const AMP_PEPTIDES_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'amp-glp3rt-20',
-    name: 'GLP3RT',
+    name: 'GL3RT',
     peptideIds: ['retatrutide'],
     priceUsd: 145,
     testAmount: '20 mg',
@@ -123,7 +123,7 @@ export const AMP_PEPTIDES_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'amp-glp3rt-bimonthly',
-    name: 'GLP3RT — Bi-Monthly Supply (2-Month)',
+    name: 'GL3RT — Bi-Monthly Supply (2-Month)',
     peptideIds: [],
     priceUsd: 200,
     priceMaxUsd: 313.5,
@@ -132,7 +132,7 @@ export const AMP_PEPTIDES_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'amp-glp3rt-quarterly',
-    name: 'GLP3RT — Quarterly Supply (3-Month)',
+    name: 'GL3RT — Quarterly Supply (3-Month)',
     peptideIds: [],
     priceUsd: 262.5,
     priceMaxUsd: 420.75,
@@ -141,7 +141,7 @@ export const AMP_PEPTIDES_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'amp-glp3rt-biannual',
-    name: 'GLP3RT — Biannual Supply (6-Month)',
+    name: 'GL3RT — Biannual Supply (6-Month)',
     peptideIds: [],
     priceUsd: 450,
     priceMaxUsd: 742.5,

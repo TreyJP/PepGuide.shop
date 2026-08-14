@@ -36,9 +36,6 @@ function openOffer(
       priceUsd: offer.priceUsd,
     },
   });
-  if (offer.href && offer.href !== '#') {
-    window.open(offer.href, '_blank', 'noopener,noreferrer');
-  }
 }
 
 function sizeLabel(offer: AffiliateOffer): string {
@@ -132,19 +129,23 @@ export function PartnerSlotList({
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <OfferPrice offer={offer} size="sm" />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          openOffer(offer, peptideId, peptideName)
-                        }
-                        className={cn(
-                          'inline-flex h-8 items-center gap-1 rounded-[8px] px-3 text-xs font-medium text-white',
-                          preferred ? 'bg-teal-700' : 'bg-accent',
-                        )}
-                      >
-                        View
-                        <ExternalLink className="size-3" />
-                      </button>
+                      {offer.href && offer.href !== '#' ? (
+                        <a
+                          href={offer.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() =>
+                            openOffer(offer, peptideId, peptideName)
+                          }
+                          className={cn(
+                            'inline-flex h-8 items-center gap-1 rounded-[8px] px-3 text-xs font-medium text-white no-underline',
+                            preferred ? 'bg-teal-700' : 'bg-accent',
+                          )}
+                        >
+                          View
+                          <ExternalLink className="size-3" />
+                        </a>
+                      ) : null}
                     </div>
                   </div>
                 ))
@@ -159,19 +160,23 @@ export function PartnerSlotList({
                     <span className="font-[family-name:var(--font-display)] text-sm font-semibold tabular-nums text-foreground">
                       {priceRangeLabel(group)}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        openOffer(primary, peptideId, peptideName)
-                      }
-                      className={cn(
-                        'inline-flex h-8 items-center gap-1 rounded-[8px] px-3 text-xs font-medium text-white',
-                        preferred ? 'bg-teal-700' : 'bg-accent',
-                      )}
-                    >
-                      View
-                      <ExternalLink className="size-3" />
-                    </button>
+                    {primary.href && primary.href !== '#' ? (
+                      <a
+                        href={primary.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() =>
+                          openOffer(primary, peptideId, peptideName)
+                        }
+                        className={cn(
+                          'inline-flex h-8 items-center gap-1 rounded-[8px] px-3 text-xs font-medium text-white no-underline',
+                          preferred ? 'bg-teal-700' : 'bg-accent',
+                        )}
+                      >
+                        View
+                        <ExternalLink className="size-3" />
+                      </a>
+                    ) : null}
                   </div>
                 </div>
               ) : null}

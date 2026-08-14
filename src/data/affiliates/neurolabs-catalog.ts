@@ -14,7 +14,7 @@ function nlProduct(slug: string): string {
 export const NEUROLABS_CATALOG: PartnerProduct[] = [
   {
     id: 'nl-3-rt',
-    name: 'NL-3 RT (5–40MG)',
+    name: 'GL3RT (5–40MG)',
     peptideIds: ['retatrutide'],
     priceUsd: 44.95,
     testAmount: '5–40 mg',
@@ -22,7 +22,7 @@ export const NEUROLABS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'nl-2-tz',
-    name: 'NL-2 TZ (10–40MG)',
+    name: 'GL2TZ (10–40MG)',
     peptideIds: ['tirzepatide'],
     priceUsd: 69.95,
     testAmount: '10–40 mg',

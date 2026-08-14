@@ -6,6 +6,8 @@ export type ForumListDesignProps = {
   posts: ForumPost[];
   isAdmin: boolean;
   pinBusyId: string | null;
+  /** Post IDs that still need an admin reply (admin list only). */
+  needsAdminReplyIds?: ReadonlySet<string>;
   onOpenPost: (postId: string) => void;
   onOpenRank: (
     authorId: string,

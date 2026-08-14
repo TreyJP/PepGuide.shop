@@ -12,6 +12,10 @@ import {
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { MarkdownContent } from '@/src/components/chat/markdown-content';
+import {
+  AdminAiReplyComposer,
+  type AdminAiReplyTarget,
+} from '@/src/components/admin/admin-ai-reply-composer';
 import { AuthorLabel } from '@/src/components/pro/admin-badge';
 import { Button } from '@/src/components/ui/button';
 import { Textarea } from '@/src/components/ui/textarea';
@@ -280,6 +284,9 @@ export function ThreadReplyComposer({
   saving,
   isAdmin,
   error,
+  aiTargets,
+  selectedAiTargetId,
+  onSelectedAiTargetIdChange,
 }: {
   replyBody: string;
   onReplyBodyChange: (value: string) => void;
@@ -287,18 +294,35 @@ export function ThreadReplyComposer({
   saving: boolean;
   isAdmin: boolean;
   error: string | null;
+  aiTargets?: AdminAiReplyTarget[];
+  selectedAiTargetId?: string | null;
+  onSelectedAiTargetIdChange?: (id: string) => void;
 }) {
   return (
     <div id={FORUM_REPLY_COMPOSER_ID} className="scroll-mt-24 space-y-2">
-      <Textarea
-        label="Your reply"
-        value={replyBody}
-        onChange={(event) => onReplyBodyChange(event.target.value)}
-        maxLength={8000}
-        rows={4}
-        placeholder="Markdown works here too — # headers, * lists, **bold**…"
-        hint="Markdown formatting is supported."
-      />
+      {isAdmin && aiTargets && aiTargets.length > 0 ? (
+        <AdminAiReplyComposer
+          targets={aiTargets}
+          selectedTargetId={selectedAiTargetId}
+          onSelectedTargetIdChange={onSelectedAiTargetIdChange}
+          value={replyBody}
+          onChange={onReplyBodyChange}
+          label="Your reply"
+          rows={4}
+          maxLength={8000}
+          disabled={saving}
+        />
+      ) : (
+        <Textarea
+          label="Your reply"
+          value={replyBody}
+          onChange={(event) => onReplyBodyChange(event.target.value)}
+          maxLength={8000}
+          rows={4}
+          placeholder="Markdown works here too — # headers, * lists, **bold**…"
+          hint="Markdown formatting is supported."
+        />
+      )}
       {isAdmin ? (
         <p className="text-xs text-accent">
           You’ll appear as PepGuide Admin on this reply.

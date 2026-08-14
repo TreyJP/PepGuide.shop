@@ -1,35 +1,42 @@
 import type { PartnerProduct } from '@/src/types/affiliates';
 
-const PRISTINE_HREF = 'https://pristinepeptide.com/?coupon=PEPGUIDE';
+const PRISTINE_COUPON = 'PEPGUIDE';
+const PRISTINE_SHOP = `https://pristinepeptide.com/?coupon=${PRISTINE_COUPON}`;
+
+/** Build a Pristine Peptide product URL with PepGuide coupon. */
+function ppProduct(slug: string): string {
+  return `https://pristinepeptide.com/product/${slug}/?coupon=${PRISTINE_COUPON}`;
+}
 
 /**
  * Pristine Peptide catalog.
  * `peptideIds` controls which compound pricing modals show each row.
+ * Product hrefs point at real shop pages (not the homepage).
  */
 export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
   {
     id: 'pp-glp3-ret',
-    name: 'GLP-3 (RET)',
+    name: 'GL3RT',
     peptideIds: ['retatrutide'],
     priceUsd: 50,
     testAmount: 'GLP',
-    href: PRISTINE_HREF,
+    href: ppProduct('glp-3r'),
   },
   {
     id: 'pp-glp2-trz',
-    name: 'GLP-2 (TRZ)',
+    name: 'GL2TZ',
     peptideIds: ['tirzepatide'],
     priceUsd: 30,
     testAmount: 'GLP',
-    href: PRISTINE_HREF,
+    href: ppProduct('glp-2t'),
   },
   {
     id: 'pp-glp1-sem',
-    name: 'GLP-1 (SEM)',
+    name: 'GL1SM',
     peptideIds: ['semaglutide'],
     priceUsd: 30,
     testAmount: 'GLP',
-    href: PRISTINE_HREF,
+    href: ppProduct('glp-1s'),
   },
   {
     id: 'pp-bpc-157',
@@ -37,7 +44,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['bpc-157'],
     priceUsd: 35,
     testAmount: 'Regeneration',
-    href: PRISTINE_HREF,
+    href: ppProduct('bpc-157'),
   },
   {
     id: 'pp-tb-500',
@@ -45,7 +52,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['tb-500'],
     priceUsd: 45,
     testAmount: 'Regeneration',
-    href: PRISTINE_HREF,
+    href: ppProduct('tb-500'),
   },
   {
     id: 'pp-ghk-cu',
@@ -53,7 +60,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['ghk-cu'],
     priceUsd: 50,
     testAmount: 'Regeneration',
-    href: PRISTINE_HREF,
+    href: ppProduct('ghk-cu'),
   },
   {
     id: 'pp-glow-blend',
@@ -61,7 +68,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['bpc-157', 'tb-500', 'ghk-cu'],
     priceUsd: 115,
     testAmount: 'Regeneration',
-    href: PRISTINE_HREF,
+    href: ppProduct('glow'),
   },
   {
     id: 'pp-klow-blend',
@@ -69,7 +76,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['bpc-157', 'tb-500', 'ghk-cu', 'kpv'],
     priceUsd: 135,
     testAmount: 'Regeneration',
-    href: PRISTINE_HREF,
+    href: ppProduct('klow'),
   },
   {
     id: 'pp-regen-blend',
@@ -77,7 +84,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['bpc-157', 'tb-500'],
     priceUsd: 80,
     testAmount: 'Regeneration',
-    href: PRISTINE_HREF,
+    href: ppProduct('regen-blend'),
   },
   {
     id: 'pp-tesamorelin',
@@ -85,7 +92,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['tesamorelin'],
     priceUsd: 50,
     testAmount: 'GHRH/GHRP',
-    href: PRISTINE_HREF,
+    href: ppProduct('tesamorelin'),
   },
   {
     id: 'pp-sermorelin',
@@ -93,7 +100,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['sermorelin'],
     priceUsd: 55,
     testAmount: 'GHRH/GHRP',
-    href: PRISTINE_HREF,
+    href: ppProduct('sermorelin'),
   },
   {
     id: 'pp-ipamorelin',
@@ -101,7 +108,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['ipamorelin'],
     priceUsd: 45,
     testAmount: 'GHRH/GHRP',
-    href: PRISTINE_HREF,
+    href: ppProduct('ipamorelin'),
   },
   {
     id: 'pp-cjc-1295',
@@ -109,7 +116,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['cjc-1295'],
     priceUsd: 25,
     testAmount: 'GHRH/GHRP',
-    href: PRISTINE_HREF,
+    href: ppProduct('cjc-1295'),
   },
   {
     id: 'pp-nad-plus',
@@ -117,7 +124,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['nad-plus'],
     priceUsd: 40,
     testAmount: 'Longevity Research',
-    href: PRISTINE_HREF,
+    href: ppProduct('nad-plus'),
   },
   {
     id: 'pp-mots-c',
@@ -125,7 +132,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['mots-c'],
     priceUsd: 50,
     testAmount: 'Longevity Research',
-    href: PRISTINE_HREF,
+    href: ppProduct('mots-c'),
   },
   {
     id: 'pp-glutathione',
@@ -133,7 +140,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['glutathione'],
     priceUsd: 50,
     testAmount: 'Longevity Research',
-    href: PRISTINE_HREF,
+    href: ppProduct('glutathione'),
   },
   {
     id: 'pp-gh-stack',
@@ -141,7 +148,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['cjc-1295', 'ipamorelin'],
     priceUsd: 90,
     testAmount: 'GHRH/GHRP',
-    href: PRISTINE_HREF,
+    href: ppProduct('gh-stack'),
   },
   {
     id: 'pp-epithalon',
@@ -149,15 +156,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['epitalon'],
     priceUsd: 50,
     testAmount: 'Longevity Research',
-    href: PRISTINE_HREF,
-  },
-  {
-    id: 'pp-ss-31',
-    name: 'SS-31',
-    peptideIds: ['ss-31'],
-    priceUsd: 65,
-    testAmount: 'Longevity Research',
-    href: PRISTINE_HREF,
+    href: ppProduct('epithalon'),
   },
   {
     id: 'pp-bac-water',
@@ -165,7 +164,7 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['bac-water'],
     priceUsd: 15,
     testAmount: 'Reconstitution Solutions',
-    href: PRISTINE_HREF,
+    href: ppProduct('bacteriostatic-water'),
   },
   {
     id: 'pp-sterile-water',
@@ -173,14 +172,14 @@ export const PRISTINE_PEPTIDE_CATALOG: PartnerProduct[] = [
     peptideIds: ['bac-water'],
     priceUsd: 15,
     testAmount: 'Reconstitution Solutions',
-    href: PRISTINE_HREF,
+    href: ppProduct('sterile-water'),
   },
 ];
 
 export const PRISTINE_PEPTIDE_PARTNER = {
   id: 'pristine-peptide',
   label: 'Pristine Peptide',
-  href: PRISTINE_HREF,
+  href: PRISTINE_SHOP,
   couponCode: 'PEPGUIDE',
   discountLabel: '10% off',
 } as const;

@@ -5,8 +5,19 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { ProExplainerVideo } from '@/src/components/billing/pro-explainer-video';
 import { Button } from '@/src/components/ui/button';
-import { PRO_BILLING, PRO_COMING_SOON } from '@/src/constants/billing';
+import {
+  DEFAULT_PRO_PLAN_ID,
+  formatProDailyUsd,
+  getProPlanBilledLabel,
+  getProPlanCompareDailyUsd,
+  getProPlanDailyUsd,
+  PRO_BILLING,
+  PRO_COMING_SOON,
+  PRO_PLANS,
+  type ProPlanId,
+} from '@/src/constants/billing';
 import { startProCheckout } from '@/src/lib/billing/start-pro-checkout';
+import { cn } from '@/src/lib/utils';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useUiStore } from '@/src/stores/ui-store';
 
@@ -20,11 +31,13 @@ export function ProSubscribeModal() {
   const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [planId, setPlanId] = useState<ProPlanId>(DEFAULT_PRO_PLAN_ID);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
     setLoading(false);
+    setPlanId(DEFAULT_PRO_PLAN_ID);
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closeProSubscribeModal();
     };
@@ -38,6 +51,8 @@ export function ProSubscribeModal() {
   }, [open, closeProSubscribeModal]);
 
   if (!open) return null;
+
+  const selectedPlan = PRO_PLANS[planId];
 
   const shell = (body: ReactNode) => (
     <div
@@ -122,7 +137,7 @@ export function ProSubscribeModal() {
     setLoading(true);
     setError(null);
     try {
-      await startProCheckout();
+      await startProCheckout(planId);
       setLoading(false);
       closeProSubscribeModal();
     } catch (err) {
@@ -160,11 +175,55 @@ export function ProSubscribeModal() {
 
         <ProExplainerVideo feature={feature} className="mt-5" />
 
-        <div className="mt-5 flex items-end gap-1">
-          <span className="font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight text-foreground">
-            ${PRO_BILLING.priceUsd}
-          </span>
-          <span className="mb-1 text-sm text-foreground-secondary">/month</span>
+        <div
+          className="mt-5 grid grid-cols-2 gap-2"
+          role="radiogroup"
+          aria-label="Billing plan"
+        >
+          {([PRO_PLANS.monthly, PRO_PLANS.yearly] as const).map((plan) => {
+            const selected = plan.id === planId;
+            const dailyUsd = getProPlanDailyUsd(plan);
+            const compareDailyUsd = getProPlanCompareDailyUsd(plan);
+            return (
+              <button
+                key={plan.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setPlanId(plan.id)}
+                className={cn(
+                  'relative rounded-[14px] border px-3 py-3 text-left transition-colors',
+                  selected
+                    ? 'border-accent bg-accent-muted/60 ring-1 ring-accent/30'
+                    : 'border-border bg-surface/80 hover:border-accent/40 hover:bg-surface-secondary/60',
+                )}
+              >
+                {plan.badge ? (
+                  <span className="mb-1.5 inline-flex rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-white">
+                    {plan.badge}
+                  </span>
+                ) : (
+                  <span className="mb-1.5 block h-[18px]" aria-hidden />
+                )}
+                <p className="flex flex-wrap items-baseline gap-x-1.5 font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-foreground">
+                  <span>
+                    {formatProDailyUsd(dailyUsd)}
+                    <span className="ml-0.5 text-sm font-semibold text-foreground-secondary">
+                      /day
+                    </span>
+                  </span>
+                  {compareDailyUsd != null ? (
+                    <span className="text-base font-semibold text-foreground-secondary line-through decoration-foreground-secondary/70">
+                      {formatProDailyUsd(compareDailyUsd)}
+                    </span>
+                  ) : null}
+                </p>
+                <p className="mt-0.5 text-[11px] font-medium text-foreground-secondary">
+                  {getProPlanBilledLabel(plan)}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -190,7 +249,7 @@ export function ProSubscribeModal() {
           {loading
             ? 'Redirecting to Stripe…'
             : user
-              ? `Continue to Stripe — ${PRO_BILLING.priceLabel}`
+              ? `Continue to Stripe — ${selectedPlan.priceLabel}`
               : 'Sign in to subscribe'}
         </Button>
 

@@ -977,7 +977,7 @@ function buildDualGoalResponse(): PepGuideAiResponse {
     answer: [
       'You’re chasing two goals, so research usually splits them:',
       '',
-      `- **Fat loss:** ${weight?.name ?? 'Retatrutide'}`,
+      `- **Fat loss:** ${weight?.name ?? 'GL3RT'}`,
       `- **Size / lean mass:** ${muscle?.name ?? 'Ipamorelin'}`,
       '',
       'Different jobs — not one magic stack. Want me to narrow either side?',

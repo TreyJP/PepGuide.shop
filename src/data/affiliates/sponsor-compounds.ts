@@ -1,4 +1,5 @@
 import { AMP_PEPTIDES_CATALOG } from '@/src/data/affiliates/amp-peptides-catalog';
+import { ALASKA_LABS_CATALOG } from '@/src/data/affiliates/alaska-labs-catalog';
 import { ELYTRA_LABS_CATALOG } from '@/src/data/affiliates/elytra-labs-catalog';
 import { NEUROLABS_CATALOG } from '@/src/data/affiliates/neurolabs-catalog';
 import { PRISTINE_PEPTIDE_CATALOG } from '@/src/data/affiliates/pristine-peptide-catalog';
@@ -15,6 +16,7 @@ const SPONSOR_CATALOGS: PartnerProduct[][] = [
   VITALCHEMS_CATALOG,
   ELYTRA_LABS_CATALOG,
   AMP_PEPTIDES_CATALOG,
+  ALASKA_LABS_CATALOG,
 ];
 
 /** Every compound ID referenced by any sponsor catalog product. */
@@ -32,7 +34,7 @@ export function getSponsorCompoundIds(): Set<string> {
 
 /**
  * Extra Library search aliases from sponsor product titles
- * (e.g. "GLP-3 (RET)" → retatrutide searchable as "GLP-3" / "RET").
+ * (e.g. "GL3RT" → retatrutide searchable as "GL3RT" / "RET").
  */
 export function getSponsorSearchAliasesByCompoundId(): Map<string, string[]> {
   const map = new Map<string, string[]>();

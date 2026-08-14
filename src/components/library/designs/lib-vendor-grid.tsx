@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink } from 'lucide-react';
+import { Copy, ExternalLink, Link2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { OfferPrice } from '@/src/components/affiliates/offer-price';
@@ -14,6 +14,7 @@ import {
   formatAffiliateUsd,
   type AffiliateOffer,
 } from '@/src/data/affiliates/slots';
+import { useAdminAccess } from '@/src/hooks/use-admin-access';
 import {
   groupOffersByVendor,
   type VendorOfferGroup,
@@ -24,7 +25,7 @@ function sizeLabel(offer: AffiliateOffer): string {
   return offer.testAmount || offer.productName || 'Standard';
 }
 
-function openVendor(
+function trackVendorClick(
   offer: AffiliateOffer,
   peptideId: string,
   peptideName: string,
@@ -41,17 +42,20 @@ function openVendor(
       priceUsd: offer.priceUsd,
     },
   });
-  if (offer.href && offer.href !== '#') {
-    window.open(offer.href, '_blank', 'noopener,noreferrer');
-  }
 }
 
-async function copyCoupon(code: string) {
+function offerHref(offer: AffiliateOffer | undefined): string | null {
+  const href = offer?.href?.trim();
+  if (!href || href === '#') return null;
+  return href;
+}
+
+async function copyText(value: string) {
   try {
-    await navigator.clipboard.writeText(code);
+    await navigator.clipboard.writeText(value);
   } catch {
     const input = document.createElement('input');
-    input.value = code;
+    input.value = value;
     document.body.appendChild(input);
     input.select();
     document.execCommand('copy');
@@ -80,7 +84,9 @@ export function LibVendorGrid({
   previewCount?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedCouponId, setCopiedCouponId] = useState<string | null>(null);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+  const { isAdmin } = useAdminAccess();
 
   const groups = useMemo(() => groupOffersByVendor(offers), [offers]);
 
@@ -117,6 +123,9 @@ export function LibVendorGrid({
             .filter(Boolean)
             .join(' ');
           const primary = group.sizes[0];
+          const primaryHref = offerHref(primary);
+          const linkCopied = copiedLinkId === group.vendorId;
+          const couponCopied = copiedCouponId === group.vendorId;
 
           return (
             <div
@@ -132,7 +141,25 @@ export function LibVendorGrid({
               ) : null}
 
               <div className="lib-vg__vendor-head">
-                <span className="lib-vg__vendor">{group.vendorLabel}</span>
+                {primaryHref ? (
+                  <a
+                    href={primaryHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="lib-vg__vendor lib-vg__vendor-link"
+                    title={`Open ${group.vendorLabel} (right-click to copy link)`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (primary) {
+                        trackVendorClick(primary, peptideId, peptideName);
+                      }
+                    }}
+                  >
+                    {group.vendorLabel}
+                  </a>
+                ) : (
+                  <span className="lib-vg__vendor">{group.vendorLabel}</span>
+                )}
                 <div className="lib-vg__meta">
                   <div
                     className="lib-vg__lab"
@@ -141,6 +168,41 @@ export function LibVendorGrid({
                   >
                     <PartnerLabScore vendorId={group.vendorId} />
                   </div>
+                  {isAdmin && primaryHref ? (
+                    <button
+                      type="button"
+                      className="lib-vg__copy-link"
+                      title="Copy referral link"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void copyText(primaryHref).then(() => {
+                          setCopiedLinkId(group.vendorId);
+                          window.setTimeout(() => setCopiedLinkId(null), 1400);
+                          void trackAnalyticsEvent({
+                            name: 'affiliate_click',
+                            meta: {
+                              partnerId: group.vendorId,
+                              partnerLabel: group.vendorLabel,
+                              peptideId,
+                              peptideName,
+                              href: primaryHref,
+                              action: 'copy_link',
+                            },
+                          });
+                        });
+                      }}
+                    >
+                      {linkCopied ? (
+                        'Link copied'
+                      ) : (
+                        <>
+                          <Link2 className="size-3" aria-hidden />
+                          Copy link
+                        </>
+                      )}
+                    </button>
+                  ) : null}
                   {group.couponCode.trim() ? (
                     <button
                       type="button"
@@ -153,19 +215,27 @@ export function LibVendorGrid({
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
-                        void copyCoupon(group.couponCode.toUpperCase()).then(
+                        void copyText(group.couponCode.toUpperCase()).then(
                           () => {
-                            setCopiedId(group.vendorId);
-                            window.setTimeout(() => setCopiedId(null), 1400);
+                            setCopiedCouponId(group.vendorId);
+                            window.setTimeout(
+                              () => setCopiedCouponId(null),
+                              1400,
+                            );
                           },
                         );
                       }}
                     >
-                      {copiedId === group.vendorId
-                        ? 'Copied'
-                        : group.discountLabel
-                          ? `${group.couponCode.toUpperCase()} · ${group.discountLabel}`
-                          : group.couponCode.toUpperCase()}
+                      {couponCopied ? (
+                        <>
+                          <Copy className="size-3" aria-hidden />
+                          Copied
+                        </>
+                      ) : group.discountLabel ? (
+                        `${group.couponCode.toUpperCase()} · ${group.discountLabel}`
+                      ) : (
+                        group.couponCode.toUpperCase()
+                      )}
                     </button>
                   ) : null}
                 </div>
@@ -173,36 +243,59 @@ export function LibVendorGrid({
 
               <div className="lib-vg__sizes">
                 {group.hasKnownSizes ? (
-                  group.sizes.map((offer) => (
-                    <button
-                      key={offer.id}
-                      type="button"
-                      className="lib-vg__size-row"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        openVendor(offer, peptideId, peptideName);
-                      }}
-                    >
-                      <span className="lib-vg__size-row__top">
-                        <span className="lib-vg__sku">{sizeLabel(offer)}</span>
-                        <ExternalLink className="lib-vg__icon" aria-hidden />
-                      </span>
-                      <OfferPrice
-                        offer={offer}
-                        size="sm"
-                        className="lib-vg__price"
-                      />
-                    </button>
-                  ))
-                ) : primary ? (
-                  <button
-                    type="button"
+                  group.sizes.map((offer) => {
+                    const href = offerHref(offer);
+                    if (!href) {
+                      return (
+                        <div key={offer.id} className="lib-vg__size-row">
+                          <span className="lib-vg__size-row__top">
+                            <span className="lib-vg__sku">
+                              {sizeLabel(offer)}
+                            </span>
+                          </span>
+                          <OfferPrice
+                            offer={offer}
+                            size="sm"
+                            className="lib-vg__price"
+                          />
+                        </div>
+                      );
+                    }
+                    return (
+                      <a
+                        key={offer.id}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="lib-vg__size-row"
+                        title={`Open ${group.vendorLabel} — ${sizeLabel(offer)} (right-click to copy link)`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          trackVendorClick(offer, peptideId, peptideName);
+                        }}
+                      >
+                        <span className="lib-vg__size-row__top">
+                          <span className="lib-vg__sku">{sizeLabel(offer)}</span>
+                          <ExternalLink className="lib-vg__icon" aria-hidden />
+                        </span>
+                        <OfferPrice
+                          offer={offer}
+                          size="sm"
+                          className="lib-vg__price"
+                        />
+                      </a>
+                    );
+                  })
+                ) : primary && primaryHref ? (
+                  <a
+                    href={primaryHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="lib-vg__size-row lib-vg__size-row--price-only"
+                    title={`Open ${group.vendorLabel} (right-click to copy link)`}
                     onClick={(event) => {
-                      event.preventDefault();
                       event.stopPropagation();
-                      openVendor(primary, peptideId, peptideName);
+                      trackVendorClick(primary, peptideId, peptideName);
                     }}
                   >
                     <span className="lib-vg__size-row__top">
@@ -212,7 +305,7 @@ export function LibVendorGrid({
                     <span className="lib-vg__price font-[family-name:var(--font-display)] font-semibold tabular-nums text-foreground text-sm">
                       {priceRangeLabel(group)}
                     </span>
-                  </button>
+                  </a>
                 ) : null}
               </div>
             </div>

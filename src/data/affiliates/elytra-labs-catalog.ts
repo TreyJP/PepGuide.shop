@@ -17,7 +17,7 @@ function elProduct(path: string): string {
 export const ELYTRA_LABS_CATALOG: PartnerProduct[] = [
   {
     id: 'el-elyt-r3-20',
-    name: 'ELYT-R3',
+    name: 'GL3RT',
     peptideIds: ['retatrutide'],
     priceUsd: 75,
     testAmount: '20 mg',
@@ -185,7 +185,7 @@ export const ELYTRA_LABS_CATALOG: PartnerProduct[] = [
   },
   {
     id: 'el-elyt-t2-20',
-    name: 'ELYT-T2',
+    name: 'GL2TZ',
     peptideIds: ['tirzepatide'],
     priceUsd: 45,
     testAmount: '20 mg',

@@ -23,7 +23,10 @@ import {
   PRISTINE_PEPTIDE_CATALOG,
   PRISTINE_PEPTIDE_PARTNER,
 } from '@/src/data/affiliates/pristine-peptide-catalog';
-import { PREFERRED_PARTNER_ID } from '@/src/data/affiliates/preferred-partners';
+import {
+  PREFERRED_PARTNER_ID,
+  isPreferredPartner,
+} from '@/src/data/affiliates/preferred-partners';
 import {
   REFINED_BIOLABS_CATALOG,
   REFINED_BIOLABS_PARTNER,
@@ -44,6 +47,10 @@ import {
   AMP_PEPTIDES_CATALOG,
   AMP_PEPTIDES_PARTNER,
 } from '@/src/data/affiliates/amp-peptides-catalog';
+import {
+  ALASKA_LABS_CATALOG,
+  ALASKA_LABS_PARTNER,
+} from '@/src/data/affiliates/alaska-labs-catalog';
 import {
   getFirestoreDb,
   shouldUseMockServices,
@@ -105,6 +112,11 @@ const CATALOG_PARTNERS: CatalogPartnerDef[] = [
     sortOrder: 6,
     products: AMP_PEPTIDES_CATALOG,
   },
+  {
+    ...ALASKA_LABS_PARTNER,
+    sortOrder: 0,
+    products: ALASKA_LABS_CATALOG,
+  },
 ];
 
 function emptyLabTests(): Record<PartnerLabTestId, boolean | null> {
@@ -140,6 +152,19 @@ function catalogLabTests(
     case PREFERRED_PARTNER_ID:
     case 'vitalchems':
       return fullLabTests();
+
+    // Alaska Labs: full public COA panel except fentanyl.
+    case 'alaska-labs':
+      return {
+        ...emptyLabTests(),
+        net_content: true,
+        net_purity: true,
+        identification: true,
+        endotoxins: true,
+        sterility: true,
+        heavy_metals: true,
+        fentanyl: null,
+      };
 
     // NeuroLabs: six-way panel (no heavy metals on public COAs).
     case 'neurolabs':
@@ -334,7 +359,7 @@ async function syncCatalogPartnerLive(def: CatalogPartnerDef): Promise<void> {
 
   if (existing.exists()) {
     const current = mapPartner(def.id, existing.data() as Record<string, unknown>);
-    const preferred = def.id === PREFERRED_PARTNER_ID;
+    const preferred = isPreferredPartner(def.id);
     const forcedLabs = catalogLabTests(def.id);
     await setDoc(ref, {
       ...next,
@@ -377,7 +402,7 @@ async function listMock(): Promise<AffiliatePartner[]> {
       const existing = mockPartners.find((partner) => partner.id === def.id);
       if (!existing) return buildCatalogPartner(def);
       const next = buildCatalogPartner(def, existing.createdAt);
-      const preferred = def.id === PREFERRED_PARTNER_ID;
+      const preferred = isPreferredPartner(def.id);
       const forcedLabs = catalogLabTests(def.id);
       return {
         ...next,
@@ -429,7 +454,25 @@ async function listLive(): Promise<AffiliatePartner[]> {
     return CATALOG_PARTNERS.map((def) => buildCatalogPartner(def));
   }
 
-  return live;
+  // Always prefer in-code catalog products/labels for known partners so
+  // renamed SKUs (e.g. GL3RT) show up even when catalog sync couldn't write.
+  const catalogById = new Map(
+    CATALOG_PARTNERS.map((def) => [def.id, def] as const),
+  );
+  return live.map((partner) => {
+    const def = catalogById.get(partner.id);
+    if (!def) return partner;
+    const catalog = buildCatalogPartner(def, partner.createdAt);
+    return {
+      ...partner,
+      label: catalog.label,
+      products: catalog.products,
+      couponCode: catalog.couponCode,
+      discountLabel: catalog.discountLabel,
+      labTests: catalog.labTests,
+      href: partner.href || catalog.href,
+    };
+  });
 }
 
 /** Offline / catalog vendor names for UIs that need a vendor picker. */

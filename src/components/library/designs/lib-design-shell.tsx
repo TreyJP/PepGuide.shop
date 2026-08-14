@@ -28,7 +28,7 @@ export function LibDesignShell({
           <LibSearch
             value={query}
             onChange={onQueryChange}
-            placeholder="Search peptides (reta, bpc, tirz…)"
+            placeholder="Search peptides (GL3RT, bpc, GL2TZ…)"
           />
         </div>
         <div className="lib-card-shell__chips" aria-label="Quick searches">

@@ -29,7 +29,7 @@ export const PRO_PROTOCOLS: ProProtocol[] = [
     peptides: [
       {
         peptideId: 'retatrutide',
-        name: 'Retatrutide',
+        name: 'GL3RT',
         role: 'Primary metabolic research compound',
         researchNote: 'Start-low weekly research ranges in trials; titration only if studied.',
       },
@@ -41,7 +41,7 @@ export const PRO_PROTOCOLS: ProProtocol[] = [
       },
       {
         peptideId: 'tirzepatide',
-        name: 'Tirzepatide',
+        name: 'GL2TZ',
         role: 'Dual-agonist alternative anchor',
         researchNote: 'Label/trial step-up schedules are educational reference only.',
       },
@@ -201,7 +201,7 @@ export const PRO_PROTOCOLS: ProProtocol[] = [
       },
       {
         peptideId: 'semaglutide',
-        name: 'Semaglutide',
+        name: 'GL1SM',
         role: 'GLP-1 agonist research anchor',
         researchNote:
           'Weekly GLP-1 research compound widely referenced in metabolic and appetite literature.',
@@ -214,7 +214,7 @@ export const PRO_PROTOCOLS: ProProtocol[] = [
   },
   {
     id: 'reta-cagri-appetite',
-    name: 'Retatrutide + Cagrilintide research pair',
+    name: 'GL3RT + Cagrilintide research pair',
     goal: 'Appetite + metabolic research',
     summary:
       'Research shortlist pairing a multi-agonist metabolic compound with an amylin-pathway complement for appetite-focused study.',
@@ -223,7 +223,7 @@ export const PRO_PROTOCOLS: ProProtocol[] = [
     peptides: [
       {
         peptideId: 'retatrutide',
-        name: 'Retatrutide',
+        name: 'GL3RT',
         role: 'Triple-agonist metabolic research compound',
         researchNote:
           'Investigational multi-receptor agonist discussed for metabolic and weight-related endpoints.',
@@ -301,7 +301,7 @@ export const PRO_PROTOCOLS: ProProtocol[] = [
   },
   {
     id: 'aod-glp1-fat-loss',
-    name: 'AOD-9604 + Semaglutide research pair',
+    name: 'AOD-9604 + GL1SM research pair',
     goal: 'Fat-loss pathway research',
     summary:
       'Educational shortlist pairing a GH-fragment fat-metabolism research mention with a GLP-1 agonist for comparative metabolic study.',
@@ -317,7 +317,7 @@ export const PRO_PROTOCOLS: ProProtocol[] = [
       },
       {
         peptideId: 'semaglutide',
-        name: 'Semaglutide',
+        name: 'GL1SM',
         role: 'GLP-1 agonist research anchor',
         researchNote:
           'Incretin pathway compound with extensive metabolic and appetite research literature.',

@@ -232,7 +232,7 @@ function mockMetrics(): AdminDashboardMetrics {
               partnerId: 'somachems',
               partnerLabel: 'SomaChems',
               peptideId: 'retatrutide',
-              peptideName: 'Retatrutide',
+              peptideName: 'GL3RT',
             },
           },
         ],

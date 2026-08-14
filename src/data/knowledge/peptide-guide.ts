@@ -16,7 +16,7 @@ export type PeptideGuideEntry = {
 export const PEPTIDE_GUIDE: PeptideGuideEntry[] = [
   {
     id: "retatrutide",
-    name: "Retatrutide",
+    name: "GL3RT",
     mainEffects: ["Weight loss", "Appetite suppression", "Metabolic / liver-fat support"],
     why: "Top phase-2 weight-loss signal (triple agonist).",
     researchDosing: "Start ~1–2 mg/wk → increase only if needed, up to ~12 mg/wk.",
@@ -34,7 +34,7 @@ export const PEPTIDE_GUIDE: PeptideGuideEntry[] = [
   },
   {
     id: "semaglutide",
-    name: "Semaglutide",
+    name: "GL1SM",
     mainEffects: ["Weight loss", "Blood sugar control", "Appetite suppression"],
     why: "Best-studied GLP-1 for weight management.",
     researchDosing: "Start 0.25 mg/wk ×4 → step up only if needed (to 2.4 mg).",
@@ -43,7 +43,7 @@ export const PEPTIDE_GUIDE: PeptideGuideEntry[] = [
   },
   {
     id: "tirzepatide",
-    name: "Tirzepatide",
+    name: "GL2TZ",
     mainEffects: ["Weight loss", "Glycemic control", "Appetite suppression"],
     why: "Dual agonist; strongest approved-class results.",
     researchDosing: "Start 2.5 mg/wk ×4 → step up every 4 wks only if needed (to 15 mg).",

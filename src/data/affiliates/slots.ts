@@ -31,6 +31,10 @@ import {
   AMP_PEPTIDES_CATALOG,
   AMP_PEPTIDES_PARTNER,
 } from '@/src/data/affiliates/amp-peptides-catalog';
+import {
+  ALASKA_LABS_CATALOG,
+  ALASKA_LABS_PARTNER,
+} from '@/src/data/affiliates/alaska-labs-catalog';
 import { getOfferSalePriceUsd } from '@/src/lib/offer-pricing';
 import type { PartnerProduct } from '@/src/types/affiliates';
 
@@ -141,6 +145,15 @@ const OFFLINE_CATALOGS: OfflineCatalog[] = [
     discountLabel: AMP_PEPTIDES_PARTNER.discountLabel,
     discountPercent: AMP_PEPTIDES_PARTNER.discountPercent,
     products: AMP_PEPTIDES_CATALOG,
+  },
+  {
+    id: ALASKA_LABS_PARTNER.id,
+    label: ALASKA_LABS_PARTNER.label,
+    href: ALASKA_LABS_PARTNER.href,
+    couponCode: ALASKA_LABS_PARTNER.couponCode,
+    discountLabel: ALASKA_LABS_PARTNER.discountLabel,
+    discountPercent: ALASKA_LABS_PARTNER.discountPercent,
+    products: ALASKA_LABS_CATALOG,
   },
 ];
 
