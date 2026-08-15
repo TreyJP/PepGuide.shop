@@ -1,10 +1,9 @@
 import { DEFAULT_AFFILIATE_COUPON } from '@/src/constants/affiliates';
 import {
+  getTrustedPartnerDiscount,
   isPreferredPartner,
   sortOffersPreferredFirst,
   TRUSTED_PARTNER_COUPON,
-  TRUSTED_PARTNER_DISCOUNT_LABEL,
-  TRUSTED_PARTNER_DISCOUNT_PERCENT,
   withTrustedPartnerOfferFields,
 } from '@/src/data/affiliates/preferred-partners';
 import {
@@ -20,7 +19,8 @@ import {
 import type { AffiliatePartner } from '@/src/types/affiliates';
 
 function partnerDiscountPercent(partner: AffiliatePartner): number {
-  if (isPreferredPartner(partner.id)) return TRUSTED_PARTNER_DISCOUNT_PERCENT;
+  const trusted = getTrustedPartnerDiscount(partner.id, partner.label);
+  if (trusted) return trusted.percent;
   return (
     parseDiscountPercent(partner.discountLabel) ||
     DEFAULT_AFFILIATE_COUPON.discountPercent
@@ -32,11 +32,12 @@ function partnerCouponFields(partner: AffiliatePartner): {
   discountLabel: string;
   discountPercent: number;
 } {
-  if (isPreferredPartner(partner.id)) {
+  const trusted = getTrustedPartnerDiscount(partner.id, partner.label);
+  if (trusted) {
     return {
       couponCode: TRUSTED_PARTNER_COUPON,
-      discountLabel: TRUSTED_PARTNER_DISCOUNT_LABEL,
-      discountPercent: TRUSTED_PARTNER_DISCOUNT_PERCENT,
+      discountLabel: trusted.label,
+      discountPercent: trusted.percent,
     };
   }
   const code = (partner.couponCode ?? '').trim();

@@ -8,24 +8,53 @@ export const TRUSTED_PARTNER_IDS = new Set([
   'alaska-labs',
 ]);
 
+/** Default trusted discount (Refined). Alaska uses its own percent below. */
 export const TRUSTED_PARTNER_DISCOUNT_PERCENT = 20;
 export const TRUSTED_PARTNER_DISCOUNT_LABEL = '20% off';
 export const TRUSTED_PARTNER_COUPON = 'PEPGUIDE';
+
+const TRUSTED_PARTNER_DISCOUNTS: Record<
+  string,
+  { percent: number; label: string }
+> = {
+  'refined-biolabs': { percent: 20, label: '20% off' },
+  'alaska-labs': { percent: 30, label: '30% off' },
+};
+
+function trustedPartnerKey(
+  vendorId: string | null | undefined,
+  vendorLabel?: string | null,
+): string | null {
+  const id = (vendorId ?? '').trim().toLowerCase();
+  if (TRUSTED_PARTNER_IDS.has(id)) return id;
+  if (id.includes('alaska') || (vendorLabel ?? '').toLowerCase().includes('alaska')) {
+    return 'alaska-labs';
+  }
+  if (id.includes('refined') || (vendorLabel ?? '').toLowerCase().includes('refined')) {
+    return 'refined-biolabs';
+  }
+  return null;
+}
+
+export function getTrustedPartnerDiscount(vendorId: string | null | undefined, vendorLabel?: string | null): {
+  percent: number;
+  label: string;
+} | null {
+  const key = trustedPartnerKey(vendorId, vendorLabel);
+  if (!key) return null;
+  return (
+    TRUSTED_PARTNER_DISCOUNTS[key] ?? {
+      percent: TRUSTED_PARTNER_DISCOUNT_PERCENT,
+      label: TRUSTED_PARTNER_DISCOUNT_LABEL,
+    }
+  );
+}
 
 export function isPreferredPartner(
   vendorId: string | null | undefined,
   vendorLabel?: string | null,
 ): boolean {
-  const id = (vendorId ?? '').trim().toLowerCase();
-  if (TRUSTED_PARTNER_IDS.has(id)) return true;
-  if (id.includes('refined') || id.includes('alaska')) return true;
-  const label = (vendorLabel ?? '').trim().toLowerCase();
-  return (
-    label.includes('refined biolabs') ||
-    label === 'refined' ||
-    label.includes('alaska labs') ||
-    label === 'alaskalabs'
-  );
+  return trustedPartnerKey(vendorId, vendorLabel) != null;
 }
 
 /** Force trusted-partner coupon/discount even if Firestore still has old values. */
@@ -38,12 +67,13 @@ export function withTrustedPartnerOfferFields<
     discountPercent?: number;
   },
 >(offer: T): T {
-  if (!isPreferredPartner(offer.vendorId, offer.vendorLabel)) return offer;
+  const trusted = getTrustedPartnerDiscount(offer.vendorId, offer.vendorLabel);
+  if (!trusted) return offer;
   return {
     ...offer,
     couponCode: offer.couponCode || TRUSTED_PARTNER_COUPON,
-    discountLabel: TRUSTED_PARTNER_DISCOUNT_LABEL,
-    discountPercent: TRUSTED_PARTNER_DISCOUNT_PERCENT,
+    discountLabel: trusted.label,
+    discountPercent: trusted.percent,
   };
 }
 

@@ -1,11 +1,11 @@
 import type { PartnerProduct } from '@/src/types/affiliates';
 
 const AL_BASE = 'https://alaskalabs.is';
-const AL_COUPON = 'PEPGUIDE';
+const AL_REF = 'PEPGUIDE';
 
-/** Build an Alaska Labs product URL with PepGuide coupon. */
+/** Build an Alaska Labs product URL with PepGuide referral tracking. */
 function alProduct(slug: string): string {
-  return `${AL_BASE}/shop/${slug}?coupon=${AL_COUPON}`;
+  return `${AL_BASE}/shop/${slug}?ref=${AL_REF}`;
 }
 
 /**
@@ -204,8 +204,8 @@ export const ALASKA_LABS_CATALOG: PartnerProduct[] = [
 export const ALASKA_LABS_PARTNER = {
   id: 'alaska-labs',
   label: 'Alaska Labs',
-  href: `${AL_BASE}/shop?coupon=${AL_COUPON}`,
-  couponCode: AL_COUPON,
-  discountLabel: '20% off',
-  discountPercent: 20,
+  href: `${AL_BASE}/?ref=${AL_REF}`,
+  couponCode: AL_REF,
+  discountLabel: '30% off',
+  discountPercent: 30,
 } as const;

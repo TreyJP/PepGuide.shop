@@ -1,7 +1,4 @@
-import {
-  isPreferredPartner,
-  TRUSTED_PARTNER_DISCOUNT_PERCENT,
-} from '@/src/data/affiliates/preferred-partners';
+import { getTrustedPartnerDiscount } from '@/src/data/affiliates/preferred-partners';
 import { formatAffiliateUsd, type AffiliateOffer } from '@/src/data/affiliates/slots';
 
 export function parseDiscountPercent(discountLabel: string | null | undefined): number {
@@ -19,9 +16,8 @@ type DiscountableOffer = Pick<
 };
 
 export function getOfferDiscountPercent(offer: DiscountableOffer): number {
-  if (isPreferredPartner(offer.vendorId, offer.vendorLabel)) {
-    return TRUSTED_PARTNER_DISCOUNT_PERCENT;
-  }
+  const trusted = getTrustedPartnerDiscount(offer.vendorId, offer.vendorLabel);
+  if (trusted) return trusted.percent;
   if (typeof offer.discountPercent === 'number' && offer.discountPercent > 0) {
     return offer.discountPercent;
   }
