@@ -200,6 +200,11 @@ function routeFromIntent(
     return buildTriedCompoundFollowUpResponse(userMessage, history);
   }
 
+  // New research lane — never finish an old GLP / muscle discovery arc.
+  if (isTopicPivot(userMessage) || isDistinctGoalLane(intent.goal)) {
+    return null;
+  }
+
   switch (intent.goal) {
     case 'dual_weight_muscle':
       return buildDualGoalResponse();
@@ -225,11 +230,21 @@ function routeFromIntent(
       }
       return buildAppetiteComplementResponse(userMessage, history);
     default:
-      // Finish the open discovery arc even if intent drifts to "general".
-      if (deliverResult && priorWasWeight) {
+      // Finish the open discovery arc only when still on that same goal.
+      if (
+        deliverResult &&
+        priorWasWeight &&
+        isWeightLossQuery(userMessage) &&
+        !isTopicPivot(userMessage)
+      ) {
         return buildWeightLossPicksResponse(userMessage);
       }
-      if (deliverResult && priorWasMuscle) {
+      if (
+        deliverResult &&
+        priorWasMuscle &&
+        isMuscleQuery(userMessage) &&
+        !isTopicPivot(userMessage)
+      ) {
         return buildMusclePicksResponse(
           'research_goal_exploration',
           userMessage,
@@ -237,6 +252,24 @@ function routeFromIntent(
       }
       return null;
   }
+}
+
+/** Goals that should never inherit a prior weight-loss / muscle discovery arc. */
+function isDistinctGoalLane(goal: ResearchIntent['goal']): boolean {
+  return (
+    goal === 'skin_hair' ||
+    goal === 'recovery' ||
+    goal === 'sleep' ||
+    goal === 'cognitive' ||
+    goal === 'sexual' ||
+    goal === 'longevity'
+  );
+}
+
+function isSkinHairQuery(text: string): boolean {
+  return /\b(tan|tanning|tanned|sunless\s+tan|darker\s+skin|melanotan|mt-?1|mt-?2|pigment(?:ation)?|skin|hair|cosmetic|wrinkle)\b/i.test(
+    text,
+  );
 }
 
 export type ResearchChatTurn = {
@@ -477,11 +510,19 @@ function isTopicPivot(userMessage: string): boolean {
   ) {
     return true;
   }
+  // Skin / tanning / cosmetic lane (e.g. after a GLP thread).
+  if (
+    isSkinHairQuery(userMessage) &&
+    !isWeightLossQuery(userMessage) &&
+    !isMetabolicFollowUp(userMessage)
+  ) {
+    return true;
+  }
   // New non-weight research goal while not continuing metabolic follow-up.
   if (
     !isWeightLossQuery(userMessage) &&
     !isMetabolicFollowUp(userMessage) &&
-    /\b(heal(?:ing)?|recover(?:y)?|hair|sleep|skin|libido|cognitive|focus|tan(?:ning)?)\b/i.test(
+    /\b(heal(?:ing)?|recover(?:y)?|sleep|libido|cognitive|focus|longevity|anti[- ]?aging)\b/i.test(
       userMessage,
     )
   ) {
@@ -562,6 +603,13 @@ function buildGroundingQuery(
     return parts.join(' ').replace(/\s+/g, ' ').trim();
   }
 
+  if (isSkinHairQuery(userMessage)) {
+    parts.push(
+      'melanotan melanotan-ii pt-141 tanning pigmentation skin hair cosmetic peptide research',
+    );
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+  }
+
   if (isAppetiteComplementQuery(userMessage) || isMetabolicFollowUp(userMessage)) {
     parts.push(
       'cagrilintide amycretin amylin appetite satiety complementary combination',
@@ -620,6 +668,11 @@ function buildSystemPrompt(
             'muscle hypertrophy lean mass growth hormone secretagogue ipamorelin cjc-1295 sermorelin igf-1 peg-mgf',
             8,
           )
+        : isSkinHairQuery(userMessage)
+          ? buildKnowledgeContext(
+              'melanotan melanotan-ii tanning pigmentation skin hair cosmetic peptide research',
+              8,
+            )
         : weightQuery && history.length === 0
           ? buildKnowledgeContext(
               'weight loss obesity GLP-1 retatrutide tirzepatide semaglutide',
@@ -677,8 +730,9 @@ function buildSystemPrompt(
     '- Prefer results within 2 assistant replies (3 max).',
     'CONVERSATION RULES:',
     '- Prioritize the CURRENT user question over older turns.',
-    '- If the user pivots to a new research goal (e.g. muscle after weight loss), answer that new goal.',
-    '- Do NOT keep recommending weight-loss / GLP-1 compounds unless the user asks to combine goals.',
+    '- If the user pivots to a new research goal (e.g. tanning after GLP-1s, muscle after weight loss), answer ONLY that new goal.',
+    '- Do NOT repeat, summarize, or keep recommending compounds from the previous goal unless the user asks to combine goals.',
+    '- Do NOT keep recommending weight-loss / GLP-1 compounds when the user asks about tanning, skin, hair, sleep, recovery, or another lane.',
     '- Use prior turns only when the user is clearly continuing the same topic.',
     '- Stay educational — compare options, do not prescribe a personal protocol.',
     dualQuery
@@ -1440,10 +1494,16 @@ export async function generateResearchResponse(
     return withUsage(routed, intentUsage);
   }
 
+  const topicPivot =
+    isTopicPivot(userMessage) ||
+    isDistinctGoalLane(intent.goal) ||
+    intent.goal === 'muscle';
+  const turnsForGrounding = topicPivot ? [] : priorTurns;
+
   const groundingQuery = buildGroundingQuery(
     userMessage,
     `${retrievalQuery} ${intent.keywords.join(' ')}`.trim(),
-    priorTurns,
+    turnsForGrounding,
   );
 
   const apiKey = getOpenAiKey();
@@ -1453,24 +1513,19 @@ export async function generateResearchResponse(
         userMessage,
         retrievalQuery,
         classification.category,
-        priorTurns,
+        turnsForGrounding,
       ),
       intentUsage,
     );
   }
 
-  const topicPivot =
-    isTopicPivot(userMessage) ||
-    intent.goal === 'muscle' ||
-    intent.goal === 'recovery' ||
-    intent.goal === 'sleep';
   // On a clear topic change, don't feed the old weight-loss thread into the model.
   const historyForModel = topicPivot
     ? ([
         {
           role: 'user' as const,
           content:
-            '[Earlier in this chat the user discussed a different research topic. They have now changed goals — answer only the new question.]',
+            '[Earlier in this chat the user discussed a different research topic. They have now changed goals — answer ONLY the new question. Do not repeat or recommend compounds from the earlier goal.]',
         },
       ] satisfies ResearchChatTurn[])
     : priorTurns;
@@ -1480,13 +1535,22 @@ export async function generateResearchResponse(
   try {
     const client = new OpenAI({ apiKey });
     const systemPrompt = [
-      buildSystemPrompt(userMessage, retrievalQuery, priorTurns),
+      buildSystemPrompt(
+        userMessage,
+        retrievalQuery,
+        turnsForGrounding,
+      ),
       '',
       'NORMALIZED USER INTENT (from classifier — follow this goal):',
       `- Goal: ${intent.goal}`,
       `- Summary: ${intent.summary}`,
       `- Keywords: ${intent.keywords.join(', ')}`,
-    ].join('\n');
+      topicPivot
+        ? 'TOPIC PIVOT: Ignore earlier metabolic/GLP-1 context. Answer the current goal only.'
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
     const completion = await client.chat.completions.create({
       model: PEP_GUIDE_MODEL,
       temperature: 0.2,
@@ -1546,7 +1610,7 @@ export async function generateResearchResponse(
         userMessage,
         retrievalQuery,
         classification.category,
-        priorTurns,
+        turnsForGrounding,
       ),
       intentUsage,
     );
@@ -1559,7 +1623,7 @@ export async function generateResearchResponse(
         userMessage,
         retrievalQuery,
         classification.category,
-        priorTurns,
+        turnsForGrounding,
       ),
       intentUsage,
     );

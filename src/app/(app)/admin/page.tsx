@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 
 import { AdminAffiliatesPanel } from '@/src/components/admin/admin-affiliates-panel';
+import { AdminChatsPanel } from '@/src/components/admin/admin-chats-panel';
 import { AdminConsultsPanel } from '@/src/components/admin/admin-consults-panel';
 import { AdminDashboard } from '@/src/components/admin/admin-dashboard';
 import { AdminPremiumUsersPanel } from '@/src/components/admin/admin-premium-users-panel';
@@ -35,6 +36,7 @@ type AdminTab =
   | 'affiliates'
   | 'consults'
   | 'premium'
+  | 'chats'
   | 'access';
 
 function emptyLabs(): Record<PartnerLabTestId, boolean | null> {
@@ -354,8 +356,8 @@ export default function AdminPage() {
           Admin
         </h1>
         <p className="mt-1 text-sm text-foreground-secondary">
-          Site metrics, partners, referral affiliates, all users, Ask a
-          Professional inbox, and admin access.
+          Site metrics, partners, referral affiliates, all chats, all users, Ask
+          a Professional inbox, and admin access.
         </p>
         <div className="mt-4 flex flex-wrap gap-1.5">
           {(
@@ -363,6 +365,7 @@ export default function AdminPage() {
               { id: 'dashboard', label: 'Dashboard' },
               { id: 'partners', label: 'Partners' },
               { id: 'affiliates', label: 'Affiliates' },
+              { id: 'chats', label: 'Chats' },
               { id: 'premium', label: 'Users' },
               { id: 'consults', label: 'Ask a Pro' },
               { id: 'access', label: 'Access' },
@@ -392,6 +395,8 @@ export default function AdminPage() {
       ) : null}
 
       {tab === 'affiliates' ? <AdminAffiliatesPanel /> : null}
+
+      {tab === 'chats' ? <AdminChatsPanel /> : null}
 
       {tab === 'premium' ? <AdminPremiumUsersPanel /> : null}
 

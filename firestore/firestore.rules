@@ -75,19 +75,22 @@ service cloud.firestore {
       match /chats/{chatId} {
         // Owner can list all chats. Anyone with the chat link can get one chat
         // when a sharedChatRefs/{chatId} pointer exists (share-by-link).
+        // Admins can open any thread from the Admin → Chats panel.
         allow get: if isOwner(userId)
+          || isAdmin()
           || (
             exists(/databases/$(database)/documents/sharedChatRefs/$(chatId))
             && get(/databases/$(database)/documents/sharedChatRefs/$(chatId)).data.ownerUid
               == userId
           );
-        allow list: if isOwner(userId);
+        allow list: if isOwner(userId) || isAdmin();
         allow create, update, delete: if isOwner(userId);
 
         match /messages/{messageId} {
           // Temporary: allow client-written assistant messages until
           // Cloud Functions own the AI response write path.
           allow read: if isOwner(userId)
+            || isAdmin()
             || (
               exists(/databases/$(database)/documents/sharedChatRefs/$(chatId))
               && get(/databases/$(database)/documents/sharedChatRefs/$(chatId)).data.ownerUid
