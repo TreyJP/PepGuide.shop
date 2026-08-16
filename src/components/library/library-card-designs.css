@@ -923,6 +923,32 @@
   min-height: 100%;
 }
 
+.lib-tile__card--soon {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--surface-secondary) 55%, white);
+  opacity: 0.92;
+}
+
+.lib-tile__soon-badge {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, #ca8a04 18%, transparent);
+  color: #854d0e;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.lib-tile__soon-copy {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--foreground-secondary);
+}
+
 .lib-tile__header {
   display: flex;
   align-items: flex-start;

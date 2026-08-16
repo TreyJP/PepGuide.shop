@@ -1,6 +1,5 @@
 'use client';
 
-import { AffiliateEnrollForm } from '@/src/components/affiliates/designs/affiliate-enroll-form';
 import {
   AFFILIATE_BENEFITS,
   AFFILIATE_HOW_IT_WORKS,
@@ -10,104 +9,98 @@ import type { AffiliateDesignViewProps } from '@/src/components/affiliates/desig
 import { Badge } from '@/src/components/ui/badge';
 
 export function AffDesignConsole(props: AffiliateDesignViewProps) {
-  const {
-    affiliate,
-    referredByCode,
-    shareUrl,
-    copied,
-    onCopy,
-    signupCode,
-    onSignupCodeChange,
-    enrolling,
-    enrollError,
-    onEnroll,
-  } = props;
+  const { affiliate, referredByCode, shareUrl, copied, onCopy } = props;
+
+  if (!affiliate) {
+    return (
+      <div className="aff-console">
+        <header className="aff-console__bar">
+          <div>
+            <h1>Affiliate console</h1>
+            <p>Tracked referral links for PepGuide creators</p>
+          </div>
+        </header>
+        <div className="aff-console__shell">
+          <section className="aff-console__card">
+            <p className="text-sm text-foreground-secondary">
+              No affiliate seat is linked to this account yet.
+            </p>
+          </section>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="aff-console">
       <header className="aff-console__bar">
         <div>
           <h1>Affiliate console</h1>
-          <p>50% first order · 20% every order after</p>
+          <p>
+            {affiliate.firstOrderCommissionPercent}% first order ·{' '}
+            {affiliate.recurringCommissionPercent}% every order after
+          </p>
         </div>
-        {affiliate ? (
-          <Badge variant={affiliate.active ? 'success' : 'critical'}>
-            {affiliate.active ? 'Live' : 'Paused'}
-          </Badge>
-        ) : (
-          <Badge variant="accent">Open enrollment</Badge>
-        )}
+        <Badge variant={affiliate.active ? 'success' : 'critical'}>
+          {affiliate.active ? 'Live' : 'Paused'}
+        </Badge>
       </header>
 
       <div className="aff-console__shell">
         <section className="aff-console__card">
-          <h2>{affiliate ? 'Performance' : 'Join'}</h2>
-          {affiliate ? (
-            <>
-              <div className="aff-console__kpis">
-                <div className="aff-console__kpi">
-                  <span>Code</span>
-                  <strong className="font-mono text-base tracking-wide">
-                    {affiliate.code}
-                  </strong>
-                </div>
-                <div className="aff-console__kpi">
-                  <span>First order</span>
-                  <strong>{affiliate.firstOrderCommissionPercent}%</strong>
-                </div>
-                <div className="aff-console__kpi">
-                  <span>After</span>
-                  <strong>{affiliate.recurringCommissionPercent}%</strong>
-                </div>
-              </div>
-              <p className="mt-3 text-sm text-foreground-secondary">
-                {affiliate.referralCount} attributed signup
-                {affiliate.referralCount === 1 ? '' : 's'}
-              </p>
-            </>
-          ) : (
-            <div className="mt-3">
-              <AffiliateEnrollForm
-                signupCode={signupCode}
-                onSignupCodeChange={onSignupCodeChange}
-                enrolling={enrolling}
-                enrollError={enrollError}
-                onEnroll={onEnroll}
-              />
+          <h2>Performance</h2>
+          <div className="aff-console__kpis">
+            <div className="aff-console__kpi">
+              <span>Code</span>
+              <strong className="font-mono text-base tracking-wide">
+                {affiliate.code}
+              </strong>
             </div>
-          )}
+            <div className="aff-console__kpi">
+              <span>Link clicks</span>
+              <strong>{affiliate.clickCount}</strong>
+            </div>
+            <div className="aff-console__kpi">
+              <span>Signups</span>
+              <strong>{affiliate.referralCount}</strong>
+            </div>
+            <div className="aff-console__kpi">
+              <span>First order</span>
+              <strong>{affiliate.firstOrderCommissionPercent}%</strong>
+            </div>
+            <div className="aff-console__kpi">
+              <span>After</span>
+              <strong>{affiliate.recurringCommissionPercent}%</strong>
+            </div>
+          </div>
         </section>
 
         <section className="aff-console__card aff-console__share">
-          <h2>Share</h2>
-          {affiliate ? (
-            <>
-              <code>{shareUrl}</code>
-              <div className="flex flex-wrap gap-2">
-                <AffCopyButton
-                  label="Copy link"
-                  kind="link"
-                  value={shareUrl}
-                  copied={copied}
-                  onCopy={onCopy}
-                  size="sm"
-                />
-                <AffCopyButton
-                  label="Copy code"
-                  kind="code"
-                  value={affiliate.code}
-                  copied={copied}
-                  onCopy={onCopy}
-                  size="sm"
-                  variant="secondary"
-                />
-              </div>
-            </>
-          ) : (
-            <div className="aff-console__placeholder">
-              Your `/sign-up?ref=CODE` link appears here after you join.
-            </div>
-          )}
+          <h2>Share link</h2>
+          <p className="mb-2 text-sm text-foreground-secondary">
+            Use this on Instagram, TikTok, X, or your link tree. Every click is
+            counted, then visitors land on signup with your code applied.
+          </p>
+          <code>{shareUrl}</code>
+          <div className="flex flex-wrap gap-2">
+            <AffCopyButton
+              label="Copy link"
+              kind="link"
+              value={shareUrl}
+              copied={copied}
+              onCopy={onCopy}
+              size="sm"
+            />
+            <AffCopyButton
+              label="Copy code"
+              kind="code"
+              value={affiliate.code}
+              copied={copied}
+              onCopy={onCopy}
+              size="sm"
+              variant="secondary"
+            />
+          </div>
         </section>
 
         <section className="aff-console__card">

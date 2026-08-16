@@ -1,6 +1,5 @@
 'use client';
 
-import { AffiliateEnrollForm } from '@/src/components/affiliates/designs/affiliate-enroll-form';
 import {
   AFFILIATE_BENEFITS,
   AFFILIATE_HOW_IT_WORKS,
@@ -9,18 +8,7 @@ import { AffCopyButton, AffFaqList } from '@/src/components/affiliates/designs/s
 import type { AffiliateDesignViewProps } from '@/src/components/affiliates/designs/types';
 
 export function AffDesignEditorial(props: AffiliateDesignViewProps) {
-  const {
-    affiliate,
-    referredByCode,
-    shareUrl,
-    copied,
-    onCopy,
-    signupCode,
-    onSignupCodeChange,
-    enrolling,
-    enrollError,
-    onEnroll,
-  } = props;
+  const { affiliate, referredByCode, shareUrl, copied, onCopy } = props;
 
   return (
     <div className="aff-editorial">
@@ -28,8 +16,8 @@ export function AffDesignEditorial(props: AffiliateDesignViewProps) {
         <p className="aff-editorial__label">The PepGuide affiliate note</p>
         <h1>Earn for every clear introduction.</h1>
         <p className="aff-editorial__lede">
-          Open to every PepGuide account. Earn 50% on a referred member’s first
-          paid order, then 20% on every order after.
+          Earn 50% on a referred member’s first paid order, then 20% on every
+          order after — with a tracked /r/CODE share link.
         </p>
 
         <hr className="aff-editorial__rule" />
@@ -47,16 +35,26 @@ export function AffDesignEditorial(props: AffiliateDesignViewProps) {
                 <strong className="font-mono tracking-wide">{affiliate.code}</strong>
               </div>
               <div className="aff-editorial__dash-row">
+                <span>Share link</span>
+                <strong className="font-mono text-sm tracking-wide">
+                  {shareUrl}
+                </strong>
+              </div>
+              <div className="aff-editorial__dash-row">
+                <span>Link clicks</span>
+                <strong>{affiliate.clickCount}</strong>
+              </div>
+              <div className="aff-editorial__dash-row">
+                <span>Attributed signups</span>
+                <strong>{affiliate.referralCount}</strong>
+              </div>
+              <div className="aff-editorial__dash-row">
                 <span>First order</span>
                 <strong>{affiliate.firstOrderCommissionPercent}%</strong>
               </div>
               <div className="aff-editorial__dash-row">
                 <span>Every order after</span>
                 <strong>{affiliate.recurringCommissionPercent}%</strong>
-              </div>
-              <div className="aff-editorial__dash-row">
-                <span>Attributed signups</span>
-                <strong>{affiliate.referralCount}</strong>
               </div>
             </div>
             <div className="aff-editorial__actions">
@@ -78,13 +76,10 @@ export function AffDesignEditorial(props: AffiliateDesignViewProps) {
             </div>
           </>
         ) : (
-          <AffiliateEnrollForm
-            signupCode={signupCode}
-            onSignupCodeChange={onSignupCodeChange}
-            enrolling={enrolling}
-            enrollError={enrollError}
-            onEnroll={onEnroll}
-          />
+          <p className="text-foreground-secondary">
+            Affiliate seats are provisioned by PepGuide. When your account is
+            linked, your share link and tracking will appear here.
+          </p>
         )}
 
         <hr className="aff-editorial__rule" />

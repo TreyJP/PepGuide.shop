@@ -1,94 +1,28 @@
 'use client';
 
+import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { AffDesignConsole } from '@/src/components/affiliates/designs/aff-design-console';
-import { AffDesignEditorial } from '@/src/components/affiliates/designs/aff-design-editorial';
-import { AffDesignHorizon } from '@/src/components/affiliates/designs/aff-design-horizon';
-import { AffDesignSplit } from '@/src/components/affiliates/designs/aff-design-split';
-import { AffDesignWelcome } from '@/src/components/affiliates/designs/aff-design-welcome';
 import type { AffiliateDesignViewProps } from '@/src/components/affiliates/designs/types';
 import '@/src/components/affiliates/affiliates-designs.css';
-import {
-  AFFILIATE_DESIGNS,
-  type AffiliateDesignId,
-} from '@/src/constants/affiliate-designs';
-import { normalizeReferralCode } from '@/src/lib/referral-code';
-import {
-  referralAffiliatesRepository,
-  suggestAffiliateCode,
-} from '@/src/services/firestore/referral-affiliates';
-import { useAffiliateDesignStore } from '@/src/stores/affiliate-design-store';
+import { useAdminAccess } from '@/src/hooks/use-admin-access';
+import { useAffiliateAccess } from '@/src/hooks/use-affiliate-access';
 import { useAuthStore } from '@/src/stores/auth-store';
-import type { ReferralAffiliate } from '@/src/types/referral-affiliates';
-
-function DesignView({
-  designId,
-  ...props
-}: { designId: AffiliateDesignId } & AffiliateDesignViewProps) {
-  switch (designId) {
-    case 'horizon':
-      return <AffDesignHorizon {...props} />;
-    case 'split':
-      return <AffDesignSplit {...props} />;
-    case 'editorial':
-      return <AffDesignEditorial {...props} />;
-    case 'console':
-      return <AffDesignConsole {...props} />;
-    case 'welcome':
-    default:
-      return <AffDesignWelcome {...props} />;
-  }
-}
+import { useUiStore } from '@/src/stores/ui-store';
+import { Button } from '@/src/components/ui/button';
 
 export function AffiliatesWorkspace() {
   const user = useAuthStore((state) => state.user);
-  const designId = useAffiliateDesignStore((state) => state.designId);
-  const setDesignId = useAffiliateDesignStore((state) => state.setDesignId);
-
-  const [affiliate, setAffiliate] = useState<ReferralAffiliate | null>(null);
-  const [loading, setLoading] = useState(true);
+  const openSignInModal = useUiStore((state) => state.openSignInModal);
+  const { isAdmin } = useAdminAccess();
+  const { loading, canAccess, isAffiliate, affiliate } = useAffiliateAccess();
   const [copied, setCopied] = useState<'link' | 'code' | null>(null);
-  const [signupCode, setSignupCode] = useState('');
-  const [enrolling, setEnrolling] = useState(false);
-  const [enrollError, setEnrollError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user) {
-      setAffiliate(null);
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    void (async () => {
-      try {
-        const linked = await referralAffiliatesRepository.getByLinkedUserId(
-          user.id,
-        );
-        if (!cancelled) {
-          setAffiliate(linked);
-          if (!linked) {
-            setSignupCode(suggestAffiliateCode(user.displayName));
-          }
-        }
-      } catch {
-        if (!cancelled) setAffiliate(null);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
 
   const shareUrl = useMemo(() => {
     if (!affiliate || typeof window === 'undefined') return '';
-    return `${window.location.origin}/sign-up?ref=${encodeURIComponent(affiliate.code)}`;
+    return `${window.location.origin}/r/${encodeURIComponent(affiliate.code)}`;
   }, [affiliate]);
 
   const onCopy = async (value: string, kind: 'link' | 'code') => {
@@ -102,43 +36,6 @@ export function AffiliatesWorkspace() {
     }
   };
 
-  const onEnroll = async () => {
-    if (!user) {
-      setEnrollError('Sign in to join the affiliate program.');
-      return;
-    }
-
-    setEnrolling(true);
-    setEnrollError(null);
-    try {
-      const created = await referralAffiliatesRepository.enrollSelf({
-        userId: user.id,
-        displayName: user.displayName,
-        email: user.email,
-        code: normalizeReferralCode(signupCode) || undefined,
-      });
-      setAffiliate(created);
-    } catch (error) {
-      setEnrollError(
-        error instanceof Error
-          ? error.message
-          : 'Unable to create your affiliate seat.',
-      );
-    } finally {
-      setEnrolling(false);
-    }
-  };
-
-  const resolvedDesignId = AFFILIATE_DESIGNS.some(
-    (design) => design.id === designId,
-  )
-    ? designId
-    : 'split';
-
-  const activeBlurb =
-    AFFILIATE_DESIGNS.find((design) => design.id === resolvedDesignId)?.blurb ??
-    '';
-
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center gap-2 text-sm text-foreground-secondary">
@@ -148,47 +45,62 @@ export function AffiliatesWorkspace() {
     );
   }
 
+  if (!user) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+        <p className="text-sm text-foreground-secondary">
+          Sign in with an affiliate account to view your referral links.
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() =>
+            openSignInModal('Sign in to open your affiliate console.')
+          }
+        >
+          Sign in
+        </Button>
+      </div>
+    );
+  }
+
+  if (!canAccess) {
+    return (
+      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-foreground-secondary">
+        This section is only available to PepGuide affiliate partners.
+      </div>
+    );
+  }
+
+  if (isAdmin && !isAffiliate) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+        <p className="max-w-md text-sm text-foreground-secondary">
+          You have admin access. Create and link creator seats under Admin →
+          Affiliates. Linked partners will see their tracked{' '}
+          <span className="font-mono text-foreground">/r/CODE</span> link here.
+        </p>
+        <Link href="/admin">
+          <Button type="button" size="sm" variant="secondary">
+            Open Admin
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
   const viewProps: AffiliateDesignViewProps = {
     affiliate,
-    referredByCode: user?.referredByCode ?? null,
+    referredByCode: user.referredByCode ?? null,
     shareUrl,
     copied,
     onCopy,
-    signupCode,
-    onSignupCodeChange: setSignupCode,
-    enrolling,
-    enrollError,
-    onEnroll,
   };
 
   return (
     <div className="aff-root">
-      <div className="aff-picker">
-        <label>
-          Design
-          <select
-            value={resolvedDesignId}
-            onChange={(event) =>
-              setDesignId(event.target.value as AffiliateDesignId)
-            }
-            aria-label="Affiliates page design"
-          >
-            {AFFILIATE_DESIGNS.map((design) => (
-              <option key={design.id} value={design.id}>
-                {design.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span>{activeBlurb}</span>
-      </div>
-
       <div className="aff-scroll">
-        <DesignView
-          key={resolvedDesignId}
-          designId={resolvedDesignId}
-          {...viewProps}
-        />
+        <AffDesignConsole {...viewProps} />
       </div>
     </div>
   );

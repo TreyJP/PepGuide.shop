@@ -1,9 +1,7 @@
 'use client';
 
-import { ArrowRight, Handshake, Link2, Percent, ShieldCheck, Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import { Handshake, Link2, Percent, ShieldCheck, Sparkles } from 'lucide-react';
 
-import { AffiliateEnrollForm } from '@/src/components/affiliates/designs/affiliate-enroll-form';
 import {
   AFFILIATE_BENEFITS,
   AFFILIATE_HOW_IT_WORKS,
@@ -11,7 +9,6 @@ import {
 import { AffCopyButton, AffFaqList } from '@/src/components/affiliates/designs/shared';
 import type { AffiliateDesignViewProps } from '@/src/components/affiliates/designs/types';
 import { Badge } from '@/src/components/ui/badge';
-import { Button } from '@/src/components/ui/button';
 import {
   Card,
   CardContent,
@@ -28,18 +25,7 @@ const BENEFIT_ICONS = {
 } as const;
 
 export function AffDesignWelcome(props: AffiliateDesignViewProps) {
-  const {
-    affiliate,
-    referredByCode,
-    shareUrl,
-    copied,
-    onCopy,
-    signupCode,
-    onSignupCodeChange,
-    enrolling,
-    enrollError,
-    onEnroll,
-  } = props;
+  const { affiliate, referredByCode, shareUrl, copied, onCopy } = props;
 
   return (
     <div className="aff-welcome">
@@ -51,8 +37,8 @@ export function AffDesignWelcome(props: AffiliateDesignViewProps) {
           </div>
           <h1>Grow with PepGuide.</h1>
           <p>
-            Any account can join. Earn 50% on a referred member’s first paid
-            order, then 20% on every order after.
+            Earn 50% on a referred member’s first paid order, then 20% on every
+            order after — with a tracked /r/CODE share link.
           </p>
         </div>
       </section>
@@ -81,6 +67,24 @@ export function AffDesignWelcome(props: AffiliateDesignViewProps) {
                     </CardTitle>
                   </CardHeader>
                 </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Link clicks</CardDescription>
+                    <CardTitle className="text-2xl">
+                      {affiliate.clickCount}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Signups</CardDescription>
+                    <CardTitle className="text-2xl">
+                      {affiliate.referralCount}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+              </div>
+              <div className="aff-welcome__grid-3 mt-4">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardDescription>First order</CardDescription>
@@ -122,13 +126,10 @@ export function AffDesignWelcome(props: AffiliateDesignViewProps) {
           ) : (
             <Card>
               <CardContent className="p-5">
-                <AffiliateEnrollForm
-                  signupCode={signupCode}
-                  onSignupCodeChange={onSignupCodeChange}
-                  enrolling={enrolling}
-                  enrollError={enrollError}
-                  onEnroll={onEnroll}
-                />
+                <p className="text-sm text-foreground-secondary">
+                  Affiliate seats are provisioned by PepGuide. Once your account
+                  is linked, your /r/CODE share link and tracking appear here.
+                </p>
               </CardContent>
             </Card>
           )}
@@ -203,7 +204,9 @@ export function AffDesignWelcome(props: AffiliateDesignViewProps) {
           <div className="aff-welcome__cta">
             <Handshake className="mx-auto mb-4 size-8 text-accent" />
             <h2>
-              {affiliate ? 'Ready to share your link?' : 'Join in one click'}
+              {affiliate
+                ? 'Ready to share your link?'
+                : 'Seats provisioned by PepGuide'}
             </h2>
             <div className="mt-8 flex justify-center">
               {affiliate ? (
@@ -216,12 +219,10 @@ export function AffDesignWelcome(props: AffiliateDesignViewProps) {
                   size="lg"
                 />
               ) : (
-                <Link href="#top">
-                  <Button size="lg" onClick={onEnroll}>
-                    Join the affiliate program
-                    <ArrowRight className="size-4" />
-                  </Button>
-                </Link>
+                <p className="max-w-md text-sm text-foreground-secondary">
+                  PepGuide links creator accounts to affiliate seats. Your share
+                  link will appear here when provisioned.
+                </p>
               )}
             </div>
             <p className="mt-6 text-xs text-foreground-secondary">{BRAND.notice}</p>

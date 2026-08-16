@@ -2,7 +2,6 @@
 
 import { Sparkles } from 'lucide-react';
 
-import { AffiliateEnrollForm } from '@/src/components/affiliates/designs/affiliate-enroll-form';
 import {
   AFFILIATE_BENEFITS,
   AFFILIATE_HOW_IT_WORKS,
@@ -12,18 +11,7 @@ import type { AffiliateDesignViewProps } from '@/src/components/affiliates/desig
 import { BRAND } from '@/src/constants/brand';
 
 export function AffDesignSplit(props: AffiliateDesignViewProps) {
-  const {
-    affiliate,
-    referredByCode,
-    shareUrl,
-    copied,
-    onCopy,
-    signupCode,
-    onSignupCodeChange,
-    enrolling,
-    enrollError,
-    onEnroll,
-  } = props;
+  const { affiliate, referredByCode, shareUrl, copied, onCopy } = props;
 
   return (
     <div className="aff-split">
@@ -43,9 +31,8 @@ export function AffDesignSplit(props: AffiliateDesignViewProps) {
             <em>Real commission.</em>
           </h1>
           <p>
-            Any PepGuide account can join. Earn 50% on a referred member’s first
-            paid order, then 20% on every order after — with a personal code you
-            control.
+            Earn 50% on a referred member’s first paid order, then 20% on every
+            order after — with a personal /r/CODE link you control.
           </p>
           {referredByCode ? (
             <p className="aff-split__joined">
@@ -61,7 +48,7 @@ export function AffDesignSplit(props: AffiliateDesignViewProps) {
           <div className="aff-split__panel-head">
             <div>
               <p className="aff-split__panel-kicker">Partner seat</p>
-              <strong>{affiliate?.name ?? 'Join today'}</strong>
+              <strong>{affiliate?.name ?? 'Creator seats'}</strong>
             </div>
             <span
               className={
@@ -76,7 +63,7 @@ export function AffDesignSplit(props: AffiliateDesignViewProps) {
                 ? 'Live'
                 : affiliate
                   ? 'Paused'
-                  : 'Open'}
+                  : 'Invite'}
             </span>
           </div>
 
@@ -97,6 +84,8 @@ export function AffDesignSplit(props: AffiliateDesignViewProps) {
                 </div>
               </div>
               <p className="aff-split__signup-count">
+                {affiliate.clickCount} click
+                {affiliate.clickCount === 1 ? '' : 's'} ·{' '}
                 {affiliate.referralCount} attributed signup
                 {affiliate.referralCount === 1 ? '' : 's'}
               </p>
@@ -127,14 +116,10 @@ export function AffDesignSplit(props: AffiliateDesignViewProps) {
               </div>
             </>
           ) : (
-            <AffiliateEnrollForm
-              tone="dark"
-              signupCode={signupCode}
-              onSignupCodeChange={onSignupCodeChange}
-              enrolling={enrolling}
-              enrollError={enrollError}
-              onEnroll={onEnroll}
-            />
+            <p className="text-sm text-foreground-secondary">
+              Affiliate seats are provisioned by PepGuide. Once your account is
+              linked, your /r/CODE share link and tracking appear here.
+            </p>
           )}
         </div>
       </section>

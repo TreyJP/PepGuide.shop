@@ -204,6 +204,7 @@ export function AdminAffiliatesPanel() {
                     <span className="font-mono font-semibold tracking-wide">
                       {affiliate.code}
                     </span>
+                    <span>· {affiliate.clickCount} clicks</span>
                     <span>· {affiliate.referralCount} signups</span>
                     {!affiliate.active ? <span>· Hidden</span> : null}
                   </div>
@@ -226,10 +227,9 @@ export function AdminAffiliatesPanel() {
         <CardHeader>
           <CardTitle>{draft.id ? 'Edit affiliate' : 'New affiliate'}</CardTitle>
           <CardDescription>
-            Share links like{' '}
-            <span className="font-mono text-foreground">
-              /sign-up?ref=CODE
-            </span>
+            Share tracked links like{' '}
+            <span className="font-mono text-foreground">/r/CODE</span>
+            {' '}(counts clicks, then opens signup with the code).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -294,7 +294,7 @@ export function AdminAffiliatesPanel() {
             placeholder="affiliate@example.com"
           />
           <Input
-            label="Linked PepGuide user ID (optional)"
+            label="Linked PepGuide user ID"
             value={draft.linkedUserId}
             onChange={(event) =>
               setDraft((current) => ({
@@ -302,9 +302,17 @@ export function AdminAffiliatesPanel() {
                 linkedUserId: event.target.value,
               }))
             }
-            hint="Self-serve joins set this automatically"
+            hint="Required for the creator to see Affiliates in the sidebar"
             placeholder="Firebase uid"
           />
+          {normalizeReferralCode(draft.code) ? (
+            <p className="rounded-[10px] border border-border bg-surface-secondary/60 px-3 py-2 text-xs text-foreground-secondary">
+              Tracked link:{' '}
+              <span className="font-mono font-semibold text-foreground">
+                /r/{normalizeReferralCode(draft.code)}
+              </span>
+            </p>
+          ) : null}
           <label className="flex items-center gap-2 text-sm text-foreground">
             <input
               type="checkbox"

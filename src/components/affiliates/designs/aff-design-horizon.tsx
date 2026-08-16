@@ -1,6 +1,5 @@
 'use client';
 
-import { AffiliateEnrollForm } from '@/src/components/affiliates/designs/affiliate-enroll-form';
 import {
   AFFILIATE_BENEFITS,
   AFFILIATE_HOW_IT_WORKS,
@@ -9,18 +8,7 @@ import { AffCopyButton, AffFaqList } from '@/src/components/affiliates/designs/s
 import type { AffiliateDesignViewProps } from '@/src/components/affiliates/designs/types';
 
 export function AffDesignHorizon(props: AffiliateDesignViewProps) {
-  const {
-    affiliate,
-    referredByCode,
-    shareUrl,
-    copied,
-    onCopy,
-    signupCode,
-    onSignupCodeChange,
-    enrolling,
-    enrollError,
-    onEnroll,
-  } = props;
+  const { affiliate, referredByCode, shareUrl, copied, onCopy } = props;
 
   return (
     <div className="aff-horizon">
@@ -29,8 +17,8 @@ export function AffDesignHorizon(props: AffiliateDesignViewProps) {
           <p className="aff-horizon__kicker">PepGuide · Affiliates</p>
           <h1>Partner with clarity.</h1>
           <p>
-            Join instantly. Earn 50% on a referred member’s first paid order,
-            then 20% on every order after.
+            Earn 50% on a referred member’s first paid order, then 20% on every
+            order after — with a tracked /r/CODE link.
           </p>
           {affiliate ? (
             <div className="aff-horizon__actions">
@@ -67,6 +55,20 @@ export function AffDesignHorizon(props: AffiliateDesignViewProps) {
                 </strong>
               </div>
               <div className="aff-horizon__stat">
+                <span>Share link</span>
+                <strong className="font-mono text-sm tracking-wide">
+                  {shareUrl}
+                </strong>
+              </div>
+              <div className="aff-horizon__stat">
+                <span>Link clicks</span>
+                <strong>{affiliate.clickCount}</strong>
+              </div>
+              <div className="aff-horizon__stat">
+                <span>Signups</span>
+                <strong>{affiliate.referralCount}</strong>
+              </div>
+              <div className="aff-horizon__stat">
                 <span>First order</span>
                 <strong>{affiliate.firstOrderCommissionPercent}%</strong>
               </div>
@@ -77,13 +79,10 @@ export function AffDesignHorizon(props: AffiliateDesignViewProps) {
             </div>
           ) : (
             <div className="mx-auto mt-[-1.5rem] max-w-lg rounded-[18px] border border-border bg-white p-5 shadow-lg relative z-2">
-              <AffiliateEnrollForm
-                signupCode={signupCode}
-                onSignupCodeChange={onSignupCodeChange}
-                enrolling={enrolling}
-                enrollError={enrollError}
-                onEnroll={onEnroll}
-              />
+              <p className="text-sm text-foreground-secondary">
+                Affiliate seats are provisioned by PepGuide. Once linked, your
+                /r/CODE share link and click tracking show up here.
+              </p>
             </div>
           )}
 

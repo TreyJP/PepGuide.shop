@@ -136,8 +136,9 @@ service cloud.firestore {
     }
 
     // Signup referral affiliates (codes + commission %). Public read so
-    // codes can be validated at signup. Any signed-in user may self-enroll
-    // once (doc id = uid) at the fixed 50% / 20% rates. Admins manage all.
+    // codes can be validated at signup and `/r/CODE` clicks can resolve.
+    // New seats are admin-provisioned. Self-enroll create kept for legacy
+    // docs only. Click increments are public (tracked share links).
     match /referralAffiliates/{affiliateId} {
       allow read: if true;
 
@@ -170,6 +171,14 @@ service cloud.firestore {
           && request.resource.data.referralCount == resource.data.referralCount + 1
         )
         || (
+          // Public click tracking for `/r/CODE` share links.
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['clickCount', 'updatedAt'])
+          && request.resource.data.clickCount is int
+          && request.resource.data.clickCount
+            == resource.data.get('clickCount', 0) + 1
+        )
+        || (
           // Owner may update display name / preferred code only.
           isSignedIn()
           && resource.data.linkedUserId == request.auth.uid
@@ -181,10 +190,40 @@ service cloud.firestore {
           && request.resource.data.commissionPercent
             == resource.data.commissionPercent
           && request.resource.data.referralCount == resource.data.referralCount
+          && request.resource.data.get('clickCount', 0)
+            == resource.data.get('clickCount', 0)
           && request.resource.data.active == resource.data.active
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['name', 'email', 'code', 'updatedAt'])
         );
+    }
+
+    // Tracked referral link clicks from socials / link trees.
+    match /referralClicks/{clickId} {
+      allow create: if request.resource.data.keys()
+          .hasAll(['affiliateId', 'code', 'createdAt'])
+        && request.resource.data.affiliateId is string
+        && request.resource.data.affiliateId.size() > 0
+        && request.resource.data.code is string
+        && request.resource.data.code.size() >= 3
+        && request.resource.data.code.size() <= 32
+        && request.resource.data.createdAt is string
+        && (!('userAgent' in request.resource.data)
+          || request.resource.data.userAgent == null
+          || (request.resource.data.userAgent is string
+            && request.resource.data.userAgent.size() <= 300))
+        && (!('referrer' in request.resource.data)
+          || request.resource.data.referrer == null
+          || (request.resource.data.referrer is string
+            && request.resource.data.referrer.size() <= 500));
+      allow read: if isAdmin()
+        || (
+          isSignedIn()
+          && exists(/databases/$(database)/documents/referralAffiliates/$(resource.data.affiliateId))
+          && get(/databases/$(database)/documents/referralAffiliates/$(resource.data.affiliateId)).data.linkedUserId
+            == request.auth.uid
+        );
+      allow update, delete: if isAdmin();
     }
 
     match /config/admins {

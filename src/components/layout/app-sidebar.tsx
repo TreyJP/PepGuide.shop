@@ -5,6 +5,7 @@ import {
   BookOpen,
   Calculator,
   FlaskConical,
+  Link2,
   Library,
   Lock,
   MessageCircleQuestion,
@@ -27,6 +28,7 @@ import { Button } from '@/src/components/ui/button';
 import { PRO_COMING_SOON } from '@/src/constants/billing';
 import { useAdminAccess } from '@/src/hooks/use-admin-access';
 import { useAdminForumNeedsReply } from '@/src/hooks/use-admin-forum-needs-reply';
+import { useAffiliateAccess } from '@/src/hooks/use-affiliate-access';
 import { useProAccess } from '@/src/hooks/use-pro-access';
 import { cn } from '@/src/lib/utils';
 import { useAuthStore } from '@/src/stores/auth-store';
@@ -127,6 +129,7 @@ export function AppSidebar() {
   const closeSidebar = useUiStore((state) => state.closeSidebar);
   const { isAdmin } = useAdminAccess();
   const forumNeedsAdminReply = useAdminForumNeedsReply();
+  const { canAccess: canAccessAffiliates } = useAffiliateAccess();
   const { isPro, loading: proLoading } = useProAccess();
   const proComingSoon = PRO_COMING_SOON && !isAdmin;
   const proLocked = !PRO_COMING_SOON && !proLoading && !isPro;
@@ -239,6 +242,19 @@ export function AppSidebar() {
                 icon={Settings}
                 active={
                   pathname === '/settings' || pathname.startsWith('/settings/')
+                }
+                onNavigate={closeSidebar}
+              />
+            ) : null}
+
+            {canAccessAffiliates ? (
+              <NavLink
+                href="/affiliates"
+                label="Affiliates"
+                icon={Link2}
+                active={
+                  pathname === '/affiliates' ||
+                  pathname.startsWith('/affiliates/')
                 }
                 onNavigate={closeSidebar}
               />

@@ -22,6 +22,7 @@ import type { KnowledgeCategory, KnowledgeCompound } from '@/src/data/knowledge/
 import { PEP_GUIDE_KNOWLEDGE_PREAMBLE } from '@/src/data/knowledge/system-context';
 import {
   classifyMessage,
+  hasInScopeSignal,
   isProContentInquiry,
 } from '@/src/lib/server/classify';
 import {
@@ -1403,11 +1404,17 @@ export async function generateResearchResponse(
     );
   }
 
-  if (intent.goal === 'off_topic') {
+  // Only hard-refuse as off-topic when the message has no peptide signal.
+  // Legitimate in-scope asks (e.g. "how to get tan" → melanotan) can be
+  // mislabeled off_topic by the intent model; keep those in the research lane.
+  if (intent.goal === 'off_topic' && !hasInScopeSignal(userMessage)) {
     return withUsage(
       buildRefusalResponse('out_of_scope', 'refuse'),
       intentUsage,
     );
+  }
+  if (intent.goal === 'off_topic') {
+    intent.goal = 'general';
   }
 
   const retrievalQuery =

@@ -6,20 +6,20 @@ import {
 export const AFFILIATE_HOW_IT_WORKS = [
   {
     step: '01',
-    title: 'Join in one click',
+    title: 'Get your tracked link',
     description:
-      'Any PepGuide account can open an affiliate seat and claim a personal signup code.',
+      'PepGuide links your account to an affiliate seat and gives you a personal /r/CODE share URL.',
   },
   {
     step: '02',
-    title: 'Share your link',
+    title: 'Post it on your channels',
     description:
-      'Send /sign-up?ref=YOURCODE or have members enter your code when they create an account.',
+      'Add the link to Instagram, TikTok, X, YouTube, or your link tree. Every click is counted.',
   },
   {
     step: '03',
     title: 'Earn on orders',
-    description: `You earn ${AFFILIATE_FIRST_ORDER_COMMISSION_PERCENT}% on a referred member’s first paid order, then ${AFFILIATE_RECURRING_COMMISSION_PERCENT}% on every order after.`,
+    description: `Referred members keep your code at signup. You earn ${AFFILIATE_FIRST_ORDER_COMMISSION_PERCENT}% on their first paid order, then ${AFFILIATE_RECURRING_COMMISSION_PERCENT}% on every order after.`,
   },
 ] as const;
 
@@ -31,36 +31,35 @@ export const AFFILIATE_BENEFITS = [
   },
   {
     id: 'attribution',
-    title: 'Simple attribution',
+    title: 'Click + signup tracking',
     description:
-      'One code, one link. Signups are attributed at account creation — no cookies required.',
+      'Your /r/CODE link records clicks from socials and link trees, then attributes signups when they create an account.',
   },
   {
     id: 'trust',
-    title: 'Open to every account',
+    title: 'Creator seats',
     description:
-      'No private invite list. Create your affiliate seat anytime and start sharing immediately.',
+      'Affiliate access is provisioned by PepGuide. Linked partners see clicks, signups, and their share link in one console.',
   },
 ] as const;
 
 export const AFFILIATE_FAQ = [
   {
-    question: 'Who can become an affiliate?',
+    id: 'where-link',
+    question: 'Where do I put my link?',
     answer:
-      'Any PepGuide account can join. Open Affiliates, choose a code, and create your seat — no approval wait.',
+      'Anywhere you share PepGuide — bio links, stories, Discord, email, or a link-tree slot. Use the /r/CODE URL so clicks are tracked.',
   },
   {
-    question: 'How does commission work?',
-    answer: `You earn ${AFFILIATE_FIRST_ORDER_COMMISSION_PERCENT}% on a referred member’s first paid order, then ${AFFILIATE_RECURRING_COMMISSION_PERCENT}% on every paid order after that.`,
+    id: 'when-paid',
+    question: 'When do I get paid?',
+    answer:
+      'Commission applies to paid orders from members who signed up with your code. Payout details are coordinated with PepGuide.',
   },
   {
-    question: 'How do people use my code?',
+    id: 'change-code',
+    question: 'Can I change my code?',
     answer:
-      'They can open your referral link, or type your code into the optional referral field on the signup page. Google sign-up also picks up a code saved from your link.',
-  },
-  {
-    question: 'When is a signup attributed?',
-    answer:
-      'Only when a new account is created with an active affiliate code. Existing members who sign in later are not re-attributed.',
+      'Ask PepGuide admin to update your seat if you need a new code. Old links stop working once the code changes.',
   },
 ] as const;

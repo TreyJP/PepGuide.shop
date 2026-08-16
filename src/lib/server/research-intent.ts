@@ -54,13 +54,13 @@ Goal rules:
 - recovery: injury, healing, joints, BPC/TB-style recovery
 - sleep: sleep, circadian
 - cognitive: focus, memory, nootropics-as-peptides
-- skin_hair: skin, hair, cosmetic peptides
+- skin_hair: skin, hair, cosmetic peptides, tanning / getting a tan / darker skin / sunless tan / pigmentation (melanotan)
 - sexual: libido, sexual health peptides
 - longevity: aging, longevity peptides
 - general: peptide research that does not fit above
 - off_topic: clearly unrelated (sports scores, coding homework, poems)
 
-Map slang to goals (e.g. "add size" → muscle; "get shredded" → weight_loss; "reta" → retatrutide; "bpc" → BPC-157; "ipa" → ipamorelin).
+Map slang to goals (e.g. "add size" → muscle; "get shredded" → weight_loss; "reta" → retatrutide; "bpc" → BPC-157; "ipa" → ipamorelin; "get tan" / "tanning" / "darker skin" → skin_hair via melanotan).
 If the user says they took/tried ANY peptide and it was not enough / still has the problem → keep the same research lane but recommend a NEXT or ADD-ON option. NEVER restart with the same compound as the answer.
 Examples: still hungry on reta → amylin add-on; tried BPC and still sore → TB-500 / related recovery peers; tried ipamorelin with weak results → CJC / sermorelin peers.
 Never invent personal dosing protocols.`;
@@ -171,6 +171,18 @@ function heuristicIntent(userMessage: string): ResearchIntent {
       keywords: ['sleep', 'circadian'],
       summary: 'User wants sleep-related peptide research.',
       retrievalQuery: 'sleep circadian peptide research',
+    };
+  }
+  if (
+    /\b(tan|tanning|tanned|sunless\s+tan|darker\s+skin|melanotan|mt-?1|mt-?2|skin|hair|cosmetic|wrinkle|pigment(?:ation)?)\b/i.test(
+      lower,
+    )
+  ) {
+    return {
+      goal: 'skin_hair',
+      keywords: ['skin', 'hair', 'tanning', 'melanotan', 'cosmetic'],
+      summary: 'User wants skin / hair / tanning peptide research.',
+      retrievalQuery: 'melanotan tanning skin hair cosmetic peptide research',
     };
   }
 

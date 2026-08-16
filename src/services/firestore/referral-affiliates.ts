@@ -21,6 +21,7 @@ import type {
   AffiliateSelfEnrollInput,
   ReferralAffiliate,
   ReferralAffiliateInput,
+  ReferralClickInput,
 } from '@/src/types/referral-affiliates';
 import { createId } from '@/src/utils/dates';
 
@@ -71,6 +72,7 @@ function mapAffiliate(
         ? data.linkedUserId.trim()
         : null,
     referralCount: Number(data.referralCount ?? 0) || 0,
+    clickCount: Number(data.clickCount ?? 0) || 0,
     createdAt: String(data.createdAt ?? new Date().toISOString()),
     updatedAt: String(data.updatedAt ?? new Date().toISOString()),
   };
@@ -184,6 +186,7 @@ export const referralAffiliatesRepository = {
           ? input.linkedUserId.trim()
           : null,
       referralCount: prev?.referralCount ?? 0,
+      clickCount: prev?.clickCount ?? 0,
       createdAt: prev?.createdAt ?? now,
       updatedAt: now,
     };
@@ -229,6 +232,7 @@ export const referralAffiliatesRepository = {
       active: true,
       linkedUserId: input.userId,
       referralCount: 0,
+      clickCount: 0,
       createdAt: now,
       updatedAt: now,
       selfEnrolled: true,
@@ -246,6 +250,35 @@ export const referralAffiliatesRepository = {
     await updateDoc(doc(requireDb(), 'referralAffiliates', affiliateId), {
       referralCount: increment(1),
       updatedAt: new Date().toISOString(),
+    });
+  },
+
+  /**
+   * Record a tracked `/r/CODE` click. Best-effort; callers should still redirect.
+   */
+  async recordReferralClick(input: ReferralClickInput): Promise<void> {
+    const code = normalizeReferralCode(input.code);
+    if (!input.affiliateId || !code) return;
+
+    const now = new Date().toISOString();
+    const clickRef = doc(collection(requireDb(), 'referralClicks'));
+    await setDoc(clickRef, {
+      affiliateId: input.affiliateId,
+      code,
+      createdAt: now,
+      userAgent:
+        typeof input.userAgent === 'string' && input.userAgent.trim()
+          ? input.userAgent.trim().slice(0, 300)
+          : null,
+      referrer:
+        typeof input.referrer === 'string' && input.referrer.trim()
+          ? input.referrer.trim().slice(0, 500)
+          : null,
+    });
+
+    await updateDoc(doc(requireDb(), 'referralAffiliates', input.affiliateId), {
+      clickCount: increment(1),
+      updatedAt: now,
     });
   },
 };

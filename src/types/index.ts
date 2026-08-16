@@ -238,6 +238,8 @@ export type Peptide = {
   references: Citation[];
   lastReviewedAt: string;
   reviewStatus: 'draft' | 'reviewed' | 'needs_update';
+  /** Shown on All Peptides without a live catalog profile yet. */
+  comingSoon?: boolean;
 };
 
 export type ComparisonRowKey =

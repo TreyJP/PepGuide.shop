@@ -6,10 +6,4 @@ export type AffiliateDesignViewProps = {
   shareUrl: string;
   copied: 'link' | 'code' | null;
   onCopy: (value: string, kind: 'link' | 'code') => void;
-  /** Preferred code for self-serve signup (controlled by workspace). */
-  signupCode: string;
-  onSignupCodeChange: (code: string) => void;
-  enrolling: boolean;
-  enrollError: string | null;
-  onEnroll: () => void;
 };

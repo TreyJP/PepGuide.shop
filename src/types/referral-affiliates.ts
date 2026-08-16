@@ -19,6 +19,8 @@ export type ReferralAffiliate = {
   linkedUserId: string | null;
   /** Signups attributed to this code. */
   referralCount: number;
+  /** Tracked `/r/CODE` link clicks (link trees, socials). */
+  clickCount: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -41,4 +43,11 @@ export type AffiliateSelfEnrollInput = {
   email: string;
   /** Optional custom code; generated when omitted. */
   code?: string;
+};
+
+export type ReferralClickInput = {
+  affiliateId: string;
+  code: string;
+  userAgent?: string | null;
+  referrer?: string | null;
 };
