@@ -103,7 +103,10 @@ export function CalculatorWorkspace() {
             <dl className="calc-gauge__stats">
               <div>
                 <dt>Draw volume</dt>
-                <dd>{formatAmount(result.drawMl, 3)} mL</dd>
+                <dd>
+                  {formatAmount(result.drawMl, 3)} mL (
+                  {formatAmount(result.insulinUnits, 1)} units)
+                </dd>
               </div>
               <div>
                 <dt>Concentration</dt>
