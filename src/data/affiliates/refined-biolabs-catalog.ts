@@ -1,10 +1,12 @@
 import type { PartnerProduct } from '@/src/types/affiliates';
 
 const RB_BASE = 'https://refinedbiolabs.com';
-const RB_COUPON = 'PEPGUIDE';
+const RB_CODE = 'PEPGUIDE';
+const RB_TRACKING = `utm_source=affiliate_marketing&code=${RB_CODE}`;
 
+/** Build a Refined Biolabs product URL with PepGuide affiliate tracking. */
 function rbProduct(slug: string): string {
-  return `${RB_BASE}/shop/${slug}?coupon=${RB_COUPON}`;
+  return `${RB_BASE}/shop/${slug}?${RB_TRACKING}`;
 }
 
 /**
@@ -290,8 +292,8 @@ export const REFINED_BIOLABS_CATALOG: PartnerProduct[] = [
 export const REFINED_BIOLABS_PARTNER = {
   id: 'refined-biolabs',
   label: 'Refined Biolabs',
-  href: `${RB_BASE}/shop?coupon=${RB_COUPON}`,
-  couponCode: 'PEPGUIDE',
+  href: `${RB_BASE}?${RB_TRACKING}`,
+  couponCode: RB_CODE,
   discountLabel: '20% off',
   discountPercent: 20,
 } as const;
