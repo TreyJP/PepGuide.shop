@@ -9,14 +9,13 @@ import {
 } from 'firebase/firestore';
 
 import { createId } from '@/src/lib/utils';
-import { buildAdminDashboardMetrics } from '@/src/lib/admin-metrics';
 import {
   getFirestoreDb,
   shouldUseMockServices,
 } from '@/src/services/firebase/config';
 import { useAuthStore } from '@/src/stores/auth-store';
 import type {
-  AdminDashboardMetrics,
+  AdminDashboardRawData,
   AnalyticsEvent,
   AnalyticsEventName,
 } from '@/src/types/analytics';
@@ -197,23 +196,20 @@ async function loadPartnersLive(): Promise<
   });
 }
 
-function mockMetrics(): AdminDashboardMetrics {
-  return buildAdminDashboardMetrics({
+function mockRawData(): AdminDashboardRawData {
+  return {
+    generatedAt: new Date().toISOString(),
     users: [
       {
         createdAt: new Date().toISOString(),
-        subscriptionTier: 'pro',
         accountStatus: 'active',
-        stripeSubscriptionId: 'sub_mock',
       },
       {
         createdAt: daysAgo(3),
-        subscriptionTier: 'free',
         accountStatus: 'active',
       },
       {
         createdAt: daysAgo(20),
-        subscriptionTier: 'free',
         accountStatus: 'review',
         abuseStrikeCount: 2,
       },
@@ -235,26 +231,37 @@ function mockMetrics(): AdminDashboardMetrics {
               peptideName: 'GL3RT',
             },
           },
+          {
+            id: 'evt_2',
+            name: 'coupon_copy',
+            createdAt: daysAgo(2),
+            userId: 'u2',
+            email: 'member@example.com',
+            path: '/library',
+            meta: { partnerId: 'neurolabs' },
+          },
         ],
     usagePeriods: [
       { id: new Date().toISOString().slice(0, 10), messagesUsed: 12 },
       { id: daysAgo(1).slice(0, 10), messagesUsed: 8 },
+      { id: daysAgo(5).slice(0, 10), messagesUsed: 24 },
     ],
     safetyEvents: [{ createdAt: daysAgo(1) }],
     partners: [
       { id: 'somachems', label: 'SomaChems', active: true },
       { id: 'neurolabs', label: 'NeuroLabs', active: true },
+      { id: 'alaska-labs', label: 'Alaska Labs', active: false },
     ],
-  });
+  };
 }
 
 function daysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
-export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics> {
+export async function loadAdminDashboardRawData(): Promise<AdminDashboardRawData> {
   if (shouldUseMockServices()) {
-    return mockMetrics();
+    return mockRawData();
   }
 
   const [users, events, safetyEvents, usagePeriods, partners] =
@@ -266,26 +273,17 @@ export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics
       loadPartnersLive().catch(() => []),
     ]);
 
-  return buildAdminDashboardMetrics({
+  return {
+    generatedAt: new Date().toISOString(),
     users: users.map((row) => ({
       email: typeof row.email === 'string' ? row.email : undefined,
       createdAt: typeof row.createdAt === 'string' ? row.createdAt : undefined,
-      subscriptionTier:
-        typeof row.subscriptionTier === 'string'
-          ? row.subscriptionTier
-          : undefined,
       accountStatus:
         typeof row.accountStatus === 'string' ? row.accountStatus : undefined,
       chatBlockedUntil:
         typeof row.chatBlockedUntil === 'string' ? row.chatBlockedUntil : null,
       abuseStrikeCount:
         typeof row.abuseStrikeCount === 'number' ? row.abuseStrikeCount : 0,
-      stripeSubscriptionId:
-        typeof row.stripeSubscriptionId === 'string'
-          ? row.stripeSubscriptionId
-          : null,
-      stripeCustomerId:
-        typeof row.stripeCustomerId === 'string' ? row.stripeCustomerId : null,
     })),
     events,
     usagePeriods,
@@ -293,5 +291,12 @@ export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics
       createdAt: typeof row.createdAt === 'string' ? row.createdAt : undefined,
     })),
     partners,
-  });
+  };
+}
+
+/** @deprecated Use loadAdminDashboardRawData — kept for older imports. */
+export async function loadAdminDashboardMetrics() {
+  const { buildAdminDashboardMetrics } = await import('@/src/lib/admin-metrics');
+  const raw = await loadAdminDashboardRawData();
+  return buildAdminDashboardMetrics(raw, '7d');
 }

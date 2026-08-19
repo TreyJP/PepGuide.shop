@@ -370,7 +370,7 @@ export default function AdminPage() {
               { id: 'affiliates', label: 'Affiliates' },
               { id: 'chats', label: 'Chats' },
               { id: 'premium', label: 'Users' },
-              { id: 'consults', label: 'Ask a Pro' },
+              { id: 'consults', label: 'Ask a Professional' },
               { id: 'access', label: 'Access' },
             ] as const
           ).map((item) => (
@@ -392,7 +392,7 @@ export default function AdminPage() {
       </header>
 
       {tab === 'dashboard' ? (
-        <div className="mx-auto max-w-6xl p-6">
+        <div className="mx-auto max-w-7xl p-4 sm:p-6">
           <AdminDashboard />
         </div>
       ) : null}

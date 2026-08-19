@@ -1,11 +1,32 @@
 'use client';
 
 import { ThemeProvider } from 'next-themes';
-import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
 
+import { AuthModal } from '@/src/components/auth/sign-in-modal';
 import { authService } from '@/src/services/auth';
 import { initFirebaseAnalytics } from '@/src/services/firebase/config';
 import { useAuthStore } from '@/src/stores/auth-store';
+import { useUiStore } from '@/src/stores/ui-store';
+
+function AuthQueryListener() {
+  const searchParams = useSearchParams();
+  const openSignInModal = useUiStore((state) => state.openSignInModal);
+  const openSignUpModal = useUiStore((state) => state.openSignUpModal);
+
+  useEffect(() => {
+    if (searchParams.get('signup') === '1') {
+      openSignUpModal();
+      return;
+    }
+    if (searchParams.get('signin') === '1') {
+      openSignInModal();
+    }
+  }, [searchParams, openSignInModal, openSignUpModal]);
+
+  return null;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const setUser = useAuthStore((state) => state.setUser);
@@ -21,7 +42,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
       setInitializing(false);
     });
 
-    // Safety valve: never leave the app on the loading screen forever.
     const timeoutId = window.setTimeout(() => {
       if (!settled) setInitializing(false);
     }, 8000);
@@ -42,6 +62,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem={false}
     >
       {children}
+      <AuthModal />
+      <Suspense fallback={null}>
+        <AuthQueryListener />
+      </Suspense>
     </ThemeProvider>
   );
 }

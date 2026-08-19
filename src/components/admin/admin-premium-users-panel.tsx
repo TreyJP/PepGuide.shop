@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink, RefreshCw, Search, Users } from 'lucide-react';
+import { RefreshCw, Search, Users } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/src/components/ui/button';
@@ -13,16 +13,11 @@ type AdminUserRow = {
   id: string;
   email: string;
   displayName: string;
-  subscriptionTier: 'free' | 'pro';
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
   createdAt: string | null;
   updatedAt: string | null;
   chatCount: number;
   accountStatus: string;
 };
-
-type TierFilter = 'all' | 'pro' | 'free';
 
 async function authHeaders(): Promise<HeadersInit> {
   const token = await getFirebaseAuth()?.currentUser?.getIdToken();
@@ -54,7 +49,6 @@ export function AdminPremiumUsersPanel() {
 }
 
 export function AdminUsersPanel() {
-  const [tier, setTier] = useState<TierFilter>('all');
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,49 +80,21 @@ export function AdminUsersPanel() {
     void loadUsers();
   }, [loadUsers]);
 
-  const proCount = useMemo(
-    () =>
-      users.filter(
-        (user) =>
-          user.subscriptionTier === 'pro' && !isTestAccountEmail(user.email),
-      ).length,
-    [users],
-  );
-  const freeCount = users.length - proCount;
-
-  const byTier = useMemo(() => {
-    if (tier === 'pro') {
-      return users.filter(
-        (user) =>
-          user.subscriptionTier === 'pro' && !isTestAccountEmail(user.email),
-      );
-    }
-    if (tier === 'free') {
-      return users.filter(
-        (user) =>
-          user.subscriptionTier !== 'pro' || isTestAccountEmail(user.email),
-      );
-    }
-    return users;
-  }, [users, tier]);
-
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return byTier;
-    return byTier.filter((user) => {
-      const haystack = [
-        user.displayName,
-        user.email,
-        user.id,
-        user.subscriptionTier,
-        user.stripeCustomerId ?? '',
-        user.stripeSubscriptionId ?? '',
-      ]
+    if (!needle) return users;
+    return users.filter((user) => {
+      const haystack = [user.displayName, user.email, user.id, user.accountStatus]
         .join(' ')
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [byTier, query]);
+  }, [users, query]);
+
+  const activeCount = useMemo(
+    () => users.filter((user) => (user.accountStatus || 'active') === 'active').length,
+    [users],
+  );
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 sm:p-6">
@@ -138,7 +104,7 @@ export function AdminUsersPanel() {
             Users
           </h2>
           <p className="mt-1 text-sm text-foreground-secondary">
-            All registered accounts, with filters for Premium and Free members.
+            All registered accounts across PepGuide.
           </p>
         </div>
         <Button
@@ -153,7 +119,7 @@ export function AdminUsersPanel() {
         </Button>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2">
         <div className="rounded-[14px] border border-border bg-surface px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-foreground-secondary">
             Total users
@@ -164,44 +130,12 @@ export function AdminUsersPanel() {
         </div>
         <div className="rounded-[14px] border border-border bg-surface px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-foreground-secondary">
-            Premium (Pro)
+            Active accounts
           </p>
           <p className="mt-1 font-[family-name:var(--font-display)] text-2xl font-semibold tabular-nums text-accent">
-            {proCount}
+            {activeCount}
           </p>
         </div>
-        <div className="rounded-[14px] border border-border bg-surface px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-foreground-secondary">
-            Free
-          </p>
-          <p className="mt-1 font-[family-name:var(--font-display)] text-2xl font-semibold tabular-nums text-foreground">
-            {freeCount}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {(
-          [
-            { id: 'all', label: 'All users' },
-            { id: 'pro', label: 'Premium' },
-            { id: 'free', label: 'Free' },
-          ] as const
-        ).map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setTier(item.id)}
-            className={cn(
-              'h-9 rounded-[10px] border px-3 text-sm font-semibold transition-colors',
-              tier === item.id
-                ? 'border-accent bg-accent text-white'
-                : 'border-border bg-surface text-foreground-secondary hover:bg-surface-secondary',
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -211,7 +145,7 @@ export function AdminUsersPanel() {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search name, email, Stripe id…"
+            placeholder="Search name, email, or user id…"
             className="h-10 w-full rounded-[12px] border border-border bg-surface pl-9 pr-3 text-sm text-foreground outline-none ring-accent focus:ring-2"
           />
         </div>
@@ -219,7 +153,7 @@ export function AdminUsersPanel() {
           {loading
             ? 'Loading…'
             : `${filtered.length}${
-                filtered.length === byTier.length ? '' : ` of ${byTier.length}`
+                filtered.length === users.length ? '' : ` of ${users.length}`
               } shown`}
         </p>
       </div>
@@ -239,26 +173,25 @@ export function AdminUsersPanel() {
           description={
             users.length === 0
               ? 'Registered accounts will appear here once people sign up.'
-              : 'Try a different filter or search.'
+              : 'Try a different search.'
           }
         />
       ) : (
         <div className="overflow-hidden rounded-[16px] border border-border bg-surface">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full min-w-[640px] text-left text-sm">
               <thead className="border-b border-border bg-surface-secondary/70 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground-secondary">
                 <tr>
                   <th className="px-4 py-3">Member</th>
-                  <th className="px-4 py-3">Plan</th>
-                  <th className="px-4 py-3">Stripe</th>
+                  <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Chats</th>
+                  <th className="px-4 py-3">Joined</th>
                   <th className="px-4 py-3">Updated</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((user) => {
                   const isTest = isTestAccountEmail(user.email);
-                  const isPro = user.subscriptionTier === 'pro' && !isTest;
                   return (
                     <tr
                       key={user.id}
@@ -281,51 +214,17 @@ export function AdminUsersPanel() {
                             'inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.06em]',
                             isTest
                               ? 'bg-amber-500/15 text-amber-800'
-                              : isPro
-                                ? 'bg-accent-muted text-accent'
-                                : 'bg-surface-secondary text-foreground-secondary',
+                              : 'bg-surface-secondary text-foreground-secondary',
                           )}
                         >
-                          {isTest ? 'Test account' : isPro ? 'Pro' : 'Free'}
+                          {isTest ? 'Test account' : user.accountStatus || 'active'}
                         </span>
-                        <p className="mt-1.5 text-xs capitalize text-foreground-secondary">
-                          {user.accountStatus || 'active'}
-                        </p>
-                        <p className="mt-1 text-[11px] text-foreground-secondary">
-                          Joined {formatWhen(user.createdAt)}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        {user.stripeCustomerId ? (
-                          <div className="space-y-1">
-                            <a
-                              href={`https://dashboard.stripe.com/customers/${user.stripeCustomerId}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
-                            >
-                              Customer
-                              <ExternalLink className="size-3" />
-                            </a>
-                            <p className="font-mono text-[11px] text-foreground-secondary">
-                              {user.stripeCustomerId}
-                            </p>
-                            {user.stripeSubscriptionId ? (
-                              <p className="font-mono text-[11px] text-foreground-secondary">
-                                sub: {user.stripeSubscriptionId}
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-foreground-secondary">
-                            {isPro
-                              ? 'No Stripe ids (manual / admin Pro)'
-                              : '—'}
-                          </p>
-                        )}
                       </td>
                       <td className="px-4 py-3 align-top tabular-nums text-foreground">
                         {user.chatCount}
+                      </td>
+                      <td className="px-4 py-3 align-top text-xs text-foreground-secondary">
+                        {formatWhen(user.createdAt)}
                       </td>
                       <td className="px-4 py-3 align-top text-xs text-foreground-secondary">
                         {formatWhen(user.updatedAt)}

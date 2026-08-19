@@ -2,60 +2,30 @@
 
 import {
   Activity,
-  CreditCard,
   ExternalLink,
   Loader2,
-  MousePointerClick,
   RefreshCw,
   ShieldAlert,
+  Tag,
   Users,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import '@/src/components/admin/admin-dashboard.css';
 import { Button } from '@/src/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/src/components/ui/card';
-import { formatAffiliateUsd } from '@/src/data/affiliates/slots';
-import { loadAdminDashboardMetrics } from '@/src/services/firestore/analytics';
-import type { AdminDashboardMetrics } from '@/src/types/analytics';
+import { buildAdminDashboardMetrics } from '@/src/lib/admin-metrics';
+import { loadAdminDashboardRawData } from '@/src/services/firestore/analytics';
+import type {
+  AdminDashboardRawData,
+  AdminMetricsRange,
+} from '@/src/types/analytics';
 
-function MetricCard({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string;
-  value: string | number;
-  hint?: string;
-  icon: typeof Users;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-start justify-between gap-3 pt-5">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground-secondary">
-            {label}
-          </p>
-          <p className="mt-2 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-foreground">
-            {value}
-          </p>
-          {hint ? (
-            <p className="mt-1 text-xs text-foreground-secondary">{hint}</p>
-          ) : null}
-        </div>
-        <span className="inline-flex size-9 items-center justify-center rounded-[12px] bg-accent-muted text-accent">
-          <Icon className="size-4" />
-        </span>
-      </CardContent>
-    </Card>
-  );
-}
+const RANGES: Array<{ id: AdminMetricsRange; label: string }> = [
+  { id: '1d', label: '1D' },
+  { id: '7d', label: '7D' },
+  { id: '30d', label: '30D' },
+  { id: 'all', label: 'All' },
+];
 
 function formatWhen(iso: string): string {
   try {
@@ -70,8 +40,16 @@ function formatWhen(iso: string): string {
   }
 }
 
+function rangeLabel(range: AdminMetricsRange): string {
+  if (range === '1d') return 'Last 24 hours';
+  if (range === '7d') return 'Last 7 days';
+  if (range === '30d') return 'Last 30 days';
+  return 'All time';
+}
+
 export function AdminDashboard() {
-  const [metrics, setMetrics] = useState<AdminDashboardMetrics | null>(null);
+  const [raw, setRaw] = useState<AdminDashboardRawData | null>(null);
+  const [range, setRange] = useState<AdminMetricsRange>('7d');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,8 +57,8 @@ export function AdminDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const data = await loadAdminDashboardMetrics();
-      setMetrics(data);
+      const data = await loadAdminDashboardRawData();
+      setRaw(data);
     } catch (err) {
       setError(
         err instanceof Error
@@ -96,9 +74,22 @@ export function AdminDashboard() {
     void refresh();
   }, [refresh]);
 
+  const metrics = useMemo(
+    () => (raw ? buildAdminDashboardMetrics(raw, range) : null),
+    [raw, range],
+  );
+
+  const maxPartnerClicks = useMemo(() => {
+    if (!metrics?.affiliates.clicksByPartner.length) return 1;
+    return Math.max(
+      ...metrics.affiliates.clicksByPartner.map((row) => row.clicks),
+      1,
+    );
+  }, [metrics]);
+
   if (loading && !metrics) {
     return (
-      <div className="flex items-center gap-2 py-16 text-sm text-foreground-secondary">
+      <div className="admin-dash__loading">
         <Loader2 className="size-4 animate-spin" />
         Loading dashboard…
       </div>
@@ -107,8 +98,8 @@ export function AdminDashboard() {
 
   if (error && !metrics) {
     return (
-      <div className="space-y-3 py-10">
-        <p className="text-sm text-red-600">{error}</p>
+      <div className="space-y-3">
+        <p className="admin-dash__error">{error}</p>
         <Button size="sm" variant="secondary" onClick={() => void refresh()}>
           Retry
         </Button>
@@ -118,213 +109,183 @@ export function AdminDashboard() {
 
   if (!metrics) return null;
 
-  const { users, sales, engagement, affiliates } = metrics;
+  const { users, engagement, affiliates } = metrics;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm text-foreground-secondary">
-            Site-wide metrics · updated {formatWhen(metrics.generatedAt)}
-          </p>
-          {error ? (
-            <p className="mt-1 text-xs text-red-600">{error}</p>
-          ) : null}
-        </div>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => void refresh()}
-          disabled={loading}
-        >
-          {loading ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <RefreshCw className="size-3.5" />
-          )}
-          Refresh
-        </Button>
-      </div>
+    <div className="admin-dash space-y-4">
+      <section className="admin-dash__hero">
+        <div className="admin-dash__hero-top">
+          <div>
+            <p className="admin-dash__eyebrow">Operations overview</p>
+            <h2 className="admin-dash__title">Admin dashboard</h2>
+            <p className="admin-dash__subtitle">
+              {rangeLabel(range)} · updated {formatWhen(metrics.generatedAt)}
+            </p>
+          </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Total users"
-          value={users.total}
-          hint={`+${users.new7d} in 7d · +${users.new30d} in 30d`}
-          icon={Users}
-        />
-        <MetricCard
-          label="Pro users"
-          value={users.pro}
-          hint={`${users.free} free · ${users.withStripe} with Stripe`}
-          icon={CreditCard}
-        />
-        <MetricCard
-          label="Est. monthly revenue"
-          value={formatAffiliateUsd(sales.estimatedMrrUsd)}
-          hint={`${sales.proSubscribers} × Pro · ${sales.checkoutCompletedAll} recorded sales`}
-          icon={CreditCard}
-        />
-        <MetricCard
-          label="Referral clicks"
-          value={affiliates.clicksAll}
-          hint={`${affiliates.clicks7d} in 7d · ${affiliates.uniqueClickersAll} unique people`}
-          icon={MousePointerClick}
-        />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales</CardTitle>
-            <CardDescription>PepGuide Pro subscriptions</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="Pro subscribers" value={sales.proSubscribers} />
-            <Row
-              label="Est. MRR"
-              value={formatAffiliateUsd(sales.estimatedMrrUsd)}
-            />
-            <Row
-              label="Checkouts started (7d)"
-              value={sales.checkoutStarted7d}
-            />
-            <Row
-              label="Checkouts completed (7d)"
-              value={sales.checkoutCompleted7d}
-            />
-            <Row
-              label="All-time completed"
-              value={sales.checkoutCompletedAll}
-            />
-            <Row
-              label="Est. all-time revenue"
-              value={formatAffiliateUsd(sales.estimatedRevenueAllUsd)}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Users & moderation</CardTitle>
-            <CardDescription>Account health across the site</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="Active" value={users.byStatus.active} />
-            <Row label="Review" value={users.byStatus.review} />
-            <Row label="Cooldown" value={users.byStatus.cooldown} />
-            <Row label="Suspended" value={users.byStatus.suspended} />
-            <Row label="Chat blocked now" value={users.chatBlocked} />
-            <Row label="With abuse strikes" value={users.withAbuseStrikes} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Engagement</CardTitle>
-            <CardDescription>Chat and product activity</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="Messages today" value={engagement.messagesToday} />
-            <Row
-              label="Active chatters today"
-              value={engagement.activeChattersToday}
-            />
-            <Row label="Messages (7d)" value={engagement.messages7d} />
-            <Row label="Coupon copies (7d)" value={engagement.couponCopies7d} />
-            <Row
-              label="Coupon copies (all)"
-              value={engagement.couponCopiesAll}
-            />
-            <Row
-              label="Safety events (7d)"
-              value={engagement.safetyEvents7d}
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Affiliate partners</CardTitle>
-            <CardDescription>
-              {affiliates.activePartners} active / {affiliates.totalPartners}{' '}
-              total
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {affiliates.clicksByPartner.length === 0 ? (
-              <p className="text-foreground-secondary">
-                No referral clicks recorded yet. Clicks start logging when users
-                open partner links.
-              </p>
-            ) : (
-              affiliates.clicksByPartner.map((row) => (
-                <Row
-                  key={row.partnerId}
-                  label={row.label}
-                  value={`${row.clicks} click${row.clicks === 1 ? '' : 's'}`}
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="size-4 text-accent" />
-                People who clicked referral links
-              </CardTitle>
-              <CardDescription>
-                Latest outbound partner clicks with user email when signed in
-              </CardDescription>
+          <div className="admin-dash__toolbar">
+            <div
+              className="admin-dash__range"
+              role="group"
+              aria-label="Time range"
+            >
+              {RANGES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  data-active={range === item.id}
+                  aria-pressed={range === item.id}
+                  onClick={() => setRange(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
-          </CardHeader>
-          <CardContent>
-            {affiliates.recentClicks.length === 0 ? (
-              <p className="text-sm text-foreground-secondary">
-                No clicks yet.
+            <button
+              type="button"
+              className="admin-dash__refresh"
+              onClick={() => void refresh()}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="size-3.5" />
+              )}
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {error ? <p className="relative z-[1] mt-3 text-sm text-red-200">{error}</p> : null}
+
+        <div className="admin-dash__kpis">
+          <Kpi
+            label="Total users"
+            value={users.total}
+            hint={`+${users.newInRange} new in ${range.toUpperCase()}`}
+          />
+          <Kpi
+            label="Chat messages"
+            value={engagement.messages}
+            hint={`${engagement.activeChatters} active chat day${engagement.activeChatters === 1 ? '' : 's'}`}
+          />
+          <Kpi
+            label="Referral clicks"
+            value={affiliates.clicks}
+            hint={`${affiliates.uniqueClickers} unique people`}
+          />
+          <Kpi
+            label="Coupon copies"
+            value={engagement.couponCopies}
+            hint={`${affiliates.activePartners} active partners`}
+          />
+        </div>
+      </section>
+
+      <div className="admin-dash__grid">
+        <div className="space-y-4">
+          <Panel
+            title="User health"
+            description="Account status across the platform"
+            icon={Users}
+          >
+            <Stat label="New signups" value={users.newInRange} />
+            <Stat label="Active accounts" value={users.byStatus.active} />
+            <Stat label="Under review" value={users.byStatus.review} />
+            <Stat label="Cooldown" value={users.byStatus.cooldown} />
+            <Stat label="Suspended" value={users.byStatus.suspended} />
+            <Stat label="Chat blocked now" value={users.chatBlocked} />
+            <Stat label="With abuse strikes" value={users.withAbuseStrikes} />
+          </Panel>
+
+          <Panel
+            title="Engagement & safety"
+            description={`Activity tracked in ${rangeLabel(range).toLowerCase()}`}
+            icon={ShieldAlert}
+          >
+            <Stat label="Messages sent" value={engagement.messages} />
+            <Stat label="Active chat days" value={engagement.activeChatters} />
+            <Stat label="Coupon copies" value={engagement.couponCopies} />
+            <Stat label="Safety events" value={engagement.safetyEvents} />
+          </Panel>
+        </div>
+
+        <div className="space-y-4">
+          <Panel
+            title="Partner performance"
+            description={`${affiliates.activePartners} active / ${affiliates.totalPartners} total vendors`}
+            icon={Tag}
+          >
+            {affiliates.clicksByPartner.length === 0 ? (
+              <p className="admin-dash__empty">
+                No referral clicks in this period yet.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-left text-sm">
+              <div className="admin-dash__partner-bar">
+                {affiliates.clicksByPartner.map((row) => (
+                  <div key={row.partnerId} className="admin-dash__partner-row">
+                    <div className="admin-dash__partner-meta">
+                      <p className="admin-dash__partner-name">{row.label}</p>
+                      <div className="admin-dash__partner-track">
+                        <div
+                          className="admin-dash__partner-fill"
+                          style={{
+                            width: `${Math.max(8, (row.clicks / maxPartnerClicks) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <span className="admin-dash__partner-count">
+                      {row.clicks}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
+
+          <Panel
+            title="Recent referral activity"
+            description="Latest outbound partner clicks with member email when signed in"
+            icon={Activity}
+          >
+            {affiliates.recentClicks.length === 0 ? (
+              <p className="admin-dash__empty">No clicks in this period.</p>
+            ) : (
+              <div className="admin-dash__table-wrap">
+                <table className="admin-dash__table">
                   <thead>
-                    <tr className="border-b border-border text-[11px] uppercase tracking-[0.12em] text-foreground-secondary">
-                      <th className="py-2 pr-3 font-semibold">When</th>
-                      <th className="py-2 pr-3 font-semibold">Person</th>
-                      <th className="py-2 pr-3 font-semibold">Partner</th>
-                      <th className="py-2 pr-3 font-semibold">Peptide</th>
-                      <th className="py-2 font-semibold">Link</th>
+                    <tr>
+                      <th>When</th>
+                      <th>Person</th>
+                      <th>Partner</th>
+                      <th>Peptide</th>
+                      <th>Link</th>
                     </tr>
                   </thead>
                   <tbody>
                     {affiliates.recentClicks.map((click) => (
-                      <tr
-                        key={click.id}
-                        className="border-b border-border/70 last:border-0"
-                      >
-                        <td className="py-2.5 pr-3 text-foreground-secondary">
+                      <tr key={click.id}>
+                        <td className="text-foreground-secondary">
                           {formatWhen(click.createdAt)}
                         </td>
-                        <td className="max-w-[9rem] truncate py-2.5 pr-3 text-foreground sm:max-w-[14rem]">
+                        <td className="max-w-[10rem] truncate text-foreground">
                           {click.email || click.userId || 'Anonymous'}
                         </td>
-                        <td className="py-2.5 pr-3 text-foreground">
+                        <td className="text-foreground">
                           {click.partnerLabel || click.partnerId || '—'}
                         </td>
-                        <td className="py-2.5 pr-3 text-foreground">
+                        <td className="text-foreground">
                           {click.peptideName || click.peptideId || '—'}
                         </td>
-                        <td className="py-2.5">
+                        <td>
                           {click.href ? (
                             <a
                               href={click.href}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-accent hover:underline"
+                              className="inline-flex items-center gap-1 font-medium text-accent hover:underline"
                             >
                               Open
                               <ExternalLink className="size-3" />
@@ -339,37 +300,65 @@ export function AdminDashboard() {
                 </table>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </Panel>
+        </div>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldAlert className="size-4 text-accent" />
-            Safety snapshot
-          </CardTitle>
-          <CardDescription>
-            Abuse / policy events written by the server
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-3 text-sm">
-          <Row label="Events (7d)" value={engagement.safetyEvents7d} />
-          <Row label="Events (all loaded)" value={engagement.safetyEventsAll} />
-          <Row label="Users with strikes" value={users.withAbuseStrikes} />
-        </CardContent>
-      </Card>
     </div>
   );
 }
 
-function Row({ label, value }: { label: string; value: string | number }) {
+function Kpi({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: number;
+  hint: string;
+}) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3 rounded-[10px] bg-surface-secondary/60 px-3 py-2">
-      <span className="min-w-0 truncate text-foreground-secondary">{label}</span>
-      <span className="shrink-0 font-semibold tabular-nums text-foreground">
-        {value}
-      </span>
+    <article className="admin-dash__kpi">
+      <p className="admin-dash__kpi-label">{label}</p>
+      <p className="admin-dash__kpi-value">{value.toLocaleString()}</p>
+      <p className="admin-dash__kpi-hint">{hint}</p>
+    </article>
+  );
+}
+
+function Panel({
+  title,
+  description,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  description: string;
+  icon: typeof Users;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="admin-dash__panel">
+      <div className="admin-dash__panel-head">
+        <div>
+          <h3 className="admin-dash__panel-title flex items-center gap-2">
+            <Icon className="size-4 text-accent" />
+            {title}
+          </h3>
+          <p className="admin-dash__panel-desc">{description}</p>
+        </div>
+      </div>
+      <div className="admin-dash__panel-body">
+        <div className="admin-dash__stat-grid">{children}</div>
+      </div>
+    </section>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="admin-dash__stat-row">
+      <span className="admin-dash__stat-label">{label}</span>
+      <span className="admin-dash__stat-value">{value}</span>
     </div>
   );
 }

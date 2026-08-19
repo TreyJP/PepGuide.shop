@@ -17,9 +17,7 @@ import { Badge } from '@/src/components/ui/badge';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { BRAND } from '@/src/constants/brand';
-
-
-
+import { useUiStore } from '@/src/stores/ui-store';
 const HOW_IT_WORKS = [
   {
     step: '01',
@@ -93,6 +91,9 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 }
 
 export default function LandingPage() {
+  const openSignInModal = useUiStore((state) => state.openSignInModal);
+  const openSignUpModal = useUiStore((state) => state.openSignUpModal);
+
   return (
     <div className="min-h-svh">
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -108,11 +109,14 @@ export default function LandingPage() {
           </Link>
 
           <nav className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-            <Link href="/sign-in">
-              <Button variant="ghost" size="sm" className="sm:h-10 sm:px-4">
-                Sign in
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="sm:h-10 sm:px-4"
+              onClick={() => openSignInModal()}
+            >
+              Sign in
+            </Button>
             <Link href="/chat">
               <Button size="sm" className="sm:h-10 sm:px-4">
                 <span className="sm:hidden">Start</span>
@@ -145,11 +149,15 @@ export default function LandingPage() {
                 <ArrowRight className="size-4" />
               </Button>
             </Link>
-            <Link href="/sign-in">
-              <Button size="lg" variant="secondary">
-                Explore library
-              </Button>
-            </Link>
+            <Button
+              size="lg"
+              variant="secondary"
+              onClick={() =>
+                openSignInModal('Sign in to explore the peptide library.')
+              }
+            >
+              Explore library
+            </Button>
           </div>
           <p className="mt-8 text-sm text-foreground-secondary/90">{BRAND.notice}</p>
         </div>
@@ -239,12 +247,15 @@ export default function LandingPage() {
                 Curated peptide profiles
               </h2>
             </div>
-            <Link href="/sign-in">
-              <Button variant="secondary">
-                Browse library
-                <BookOpen className="size-4" />
-              </Button>
-            </Link>
+            <Button
+              variant="secondary"
+              onClick={() =>
+                openSignInModal('Sign in to browse the peptide library.')
+              }
+            >
+              Browse library
+              <BookOpen className="size-4" />
+            </Button>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {[
@@ -409,12 +420,20 @@ export default function LandingPage() {
             <Logo variant="full" size="sm" />
           </Link>
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-foreground-secondary">
-            <Link href="/sign-in" className="hover:text-foreground">
+            <button
+              type="button"
+              className="hover:text-foreground"
+              onClick={() => openSignInModal()}
+            >
               Sign in
-            </Link>
-            <Link href="/sign-up" className="hover:text-foreground">
+            </button>
+            <button
+              type="button"
+              className="hover:text-foreground"
+              onClick={() => openSignUpModal()}
+            >
               Sign up
-            </Link>
+            </button>
 
             <span>{BRAND.notice}</span>
           </div>

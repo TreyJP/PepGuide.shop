@@ -16,15 +16,14 @@ export type AnalyticsEvent = {
   meta: Record<string, string | number | boolean | null>;
 };
 
+export type AdminMetricsRange = '1d' | '7d' | '30d' | 'all';
+
 export type AdminDashboardMetrics = {
   generatedAt: string;
+  range: AdminMetricsRange;
   users: {
     total: number;
-    pro: number;
-    free: number;
-    new7d: number;
-    new30d: number;
-    withStripe: number;
+    newInRange: number;
     byStatus: {
       active: number;
       review: number;
@@ -34,28 +33,15 @@ export type AdminDashboardMetrics = {
     chatBlocked: number;
     withAbuseStrikes: number;
   };
-  sales: {
-    proSubscribers: number;
-    estimatedMrrUsd: number;
-    checkoutStarted7d: number;
-    checkoutCompleted7d: number;
-    checkoutCompletedAll: number;
-    estimatedRevenueAllUsd: number;
-  };
   engagement: {
-    messagesToday: number;
-    activeChattersToday: number;
-    messages7d: number;
-    couponCopies7d: number;
-    couponCopiesAll: number;
-    safetyEvents7d: number;
-    safetyEventsAll: number;
+    messages: number;
+    activeChatters: number;
+    couponCopies: number;
+    safetyEvents: number;
   };
   affiliates: {
-    clicks7d: number;
-    clicksAll: number;
-    uniqueClickers7d: number;
-    uniqueClickersAll: number;
+    clicks: number;
+    uniqueClickers: number;
     activePartners: number;
     totalPartners: number;
     clicksByPartner: Array<{ partnerId: string; label: string; clicks: number }>;
@@ -71,4 +57,23 @@ export type AdminDashboardMetrics = {
       href: string | null;
     }>;
   };
+};
+
+export type AdminDashboardRawData = {
+  generatedAt: string;
+  users: Array<{
+    email?: string;
+    createdAt?: string;
+    accountStatus?: string;
+    chatBlockedUntil?: string | null;
+    abuseStrikeCount?: number;
+  }>;
+  events: AnalyticsEvent[];
+  usagePeriods: Array<{
+    id?: string;
+    messagesUsed?: number;
+    updatedAt?: string;
+  }>;
+  safetyEvents: Array<{ createdAt?: string }>;
+  partners: Array<{ id: string; label?: string; active?: boolean }>;
 };

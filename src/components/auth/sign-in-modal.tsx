@@ -1,104 +1,118 @@
 'use client';
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { X } from 'lucide-react';
 
-import { Logo } from '@/src/components/brand/logo';
-import { Button } from '@/src/components/ui/button';
-import { BRAND } from '@/src/constants/brand';
+import '@/src/components/auth/auth-forms.css';
+import { InAppBrowserGate } from '@/src/components/auth/in-app-browser-gate';
+import { SignInForm } from '@/src/components/auth/sign-in-form';
+import { SignUpForm } from '@/src/components/auth/sign-up-form';
+import { ModalShell } from '@/src/components/ui/modal-shell';
+import { cn } from '@/src/lib/utils';
+import { useAuthStore } from '@/src/stores/auth-store';
+import { useUiStore } from '@/src/stores/ui-store';
 
-type SignInModalProps = {
-  open: boolean;
-  onClose: () => void;
-  message?: string;
-};
+const DEFAULT_SIGN_IN_MESSAGE =
+  'Sign in to start researching with PepGuide AI and save your chats.';
+const DEFAULT_SIGN_UP_MESSAGE =
+  'Free access to chat, bookmarks, vendor reviews, and more.';
 
-export function SignInModal({
-  open,
-  onClose,
-  message = 'Sign in to start researching with PepGuide AI and save your chats.',
-}: SignInModalProps) {
-  const router = useRouter();
+const SIGN_UP_PERKS = ['AI chat', 'Bookmarks', 'Vendor reviews'] as const;
+
+export function AuthModal() {
+  const user = useAuthStore((state) => state.user);
+  const open = useUiStore((state) => state.authModalOpen);
+  const mode = useUiStore((state) => state.authModalMode);
+  const message = useUiStore((state) => state.authModalMessage);
+  const closeAuthModal = useUiStore((state) => state.closeAuthModal);
+  const setAuthModalMode = useUiStore((state) => state.setAuthModalMode);
 
   useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previous;
-    };
-  }, [open, onClose]);
+    if (user && open) closeAuthModal();
+  }, [user, open, closeAuthModal]);
 
-  if (!open) return null;
+  const isSignUp = mode === 'sign-up';
+  const title = isSignUp ? 'Create your account' : 'Sign in to continue';
+  const description =
+    message ||
+    (isSignUp ? DEFAULT_SIGN_UP_MESSAGE : DEFAULT_SIGN_IN_MESSAGE);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay)] p-4 sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="sign-in-modal-title"
-      onClick={onClose}
-    >
-      <div
-        className="relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-[18px] border border-border bg-surface p-5 shadow-xl sm:p-6"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-3 top-3 rounded-[10px] p-2 text-foreground-secondary hover:bg-surface-secondary hover:text-foreground"
-          aria-label="Close"
-        >
-          <X className="size-4" />
-        </button>
-
-        <div className="mb-5 flex flex-col items-center gap-3 text-center">
-          <Logo variant="full" size="lg" priority className="max-w-[220px]" />
-          <div>
-            <h2
-              id="sign-in-modal-title"
-              className="font-[family-name:var(--font-display)] text-xl font-semibold text-foreground"
-            >
-              Sign in to continue
-            </h2>
-            <p className="mt-2 text-sm text-foreground-secondary">{message}</p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <Button
-            className="w-full"
-            onClick={() => {
-              onClose();
-              router.push('/sign-in');
-            }}
-          >
-            Sign in
-          </Button>
-          <Button
-            className="w-full"
-            variant="secondary"
-            onClick={() => {
-              onClose();
-              router.push('/sign-up');
-            }}
-          >
-            Create account
-          </Button>
-          <p className="pt-1 text-center text-xs text-foreground-secondary">
-            <Link href="/welcome" className="text-accent hover:underline" onClick={onClose}>
-              Learn about {BRAND.name}
-            </Link>
+    <>
+      <ModalShell
+        open={open}
+        title={title}
+        titleId="auth-modal-title"
+        eyebrow={isSignUp ? 'Join PepGuide' : 'Welcome back'}
+        description={description}
+        onClose={closeAuthModal}
+        className={cn(isSignUp ? 'max-w-lg' : 'max-w-md')}
+        headerExtra={
+          isSignUp ? (
+            <div className="auth-modal__perks">
+              {SIGN_UP_PERKS.map((perk) => (
+                <span key={perk} className="auth-modal__perk">
+                  <span className="auth-modal__perk-dot" aria-hidden />
+                  {perk}
+                </span>
+              ))}
+            </div>
+          ) : null
+        }
+        footer={
+          <p className="text-center text-sm text-foreground-secondary">
+            {isSignUp ? (
+              <>
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  className="font-semibold text-accent hover:underline"
+                  onClick={() => setAuthModalMode('sign-in')}
+                >
+                  Sign in
+                </button>
+              </>
+            ) : (
+              <>
+                Don&apos;t have an account?{' '}
+                <button
+                  type="button"
+                  className="font-semibold text-accent hover:underline"
+                  onClick={() => setAuthModalMode('sign-up')}
+                >
+                  Create one
+                </button>
+              </>
+            )}
           </p>
+        }
+      >
+        <div className="auth-modal__tabs" role="tablist" aria-label="Auth mode">
+          {(['sign-in', 'sign-up'] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              role="tab"
+              aria-selected={mode === item}
+              data-active={mode === item}
+              className="auth-modal__tab"
+              onClick={() => setAuthModalMode(item)}
+            >
+              {item === 'sign-in' ? 'Sign in' : 'Create account'}
+            </button>
+          ))}
         </div>
-      </div>
-    </div>
+
+        {mode === 'sign-in' ? (
+          <SignInForm onSuccess={closeAuthModal} />
+        ) : (
+          <SignUpForm onSuccess={closeAuthModal} />
+        )}
+      </ModalShell>
+
+      {open ? <InAppBrowserGate /> : null}
+    </>
   );
 }
+
+/** @deprecated Use AuthModal — kept for existing imports. */
+export const SignInModal = AuthModal;

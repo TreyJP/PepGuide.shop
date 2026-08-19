@@ -1,57 +1,47 @@
-import { PRO_BILLING } from '@/src/constants/billing';
-import { isTestAccountEmail } from '@/src/constants/test-accounts';
-import type { AdminDashboardMetrics, AnalyticsEvent } from '@/src/types/analytics';
+import type {
+  AdminDashboardMetrics,
+  AdminDashboardRawData,
+  AdminMetricsRange,
+  AnalyticsEvent,
+} from '@/src/types/analytics';
 
-type UserRow = {
-  email?: string;
-  createdAt?: string;
-  subscriptionTier?: string;
-  accountStatus?: string;
-  chatBlockedUntil?: string | null;
-  abuseStrikeCount?: number;
-  stripeSubscriptionId?: string | null;
-  stripeCustomerId?: string | null;
-};
-
-type UsageRow = {
-  id?: string;
-  messagesUsed?: number;
-  updatedAt?: string;
-};
-
-type SafetyRow = {
-  createdAt?: string;
-};
-
-type PartnerRow = {
-  id: string;
-  label?: string;
-  active?: boolean;
-};
-
-function daysAgoIso(days: number): string {
+function rangeSinceIso(range: AdminMetricsRange): string | null {
+  if (range === 'all') return null;
+  const days = range === '1d' ? 1 : range === '7d' ? 7 : 30;
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
-function todayPeriodId(): string {
-  return new Date().toISOString().slice(0, 10);
+function rangeSinceDay(range: AdminMetricsRange): string | null {
+  const iso = rangeSinceIso(range);
+  return iso ? iso.slice(0, 10) : null;
 }
 
 function isWithin(iso: string | undefined, sinceIso: string): boolean {
   return Boolean(iso && iso >= sinceIso);
 }
 
-export function buildAdminDashboardMetrics(input: {
-  users: UserRow[];
-  events: AnalyticsEvent[];
-  usagePeriods: UsageRow[];
-  safetyEvents: SafetyRow[];
-  partners: PartnerRow[];
-}): AdminDashboardMetrics {
-  const now = new Date().toISOString();
-  const since7d = daysAgoIso(7);
-  const since30d = daysAgoIso(30);
-  const today = todayPeriodId();
+function inRange(
+  iso: string | undefined,
+  range: AdminMetricsRange,
+): boolean {
+  const since = rangeSinceIso(range);
+  if (!since) return true;
+  return isWithin(iso, since);
+}
+
+function uniquePeople(list: AnalyticsEvent[]): number {
+  return new Set(
+    list
+      .map((event) => event.userId || event.email)
+      .filter((value): value is string => Boolean(value)),
+  ).size;
+}
+
+export function buildAdminDashboardMetrics(
+  input: AdminDashboardRawData,
+  range: AdminMetricsRange,
+): AdminDashboardMetrics {
+  const sinceDay = rangeSinceDay(range);
 
   const byStatus = {
     active: 0,
@@ -60,29 +50,12 @@ export function buildAdminDashboardMetrics(input: {
     suspended: 0,
   };
 
-  let pro = 0;
-  let free = 0;
-  let new7d = 0;
-  let new30d = 0;
-  let withStripe = 0;
+  let newInRange = 0;
   let chatBlocked = 0;
   let withAbuseStrikes = 0;
 
   for (const user of input.users) {
-    const isTest = isTestAccountEmail(user.email);
-    // Test / QA accounts keep Pro access in-app but do not count as paid.
-    if (!isTest && user.subscriptionTier === 'pro') pro += 1;
-    else free += 1;
-
-    if (isWithin(user.createdAt, since7d)) new7d += 1;
-    if (isWithin(user.createdAt, since30d)) new30d += 1;
-
-    if (
-      !isTest &&
-      (user.stripeSubscriptionId || user.stripeCustomerId)
-    ) {
-      withStripe += 1;
-    }
+    if (inRange(user.createdAt, range)) newInRange += 1;
 
     const status = (user.accountStatus ?? 'active') as keyof typeof byStatus;
     if (status in byStatus) byStatus[status] += 1;
@@ -97,32 +70,32 @@ export function buildAdminDashboardMetrics(input: {
     if ((user.abuseStrikeCount ?? 0) > 0) withAbuseStrikes += 1;
   }
 
-  const affiliateClicks = input.events.filter((e) => e.name === 'affiliate_click');
-  const couponCopies = input.events.filter((e) => e.name === 'coupon_copy');
-  const checkoutStarted = input.events.filter((e) => e.name === 'checkout_started');
-  const checkoutCompleted = input.events.filter(
-    (e) => e.name === 'checkout_completed' && !isTestAccountEmail(e.email),
+  const affiliateClicks = input.events.filter(
+    (event) =>
+      event.name === 'affiliate_click' && inRange(event.createdAt, range),
   );
-  const checkoutStartedPaid = checkoutStarted.filter(
-    (e) => !isTestAccountEmail(e.email),
+  const couponCopies = input.events.filter(
+    (event) =>
+      event.name === 'coupon_copy' && inRange(event.createdAt, range),
   );
-
-  const clicks7d = affiliateClicks.filter((e) => isWithin(e.createdAt, since7d));
-  const unique = (list: AnalyticsEvent[]) =>
-    new Set(
-      list
-        .map((e) => e.userId || e.email)
-        .filter((value): value is string => Boolean(value)),
-    ).size;
+  const safetyEvents = input.safetyEvents.filter((event) =>
+    inRange(event.createdAt, range),
+  );
 
   const partnerLabel = new Map(
-    input.partners.map((p) => [p.id, p.label?.trim() || p.id]),
+    input.partners.map((partner) => [
+      partner.id,
+      partner.label?.trim() || partner.id,
+    ]),
   );
 
   const clicksByPartnerMap = new Map<string, number>();
   for (const click of affiliateClicks) {
     const partnerId = String(click.meta.partnerId ?? 'unknown');
-    clicksByPartnerMap.set(partnerId, (clicksByPartnerMap.get(partnerId) ?? 0) + 1);
+    clicksByPartnerMap.set(
+      partnerId,
+      (clicksByPartnerMap.get(partnerId) ?? 0) + 1,
+    );
   }
 
   const clicksByPartner = [...clicksByPartnerMap.entries()]
@@ -157,68 +130,38 @@ export function buildAdminDashboardMetrics(input: {
       href: typeof event.meta.href === 'string' ? event.meta.href : null,
     }));
 
-  let messagesToday = 0;
-  let activeChattersToday = 0;
-  let messages7d = 0;
+  let messages = 0;
+  let activeChatters = 0;
   for (const period of input.usagePeriods) {
     const used = Number(period.messagesUsed ?? 0);
     if (used <= 0) continue;
-    // period docs are keyed YYYY-MM-DD; updatedAt is a good fallback.
     const periodDay = period.id || period.updatedAt?.slice(0, 10);
-    if (periodDay === today) {
-      messagesToday += used;
-      activeChattersToday += 1;
-    }
-    if (periodDay && periodDay >= since7d.slice(0, 10)) {
-      messages7d += used;
-    }
+    if (!periodDay) continue;
+    if (sinceDay && periodDay < sinceDay) continue;
+    messages += used;
+    activeChatters += 1;
   }
 
-  const safety7d = input.safetyEvents.filter((e) =>
-    isWithin(e.createdAt, since7d),
-  ).length;
-
   return {
-    generatedAt: now,
+    generatedAt: input.generatedAt,
+    range,
     users: {
       total: input.users.length,
-      pro,
-      free,
-      new7d,
-      new30d,
-      withStripe,
+      newInRange,
       byStatus,
       chatBlocked,
       withAbuseStrikes,
     },
-    sales: {
-      proSubscribers: pro,
-      estimatedMrrUsd: pro * PRO_BILLING.priceUsd,
-      checkoutStarted7d: checkoutStartedPaid.filter((e) =>
-        isWithin(e.createdAt, since7d),
-      ).length,
-      checkoutCompleted7d: checkoutCompleted.filter((e) =>
-        isWithin(e.createdAt, since7d),
-      ).length,
-      checkoutCompletedAll: checkoutCompleted.length,
-      estimatedRevenueAllUsd: checkoutCompleted.length * PRO_BILLING.priceUsd,
-    },
     engagement: {
-      messagesToday,
-      activeChattersToday,
-      messages7d,
-      couponCopies7d: couponCopies.filter((e) => isWithin(e.createdAt, since7d))
-        .length,
-      couponCopiesAll: couponCopies.length,
-      safetyEvents7d: safety7d,
-      safetyEventsAll: input.safetyEvents.length,
+      messages,
+      activeChatters,
+      couponCopies: couponCopies.length,
+      safetyEvents: safetyEvents.length,
     },
     affiliates: {
-      clicks7d: clicks7d.length,
-      clicksAll: affiliateClicks.length,
-      uniqueClickers7d: unique(clicks7d),
-      uniqueClickersAll: unique(affiliateClicks),
-      activePartners: input.partners.filter((p) => p.active).length,
+      clicks: affiliateClicks.length,
+      uniqueClickers: uniquePeople(affiliateClicks),
+      activePartners: input.partners.filter((partner) => partner.active).length,
       totalPartners: input.partners.length,
       clicksByPartner,
       recentClicks,

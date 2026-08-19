@@ -2,11 +2,16 @@
 
 import { create } from 'zustand';
 
+export type AuthModalMode = 'sign-in' | 'sign-up';
+
 type UiState = {
-  signInModalOpen: boolean;
-  signInModalMessage: string;
+  authModalOpen: boolean;
+  authModalMode: AuthModalMode;
+  authModalMessage: string;
   openSignInModal: (message?: string) => void;
-  closeSignInModal: () => void;
+  openSignUpModal: (message?: string) => void;
+  closeAuthModal: () => void;
+  setAuthModalMode: (mode: AuthModalMode) => void;
 
   proSubscribeModalOpen: boolean;
   proSubscribeFeature: string;
@@ -19,18 +24,29 @@ type UiState = {
   toggleSidebar: () => void;
 };
 
+const DEFAULT_SIGN_IN_MESSAGE =
+  'Sign in to start researching with PepGuide AI and save your chats.';
+const DEFAULT_SIGN_UP_MESSAGE =
+  'Create your account to save chats, bookmarks, and more.';
+
 export const useUiStore = create<UiState>((set) => ({
-  signInModalOpen: false,
-  signInModalMessage:
-    'Sign in to start researching with PepGuide AI and save your chats.',
+  authModalOpen: false,
+  authModalMode: 'sign-in',
+  authModalMessage: DEFAULT_SIGN_IN_MESSAGE,
   openSignInModal: (message) =>
     set({
-      signInModalOpen: true,
-      signInModalMessage:
-        message ??
-        'Sign in to start researching with PepGuide AI and save your chats.',
+      authModalOpen: true,
+      authModalMode: 'sign-in',
+      authModalMessage: message ?? DEFAULT_SIGN_IN_MESSAGE,
     }),
-  closeSignInModal: () => set({ signInModalOpen: false }),
+  openSignUpModal: (message) =>
+    set({
+      authModalOpen: true,
+      authModalMode: 'sign-up',
+      authModalMessage: message ?? DEFAULT_SIGN_UP_MESSAGE,
+    }),
+  closeAuthModal: () => set({ authModalOpen: false }),
+  setAuthModalMode: (mode) => set({ authModalMode: mode }),
 
   proSubscribeModalOpen: false,
   proSubscribeFeature: 'PepGuide Pro',

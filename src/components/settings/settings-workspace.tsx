@@ -36,7 +36,7 @@ export function SettingsWorkspace() {
   const handleSignOut = async () => {
     await authService.signOut();
     setUser(null);
-    router.push('/sign-in');
+    openSignInModal('Sign in to continue using PepGuide.');
   };
 
   const handleDeleteAccount = async () => {

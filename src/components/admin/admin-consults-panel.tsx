@@ -232,7 +232,7 @@ export function AdminConsultsPanel() {
           className="inline-flex w-fit items-center gap-1.5 text-sm text-foreground-secondary hover:text-foreground"
         >
           <ArrowLeft className="size-4" />
-          Ask a Pro inbox
+          Ask a Professional inbox
         </button>
 
         <div className="rounded-[16px] border border-border bg-surface px-4 py-3">
@@ -327,7 +327,7 @@ export function AdminConsultsPanel() {
             Ask a Professional inbox
           </h2>
           <p className="mt-1 text-sm text-foreground-secondary">
-            One-on-one questions from Pro members. Open a thread to reply.
+            One-on-one questions from members. Open a thread to reply.
           </p>
         </div>
         <Button
