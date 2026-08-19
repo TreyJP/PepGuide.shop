@@ -21,7 +21,7 @@ export const BRAND = {
     deepNavy: '#0A1B3A',
     ink: '#07111F',
   },
-  termsVersion: '2026.08.01',
-  privacyVersion: '2026.08.01',
+  termsVersion: '2026.08.19',
+  privacyVersion: '2026.08.19',
   researchNoticeVersion: '2026.08.01',
 } as const;

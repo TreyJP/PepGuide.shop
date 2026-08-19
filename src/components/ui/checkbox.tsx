@@ -1,7 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
-import { forwardRef, type InputHTMLAttributes } from 'react';
+import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 
 import { cn } from '@/src/lib/utils';
 
@@ -9,14 +9,17 @@ export type CheckboxProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
   'type'
 > & {
-  label: string;
+  label: ReactNode;
   description?: string;
 };
 
 export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
   ({ className, label, description, id, disabled, ...props }, ref) => {
     const checkboxId =
-      id ?? label.toLowerCase().replace(/\s+/g, '-');
+      id ??
+      (typeof label === 'string'
+        ? label.toLowerCase().replace(/\s+/g, '-')
+        : 'checkbox');
 
     return (
       <label

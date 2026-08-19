@@ -218,3 +218,41 @@ body::-webkit-scrollbar-corner,
 .scrollbar-theme::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+.legal-prose {
+  color: var(--foreground-secondary);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.legal-prose h2 {
+  margin: 2rem 0 0.75rem;
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.legal-prose p,
+.legal-prose ul {
+  margin: 0 0 1rem;
+}
+
+.legal-prose ul {
+  padding-left: 1.25rem;
+}
+
+.legal-prose li {
+  margin-bottom: 0.35rem;
+}
+
+.legal-prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legal-prose a:hover {
+  opacity: 0.85;
+}

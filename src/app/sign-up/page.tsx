@@ -196,7 +196,20 @@ function SignUpForm() {
             control={control}
             render={({ field }) => (
               <Checkbox
-                label="I accept the Terms of Service"
+                label={
+                  <>
+                    I accept the{' '}
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent hover:underline"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      Terms of Service
+                    </Link>
+                  </>
+                }
                 checked={field.value === true}
                 onChange={(event) =>
                   field.onChange(event.target.checked ? true : undefined)
@@ -213,7 +226,20 @@ function SignUpForm() {
             control={control}
             render={({ field }) => (
               <Checkbox
-                label="I accept the Privacy Policy"
+                label={
+                  <>
+                    I accept the{' '}
+                    <Link
+                      href="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent hover:underline"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      Privacy Policy
+                    </Link>
+                  </>
+                }
                 checked={field.value === true}
                 onChange={(event) =>
                   field.onChange(event.target.checked ? true : undefined)
