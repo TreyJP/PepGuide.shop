@@ -374,7 +374,7 @@ export function AdminConsultsPanel() {
       ) : consults.length === 0 ? (
         <EmptyState
           title="No questions in this view"
-          description="When members send Ask a Professional questions from Pro, they appear here for you to answer."
+          description="When members send Ask a Professional questions, they appear here for you to answer."
         />
       ) : (
         <ul className="space-y-2">

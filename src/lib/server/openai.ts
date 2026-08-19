@@ -200,6 +200,14 @@ function routeFromIntent(
     return buildTriedCompoundFollowUpResponse(userMessage, history);
   }
 
+  // Quiz chips / “just show me the top options” finish the open discovery arc.
+  if (priorWasWeight && isWeightDiscoveryChip(userMessage)) {
+    return buildWeightLossPicksResponse(userMessage);
+  }
+  if (priorWasMuscle && isMuscleDiscoveryChip(userMessage)) {
+    return buildMusclePicksResponse('research_goal_exploration', userMessage);
+  }
+
   // New research lane — never finish an old GLP / muscle discovery arc.
   if (isTopicPivot(userMessage) || isDistinctGoalLane(intent.goal)) {
     return null;
@@ -219,7 +227,7 @@ function routeFromIntent(
     case 'appetite_complement':
       // Mid-discovery chip ("Hunger is my main issue") → appetite-focused picks.
       // Post-trial hunger is handled above and never reaches here.
-      if (deliverResult && priorWasWeight && isDiscoveryHungerChip(userMessage)) {
+      if (deliverResult && priorWasWeight) {
         return buildWeightLossPicksResponse(userMessage);
       }
       if (deliverResult && priorWasMuscle) {
@@ -230,21 +238,11 @@ function routeFromIntent(
       }
       return buildAppetiteComplementResponse(userMessage, history);
     default:
-      // Finish the open discovery arc only when still on that same goal.
-      if (
-        deliverResult &&
-        priorWasWeight &&
-        isWeightLossQuery(userMessage) &&
-        !isTopicPivot(userMessage)
-      ) {
+      // Finish the open discovery arc when the user is still answering that quiz.
+      if (deliverResult && priorWasWeight && !isTopicPivot(userMessage)) {
         return buildWeightLossPicksResponse(userMessage);
       }
-      if (
-        deliverResult &&
-        priorWasMuscle &&
-        isMuscleQuery(userMessage) &&
-        !isTopicPivot(userMessage)
-      ) {
+      if (deliverResult && priorWasMuscle && !isTopicPivot(userMessage)) {
         return buildMusclePicksResponse(
           'research_goal_exploration',
           userMessage,
@@ -322,7 +320,7 @@ function isWeightLossQuery(text: string): boolean {
   ) {
     return false;
   }
-  return /\b(lose\s+weight|weight\s*loss|losing\s+weight|fat\s*loss|lose\s+fat|obesity|obese|overweight|glp-?1|incretin|retatrutide|semaglutide|tirzepatide|slim\s+down|appetite|hunger|hungry|satiety|craving|burn\s+fat|cut\s+fat|belly\s*fat)\b/i.test(
+  return /\b(lose\s+weight|weight\s*loss|losing\s+weight|fat[- ]?loss|lose\s+fat|obesity|obese|overweight|glp-?1|incretin|retatrutide|semaglutide|tirzepatide|slim\s+down|appetite|hunger|hungry|satiety|craving|burn\s+fat|cut\s+fat|belly\s*fat)\b/i.test(
     text,
   );
 }
@@ -367,11 +365,22 @@ function isAppetiteComplementQuery(text: string): boolean {
   );
 }
 
-/** Discovery chips — not “I already tried X”. */
-function isDiscoveryHungerChip(text: string): boolean {
-  return /^(hunger is my main issue|overall fat-loss results|just show me the top options)\.?$/i.test(
+/** Discovery chips from the fat-loss / muscle clarifying reply. */
+function isWeightDiscoveryChip(text: string): boolean {
+  return /^(hunger is my main issue|overall fat[- ]?loss results|just show me the top options)\.?$/i.test(
     text.trim(),
   );
+}
+
+function isMuscleDiscoveryChip(text: string): boolean {
+  return /^(recovery between training|lean mass\s*\/\s*size|just show me the top options)\.?$/i.test(
+    text.trim(),
+  );
+}
+
+/** @deprecated Use isWeightDiscoveryChip — kept for older call sites. */
+function isDiscoveryHungerChip(text: string): boolean {
+  return isWeightDiscoveryChip(text);
 }
 
 const DISSATISFACTION_RE =
@@ -786,8 +795,12 @@ function buildSystemPrompt(
 }
 
 function wantsImmediatePicks(text: string): boolean {
-  return /\b(show me (the )?(options|peptides|picks|list)|just (show|give|list)|give me (the )?(options|peptides|list|picks)|what are the (top|best) (3|three|options|peptides)|skip (the )?(questions|quiz))\b/i.test(
-    text,
+  return (
+    isWeightDiscoveryChip(text) ||
+    isMuscleDiscoveryChip(text) ||
+    /\b(show me (the )?(options|peptides|picks|list)|just (show|give|list)|give me (the )?(options|peptides|list|picks)|what are the (top|best) (3|three|options|peptides)|skip (the )?(questions|quiz))\b/i.test(
+      text,
+    )
   );
 }
 

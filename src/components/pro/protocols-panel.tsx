@@ -1,6 +1,6 @@
 'use client';
 
-import { RefreshCw } from 'lucide-react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AddProtocolToCycleModal } from '@/src/components/cycle/add-protocol-to-cycle-modal';
@@ -12,8 +12,11 @@ import { ModalShell } from '@/src/components/ui/modal-shell';
 import { PRO_PROTOCOLS, type ProProtocol } from '@/src/data/pro/protocols';
 import { useProAccess } from '@/src/hooks/use-pro-access';
 import { cn } from '@/src/lib/utils';
+import { trackAnalyticsEvent } from '@/src/services/firestore/analytics';
+import { protocolShopLinksRepository } from '@/src/services/firestore/protocol-shop-links';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useUiStore } from '@/src/stores/ui-store';
+import type { ProtocolShopLink } from '@/src/types/protocol-shop-links';
 
 const DIFFICULTY_FILTERS = [
   'All levels',
@@ -47,9 +50,11 @@ function FocusTags({ protocol }: { protocol: ProProtocol }) {
 
 function ProtocolActions({
   protocol,
+  shopLinks,
   onAddToCycle,
 }: {
   protocol: ProProtocol;
+  shopLinks: ProtocolShopLink[];
   onAddToCycle: () => void;
 }) {
   return (
@@ -66,6 +71,29 @@ function ProtocolActions({
         <RefreshCw className="size-3.5" />
         Add stack to cycle
       </Button>
+      {shopLinks.map((link) => (
+        <Button
+          key={link.id}
+          type="button"
+          size="sm"
+          onClick={() => {
+            void trackAnalyticsEvent({
+              name: 'affiliate_click',
+              meta: {
+                partnerId: 'protocol-shop',
+                partnerLabel: link.label,
+                peptideId: protocol.id,
+                peptideName: protocol.name,
+                href: link.href,
+              },
+            });
+            window.open(link.href, '_blank', 'noopener,noreferrer');
+          }}
+        >
+          <ExternalLink className="size-3.5" />
+          {link.label}
+        </Button>
+      ))}
     </div>
   );
 }
@@ -167,11 +195,13 @@ function ProtocolPicker({
 
 function ProtocolDetail({
   protocol,
+  shopLinks,
   onAddToCycle,
   cycleNotice,
   compactHeader = false,
 }: {
   protocol: ProProtocol;
+  shopLinks: ProtocolShopLink[];
   onAddToCycle: () => void;
   cycleNotice: string | null;
   /** When true, skip the large title/summary (e.g. already shown in a modal chrome). */
@@ -200,7 +230,11 @@ function ProtocolDetail({
           </>
         )}
         <FocusTags protocol={protocol} />
-        <ProtocolActions protocol={protocol} onAddToCycle={onAddToCycle} />
+        <ProtocolActions
+          protocol={protocol}
+          shopLinks={shopLinks}
+          onAddToCycle={onAddToCycle}
+        />
         {cycleNotice ? (
           <p className="text-sm text-accent">{cycleNotice}</p>
         ) : null}
@@ -234,6 +268,29 @@ export function ProtocolsPanel() {
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [cycleOpen, setCycleOpen] = useState(false);
   const [cycleNotice, setCycleNotice] = useState<string | null>(null);
+  const [shopLinksByProtocol, setShopLinksByProtocol] = useState<
+    Record<string, ProtocolShopLink[]>
+  >({});
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const docs = await protocolShopLinksRepository.list();
+        if (cancelled) return;
+        const map: Record<string, ProtocolShopLink[]> = {};
+        for (const item of docs) {
+          if (item.links.length > 0) map[item.protocolId] = item.links;
+        }
+        setShopLinksByProtocol(map);
+      } catch {
+        if (!cancelled) setShopLinksByProtocol({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const protocols = useMemo(() => {
     const filtered =
@@ -345,6 +402,7 @@ export function ProtocolsPanel() {
             <div className="min-h-0 overflow-y-auto p-6">
               <ProtocolDetail
                 protocol={active}
+                shopLinks={shopLinksByProtocol[active.id] ?? []}
                 onAddToCycle={handleAddToCycle}
                 cycleNotice={cycleNotice}
               />
@@ -373,6 +431,7 @@ export function ProtocolsPanel() {
           {active ? (
             <ProtocolDetail
               protocol={active}
+              shopLinks={shopLinksByProtocol[active.id] ?? []}
               onAddToCycle={handleAddToCycle}
               cycleNotice={cycleNotice}
               compactHeader

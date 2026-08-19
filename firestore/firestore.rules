@@ -138,6 +138,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Admin-managed one-click protocol shop URLs (vendor stack links).
+    match /protocolShopLinks/{protocolId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Signup referral affiliates (codes + commission %). Public read so
     // codes can be validated at signup and `/r/CODE` clicks can resolve.
     // New seats are admin-provisioned. Self-enroll create kept for legacy

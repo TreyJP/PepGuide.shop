@@ -129,7 +129,7 @@ export function ProSubscribeModal() {
     if (!user) {
       closeProSubscribeModal();
       openSignInModal(
-        'Sign in to subscribe to PepGuide Pro and unlock Education & Research, Protocols, Bookmarks, and Ask a Professional.',
+        'Sign in to subscribe to PepGuide Pro and unlock Education & Research and Protocols.',
       );
       return;
     }

@@ -9,6 +9,7 @@ import { AdminChatsPanel } from '@/src/components/admin/admin-chats-panel';
 import { AdminConsultsPanel } from '@/src/components/admin/admin-consults-panel';
 import { AdminDashboard } from '@/src/components/admin/admin-dashboard';
 import { AdminPremiumUsersPanel } from '@/src/components/admin/admin-premium-users-panel';
+import { AdminProtocolShopLinksPanel } from '@/src/components/admin/admin-protocol-shop-links-panel';
 import { Button } from '@/src/components/ui/button';
 import {
   Card,
@@ -37,6 +38,7 @@ type AdminTab =
   | 'consults'
   | 'premium'
   | 'chats'
+  | 'protocol-shops'
   | 'access';
 
 function emptyLabs(): Record<PartnerLabTestId, boolean | null> {
@@ -364,6 +366,7 @@ export default function AdminPage() {
             [
               { id: 'dashboard', label: 'Dashboard' },
               { id: 'partners', label: 'Partners' },
+              { id: 'protocol-shops', label: 'Protocol shops' },
               { id: 'affiliates', label: 'Affiliates' },
               { id: 'chats', label: 'Chats' },
               { id: 'premium', label: 'Users' },
@@ -395,6 +398,8 @@ export default function AdminPage() {
       ) : null}
 
       {tab === 'affiliates' ? <AdminAffiliatesPanel /> : null}
+
+      {tab === 'protocol-shops' ? <AdminProtocolShopLinksPanel /> : null}
 
       {tab === 'chats' ? <AdminChatsPanel /> : null}
 

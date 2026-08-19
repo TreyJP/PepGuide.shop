@@ -38,13 +38,6 @@ const MAIN_NAV = [
   { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/pro/forum', label: 'Questions & Discussion', icon: MessagesSquare },
   { href: '/library', label: 'All Peptides', icon: Library },
-  { href: '/cycle', label: 'Cycle', icon: RefreshCw },
-  { href: '/calculator', label: 'Calculator', icon: Calculator },
-] as const;
-
-const PRO_NAV = [
-  { href: '/pro/guides', label: 'Education & Research', icon: BookOpen },
-  { href: '/pro/protocols', label: 'Protocols', icon: FlaskConical },
   { href: '/pro/bookmarks', label: 'Bookmarks', icon: Bookmark },
   {
     href: '/pro/ask',
@@ -56,6 +49,13 @@ const PRO_NAV = [
     label: 'Vendor Reviews',
     icon: Star,
   },
+  { href: '/cycle', label: 'Cycle', icon: RefreshCw },
+  { href: '/calculator', label: 'Calculator', icon: Calculator },
+] as const;
+
+const PRO_NAV = [
+  { href: '/pro/guides', label: 'Education & Research', icon: BookOpen },
+  { href: '/pro/protocols', label: 'Protocols', icon: FlaskConical },
 ] as const;
 
 function NavLink({

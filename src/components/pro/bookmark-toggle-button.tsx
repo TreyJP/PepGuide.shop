@@ -4,7 +4,6 @@ import { Bookmark } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/src/components/ui/button';
-import { useProAccess } from '@/src/hooks/use-pro-access';
 import { cn } from '@/src/lib/utils';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useBookmarksStore } from '@/src/stores/bookmarks-store';
@@ -20,7 +19,7 @@ type BookmarkToggleButtonProps = {
 };
 
 /**
- * Pro-gated bookmark toggle. Non-Pro users get the subscribe flow.
+ * Bookmark toggle. Sign-in required; available to every account.
  */
 export function BookmarkToggleButton({
   input,
@@ -30,10 +29,6 @@ export function BookmarkToggleButton({
 }: BookmarkToggleButtonProps) {
   const user = useAuthStore((state) => state.user);
   const openSignInModal = useUiStore((state) => state.openSignInModal);
-  const openProSubscribeModal = useUiStore(
-    (state) => state.openProSubscribeModal,
-  );
-  const { isPro, loading: proLoading } = useProAccess();
   const loadBookmarks = useBookmarksStore((state) => state.loadBookmarks);
   const toggleBookmark = useBookmarksStore((state) => state.toggleBookmark);
   const loadedForUserId = useBookmarksStore((state) => state.loadedForUserId);
@@ -65,16 +60,11 @@ export function BookmarkToggleButton({
   async function handleClick(event: React.MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
-    if (busy || proLoading) return;
+    if (busy) return;
     setError(null);
 
     if (!user) {
       openSignInModal('Sign in to bookmark peptides, videos, and protocols.');
-      return;
-    }
-
-    if (!isPro) {
-      openProSubscribeModal('Bookmarks');
       return;
     }
 
@@ -96,7 +86,7 @@ export function BookmarkToggleButton({
         <button
           type="button"
           onClick={handleClick}
-          disabled={busy || proLoading}
+          disabled={busy}
           aria-pressed={bookmarked}
           aria-label={bookmarked ? 'Remove bookmark' : 'Add bookmark'}
           title={bookmarked ? 'Bookmarked' : 'Bookmark'}
@@ -123,7 +113,7 @@ export function BookmarkToggleButton({
         variant="ghost"
         size={size === 'sm' ? 'sm' : 'md'}
         onClick={handleClick}
-        disabled={busy || proLoading}
+        disabled={busy}
         className={cn(bookmarked && 'text-accent')}
         aria-pressed={bookmarked}
         aria-label={bookmarked ? 'Remove bookmark' : 'Add bookmark'}

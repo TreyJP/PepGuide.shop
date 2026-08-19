@@ -85,13 +85,10 @@ export const PRO_BILLING = {
   interval: PRO_PLANS.monthly.interval,
   priceLabel: PRO_PLANS.monthly.priceLabel,
   tagline:
-    'Education & Research, Protocols, Bookmarks, and Ask a Professional',
+    'Education & Research and Protocols',
   features: [
     'Education & Research video lessons',
     'Goal-built Protocol stacks',
-    'Bookmarks for peptides, videos, and protocols',
-    'Ask a Professional one-on-one help',
-    'Vendor Reviews from the PepGuide community',
     'Cancel anytime',
   ],
   /**
