@@ -14,6 +14,7 @@ import { Button } from '@/src/components/ui/button';
 import { Checkbox } from '@/src/components/ui/checkbox';
 import { Input } from '@/src/components/ui/input';
 import { BRAND } from '@/src/constants/brand';
+import { attachCampaignSignup } from '@/src/lib/campaigns/client-attribution';
 import { getAuthErrorMessage } from '@/src/lib/firebase-errors';
 import {
   normalizeReferralCode,
@@ -78,6 +79,15 @@ export function SignUpForm({
       return;
     }
     await firebaseUser.getIdToken(true);
+    try {
+      await attachCampaignSignup({
+        idToken: await firebaseUser.getIdToken(),
+        email: firebaseUser.email ?? undefined,
+        emailVerified: firebaseUser.emailVerified,
+      });
+    } catch {
+      // best-effort campaign attribution
+    }
     onSuccess?.();
   };
 
@@ -120,6 +130,18 @@ export function SignUpForm({
       const auth = getFirebaseAuth();
       await auth?.authStateReady();
       await auth?.currentUser?.getIdToken(true);
+      try {
+        const token = await auth?.currentUser?.getIdToken();
+        if (token) {
+          await attachCampaignSignup({
+            idToken: token,
+            email: auth?.currentUser?.email ?? undefined,
+            emailVerified: auth?.currentUser?.emailVerified,
+          });
+        }
+      } catch {
+        // best-effort
+      }
 
       setGoogleLoading(false);
       onSuccess?.();

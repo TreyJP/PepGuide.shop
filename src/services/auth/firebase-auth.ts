@@ -50,6 +50,12 @@ function fallbackProfile(user: User): UserProfile {
     dataRetentionDays: 365,
     referredByCode: null,
     referredByAffiliateId: null,
+    campaignReferredByCode: null,
+    campaignReferredByCampaignId: null,
+    campaignReferredByParticipantId: null,
+    campaignSessionCount: 0,
+    campaignMeaningfulActions: 0,
+    campaignLastSessionAt: null,
   };
 }
 

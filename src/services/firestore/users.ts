@@ -70,6 +70,28 @@ function mapUser(id: string, data: Record<string, unknown>): UserProfile {
       data.referredByAffiliateId.trim()
         ? data.referredByAffiliateId.trim()
         : null,
+    campaignReferredByCode:
+      typeof data.campaignReferredByCode === 'string' &&
+      data.campaignReferredByCode.trim()
+        ? data.campaignReferredByCode.trim()
+        : null,
+    campaignReferredByCampaignId:
+      typeof data.campaignReferredByCampaignId === 'string' &&
+      data.campaignReferredByCampaignId.trim()
+        ? data.campaignReferredByCampaignId.trim()
+        : null,
+    campaignReferredByParticipantId:
+      typeof data.campaignReferredByParticipantId === 'string' &&
+      data.campaignReferredByParticipantId.trim()
+        ? data.campaignReferredByParticipantId.trim()
+        : null,
+    campaignSessionCount: Number(data.campaignSessionCount ?? 0),
+    campaignMeaningfulActions: Number(data.campaignMeaningfulActions ?? 0),
+    campaignLastSessionAt:
+      typeof data.campaignLastSessionAt === 'string' &&
+      data.campaignLastSessionAt
+        ? data.campaignLastSessionAt
+        : null,
   };
 }
 
@@ -129,6 +151,12 @@ export const userRepository = {
       dataRetentionDays: 365,
       referredByCode,
       referredByAffiliateId,
+      campaignReferredByCode: null,
+      campaignReferredByCampaignId: null,
+      campaignReferredByParticipantId: null,
+      campaignSessionCount: 0,
+      campaignMeaningfulActions: 0,
+      campaignLastSessionAt: null,
     };
 
     await setDoc(doc(requireDb(), 'users', input.id), payload, { merge: true });
@@ -183,6 +211,12 @@ export const userRepository = {
       abuseStrikeCount: _strikes,
       referredByCode: _refCode,
       referredByAffiliateId: _refId,
+      campaignReferredByCode: _cCode,
+      campaignReferredByCampaignId: _cCamp,
+      campaignReferredByParticipantId: _cPart,
+      campaignSessionCount: _cSessions,
+      campaignMeaningfulActions: _cActions,
+      campaignLastSessionAt: _cLast,
       ...safe
     } = patch;
     await updateDoc(doc(requireDb(), 'users', userId), {

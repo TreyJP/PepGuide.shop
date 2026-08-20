@@ -1,12 +1,16 @@
 'use client';
 
 import { ThemeProvider } from 'next-themes';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect } from 'react';
 
 import { AuthModal } from '@/src/components/auth/sign-in-modal';
+import { captureCampaignReferralFromUrl } from '@/src/lib/campaigns/client-attribution';
 import { authService } from '@/src/services/auth';
-import { initFirebaseAnalytics } from '@/src/services/firebase/config';
+import {
+  getFirebaseAuth,
+  initFirebaseAnalytics,
+} from '@/src/services/firebase/config';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useUiStore } from '@/src/stores/ui-store';
 
@@ -24,6 +28,41 @@ function AuthQueryListener() {
       openSignInModal();
     }
   }, [searchParams, openSignInModal, openSignUpModal]);
+
+  return null;
+}
+
+function CampaignRefCapture() {
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    void captureCampaignReferralFromUrl(searchParams);
+  }, [searchParams, pathname]);
+
+  useEffect(() => {
+    if (!user) return;
+    const key = `pepguide.campaign.session.${new Date().toISOString().slice(0, 10)}`;
+    if (window.sessionStorage.getItem(key) === '1') return;
+    void (async () => {
+      try {
+        const token = await getFirebaseAuth()?.currentUser?.getIdToken();
+        if (!token) return;
+        const res = await fetch('/api/campaigns/engagement', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ kind: 'session' }),
+        });
+        if (res.ok) window.sessionStorage.setItem(key, '1');
+      } catch {
+        // non-blocking
+      }
+    })();
+  }, [user]);
 
   return null;
 }
@@ -65,6 +104,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AuthModal />
       <Suspense fallback={null}>
         <AuthQueryListener />
+        <CampaignRefCapture />
       </Suspense>
     </ThemeProvider>
   );

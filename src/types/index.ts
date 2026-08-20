@@ -116,6 +116,14 @@ export type UserProfile = {
   referredByCode: string | null;
   /** Referral affiliate id attributed at signup. */
   referredByAffiliateId: string | null;
+  /** First-touch campaign referral attribution (server-written only). */
+  campaignReferredByCode: string | null;
+  campaignReferredByCampaignId: string | null;
+  campaignReferredByParticipantId: string | null;
+  /** Anti-fraud / qualification engagement counters (server-maintained). */
+  campaignSessionCount: number;
+  campaignMeaningfulActions: number;
+  campaignLastSessionAt: string | null;
 };
 
 /** Public Pro ranking / forum identity card. */

@@ -119,6 +119,9 @@ export const bookmarksRepository = {
     await setDoc(doc(requireDb(), 'users', userId, 'bookmarks', id), payload, {
       merge: true,
     });
+    void import('@/src/lib/campaigns/client-attribution').then((mod) =>
+      mod.recordCampaignMeaningfulAction(),
+    );
     return payload;
   },
 

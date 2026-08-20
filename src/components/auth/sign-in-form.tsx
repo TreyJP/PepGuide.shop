@@ -12,6 +12,7 @@ import {
 } from '@/src/components/auth/google-auth-button';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
+import { attachCampaignSignup } from '@/src/lib/campaigns/client-attribution';
 import { getAuthErrorMessage } from '@/src/lib/firebase-errors';
 import { signInSchema, type SignInInput } from '@/src/schemas/auth';
 import { authService } from '@/src/services/auth';
@@ -50,6 +51,15 @@ export function SignInForm({
       return;
     }
     await firebaseUser.getIdToken(true);
+    try {
+      await attachCampaignSignup({
+        idToken: await firebaseUser.getIdToken(),
+        email: firebaseUser.email ?? undefined,
+        emailVerified: firebaseUser.emailVerified,
+      });
+    } catch {
+      // best-effort
+    }
     onSuccess?.();
   };
 
@@ -90,6 +100,18 @@ export function SignInForm({
       const auth = getFirebaseAuth();
       await auth?.authStateReady();
       await auth?.currentUser?.getIdToken(true);
+      try {
+        const token = await auth?.currentUser?.getIdToken();
+        if (token) {
+          await attachCampaignSignup({
+            idToken: token,
+            email: auth?.currentUser?.email ?? undefined,
+            emailVerified: auth?.currentUser?.emailVerified,
+          });
+        }
+      } catch {
+        // best-effort
+      }
 
       setGoogleLoading(false);
       onSuccess?.();

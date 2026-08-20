@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 
 import { AdminAffiliatesPanel } from '@/src/components/admin/admin-affiliates-panel';
+import { AdminCampaignsPanel } from '@/src/components/admin/admin-campaigns-panel';
 import { AdminChatsPanel } from '@/src/components/admin/admin-chats-panel';
 import { AdminConsultsPanel } from '@/src/components/admin/admin-consults-panel';
 import { AdminDashboard } from '@/src/components/admin/admin-dashboard';
@@ -35,6 +36,7 @@ type AdminTab =
   | 'dashboard'
   | 'partners'
   | 'affiliates'
+  | 'campaigns'
   | 'consults'
   | 'premium'
   | 'chats'
@@ -368,6 +370,7 @@ export default function AdminPage() {
               { id: 'partners', label: 'Partners' },
               { id: 'protocol-shops', label: 'Protocol shops' },
               { id: 'affiliates', label: 'Affiliates' },
+              { id: 'campaigns', label: 'Campaigns' },
               { id: 'chats', label: 'Chats' },
               { id: 'premium', label: 'Users' },
               { id: 'consults', label: 'Ask a Professional' },
@@ -398,6 +401,8 @@ export default function AdminPage() {
       ) : null}
 
       {tab === 'affiliates' ? <AdminAffiliatesPanel /> : null}
+
+      {tab === 'campaigns' ? <AdminCampaignsPanel /> : null}
 
       {tab === 'protocol-shops' ? <AdminProtocolShopLinksPanel /> : null}
 

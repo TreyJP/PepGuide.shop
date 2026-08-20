@@ -8,6 +8,7 @@ import {
   Link2,
   Library,
   Lock,
+  Megaphone,
   MessageCircleQuestion,
   MessageSquare,
   MessagesSquare,
@@ -255,6 +256,19 @@ export function AppSidebar() {
                 active={
                   pathname === '/affiliates' ||
                   pathname.startsWith('/affiliates/')
+                }
+                onNavigate={closeSidebar}
+              />
+            ) : null}
+
+            {isAdmin ? (
+              <NavLink
+                href="/campaigns"
+                label="Campaigns"
+                icon={Megaphone}
+                active={
+                  pathname === '/campaigns' ||
+                  pathname.startsWith('/campaigns/')
                 }
                 onNavigate={closeSidebar}
               />

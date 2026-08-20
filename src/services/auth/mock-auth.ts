@@ -40,6 +40,12 @@ function createMockUser(
     dataRetentionDays: 365,
     referredByCode: code,
     referredByAffiliateId: code ? 'mock-affiliate' : null,
+    campaignReferredByCode: null,
+    campaignReferredByCampaignId: null,
+    campaignReferredByParticipantId: null,
+    campaignSessionCount: 0,
+    campaignMeaningfulActions: 0,
+    campaignLastSessionAt: null,
   };
 }
 

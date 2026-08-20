@@ -67,7 +67,13 @@ service cloud.firestore {
             'abuseWindowStartedAt',
             'lastAbuseAt',
             'referredByCode',
-            'referredByAffiliateId'
+            'referredByAffiliateId',
+            'campaignReferredByCode',
+            'campaignReferredByCampaignId',
+            'campaignReferredByParticipantId',
+            'campaignSessionCount',
+            'campaignMeaningfulActions',
+            'campaignLastSessionAt'
           ]);
 
       allow delete: if isOwner(userId) || isAdmin();
@@ -205,6 +211,57 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['name', 'email', 'code', 'updatedAt'])
         );
+    }
+
+    // PepGuide public campaigns — all reward/fraud writes go through Admin SDK APIs.
+    match /campaigns/{campaignId} {
+      allow read: if resource.data.status in ['active', 'paused', 'ending_review', 'finalized']
+        || isAdmin();
+      allow write: if false;
+    }
+
+    match /campaignParticipants/{participantId} {
+      allow read: if isAdmin()
+        || (
+          isSignedIn()
+          && resource.data.userId == request.auth.uid
+        )
+        || (
+          // Public leaderboard fields only when campaign is public.
+          resource.data.status == 'active'
+          && exists(/databases/$(database)/documents/campaigns/$(resource.data.campaignId))
+          && get(/databases/$(database)/documents/campaigns/$(resource.data.campaignId)).data.leaderboardPublic == true
+          && get(/databases/$(database)/documents/campaigns/$(resource.data.campaignId)).data.status
+            in ['active', 'ending_review', 'finalized']
+        );
+      allow write: if false;
+    }
+
+    match /campaignReferralVisits/{visitId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /campaignReferrals/{referralId} {
+      allow read: if isAdmin()
+        || (
+          isSignedIn()
+          && exists(/databases/$(database)/documents/campaignParticipants/$(resource.data.participantId))
+          && get(/databases/$(database)/documents/campaignParticipants/$(resource.data.participantId)).data.userId
+            == request.auth.uid
+        );
+      allow write: if false;
+    }
+
+    match /campaignAuditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /campaignTermsAcceptances/{acceptanceId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
     }
 
     // Tracked referral link clicks from socials / link trees.

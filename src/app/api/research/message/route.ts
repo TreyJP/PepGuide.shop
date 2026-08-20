@@ -308,6 +308,15 @@ export async function POST(request: Request) {
       }
     }
 
+    try {
+      const { campaignsAdminService } = await import(
+        '@/src/services/firestore/campaigns-admin'
+      );
+      await campaignsAdminService.recordEngagement(uid, 'meaningful');
+    } catch {
+      // non-blocking qualification signal
+    }
+
     return NextResponse.json(response);
   } catch (error) {
     console.error('Research API error', error);
