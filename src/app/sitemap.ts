@@ -10,28 +10,34 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {
-      url: `${SITE_URL}/peptides`,
+      url: SITE_URL,
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
-      url: `${SITE_URL}/guides`,
+      url: `${SITE_URL}/welcome`,
       lastModified: now,
-      changeFrequency: 'weekly',
+      changeFrequency: 'monthly',
       priority: 0.95,
     },
     {
-      url: `${SITE_URL}/vendors`,
+      url: `${SITE_URL}/peptides`,
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
-      url: `${SITE_URL}/welcome`,
+      url: `${SITE_URL}/guides`,
       lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.7,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
+      url: `${SITE_URL}/vendors`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.85,
     },
     {
       url: `${SITE_URL}/terms`,

@@ -37,9 +37,12 @@ export function buildPageMetadata(input: BuildPageMetadataInput): Metadata {
   const image = input.image ?? DEFAULT_OG_IMAGE;
   const imageUrl = absoluteUrl(image.url);
 
-  const absoluteTitle = input.title.includes(`| ${SITE_NAME}`)
-    ? input.title
-    : `${input.title} | ${SITE_NAME}`;
+  const absoluteTitle =
+    input.title === SITE_NAME || input.title.includes(`| ${SITE_NAME}`)
+      ? input.title === SITE_NAME
+        ? `${SITE_NAME} | Peptide Research Education`
+        : input.title
+      : `${input.title} | ${SITE_NAME}`;
 
   return {
     title: { absolute: absoluteTitle },

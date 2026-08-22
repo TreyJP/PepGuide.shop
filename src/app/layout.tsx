@@ -30,11 +30,18 @@ const display = Fraunces({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${BRAND.name} | Peptide Research Education`,
+    default: 'PepGuide | Peptide Research Education',
     template: `%s | ${BRAND.name}`,
   },
   description: BRAND.description,
   applicationName: BRAND.name,
+  keywords: [
+    'PepGuide',
+    'PepGuide.shop',
+    'Pep Guide',
+    'peptide research',
+    'peptide education',
+  ],
   icons: {
     icon: [
       { url: '/brand/faviconpepguidelogo.png', type: 'image/png' },
@@ -54,7 +61,7 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: SITE_URL,
     siteName: BRAND.name,
-    title: `${BRAND.name} | Peptide Research Education`,
+    title: 'PepGuide | Peptide Research Education',
     description: BRAND.description,
     images: [
       {
@@ -67,7 +74,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRAND.name} | Peptide Research Education`,
+    title: 'PepGuide | Peptide Research Education',
     description: BRAND.description,
     images: [DEFAULT_OG_IMAGE.url],
   },

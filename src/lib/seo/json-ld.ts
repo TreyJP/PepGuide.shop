@@ -11,11 +11,17 @@ export function organizationJsonLd(): JsonLd {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: SITE_NAME,
+    alternateName: ['PepGuide.shop', 'Pep Guide', 'PepGuide AI'],
     url: SITE_URL,
     logo: `${SITE_URL}/brand/logowhitebackground.png`,
+    image: `${SITE_URL}/brand/og-share.png`,
     email: SEO_SUPPORT_EMAIL,
     description:
-      'Educational platform for peptide research information, guides, and vendor discovery.',
+      'PepGuide is an educational platform for peptide research information, guides, and vendor discovery. PepGuide does not sell or prescribe peptides.',
+    brand: {
+      '@type': 'Brand',
+      name: SITE_NAME,
+    },
   };
 }
 
@@ -24,7 +30,12 @@ export function websiteJsonLd(): JsonLd {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: SITE_NAME,
+    alternateName: ['PepGuide.shop', 'Pep Guide'],
     url: SITE_URL,
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+    },
     potentialAction: {
       '@type': 'SearchAction',
       target: {
