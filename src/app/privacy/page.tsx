@@ -2,11 +2,13 @@ import type { Metadata } from 'next';
 
 import { LegalDocumentLayout } from '@/src/components/legal/legal-document-layout';
 import { BRAND } from '@/src/constants/brand';
+import { buildPageMetadata } from '@/src/lib/seo/metadata';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: 'Privacy Policy',
   description: `Privacy Policy for ${BRAND.name}.`,
-};
+  path: '/privacy',
+});
 
 export default function PrivacyPage() {
   return (

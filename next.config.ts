@@ -51,6 +51,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  async redirects() {
+    return [
+      {
+        source: '/guides/peptide-research',
+        destination: '/guides/how-peptide-research-works',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

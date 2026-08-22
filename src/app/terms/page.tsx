@@ -2,11 +2,13 @@ import type { Metadata } from 'next';
 
 import { LegalDocumentLayout } from '@/src/components/legal/legal-document-layout';
 import { BRAND } from '@/src/constants/brand';
+import { buildPageMetadata } from '@/src/lib/seo/metadata';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: 'Terms of Service',
   description: `Terms of Service for ${BRAND.name}.`,
-};
+  path: '/terms',
+});
 
 export default function TermsPage() {
   return (

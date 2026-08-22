@@ -3,9 +3,9 @@ import type { Metadata } from 'next';
 import { buildPageMetadata } from '@/src/lib/seo/metadata';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Onboarding',
-  description: 'PepGuide onboarding.',
-  path: '/onboarding',
+  title: 'Settings',
+  description: 'PepGuide account settings.',
+  path: '/settings',
   noIndex: true,
 });
 

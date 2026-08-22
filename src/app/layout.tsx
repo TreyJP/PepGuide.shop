@@ -3,6 +3,14 @@ import { DM_Sans, Fraunces } from 'next/font/google';
 
 import { Providers } from '@/src/components/providers';
 import { BRAND } from '@/src/constants/brand';
+import {
+  JsonLd,
+} from '@/src/components/seo/seo-shell';
+import {
+  organizationJsonLd,
+  websiteJsonLd,
+} from '@/src/lib/seo/json-ld';
+import { DEFAULT_OG_IMAGE, SITE_URL } from '@/src/lib/seo/site';
 
 import './globals.css';
 import './chat-designs.css';
@@ -20,10 +28,10 @@ const display = Fraunces({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.pepguide.shop'),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: BRAND.name,
-    template: `%s · ${BRAND.name}`,
+    default: `${BRAND.name} | Peptide Research Education`,
+    template: `%s | ${BRAND.name}`,
   },
   description: BRAND.description,
   applicationName: BRAND.name,
@@ -44,24 +52,24 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://www.pepguide.shop',
+    url: SITE_URL,
     siteName: BRAND.name,
-    title: BRAND.name,
+    title: `${BRAND.name} | Peptide Research Education`,
     description: BRAND.description,
     images: [
       {
-        url: '/brand/logowhitebackground.png',
-        width: 1983,
-        height: 793,
-        alt: BRAND.name,
+        url: DEFAULT_OG_IMAGE.url,
+        width: DEFAULT_OG_IMAGE.width,
+        height: DEFAULT_OG_IMAGE.height,
+        alt: DEFAULT_OG_IMAGE.alt,
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: BRAND.name,
+    title: `${BRAND.name} | Peptide Research Education`,
     description: BRAND.description,
-    images: ['/brand/logowhitebackground.png'],
+    images: [DEFAULT_OG_IMAGE.url],
   },
 };
 export default function RootLayout({
@@ -76,6 +84,7 @@ export default function RootLayout({
       className={`${sans.variable} ${display.variable}`}
     >
       <body className={`${sans.className} antialiased`}>
+        <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
         <Providers>{children}</Providers>
       </body>
     </html>
