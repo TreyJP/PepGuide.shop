@@ -9,30 +9,29 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: SITE_URL, lastModified: now, changeFrequency: 'weekly', priority: 1 },
     {
       url: `${SITE_URL}/peptides`,
       lastModified: now,
       changeFrequency: 'weekly',
-      priority: 0.95,
+      priority: 1,
     },
     {
       url: `${SITE_URL}/guides`,
       lastModified: now,
       changeFrequency: 'weekly',
-      priority: 0.9,
+      priority: 0.95,
     },
     {
       url: `${SITE_URL}/vendors`,
       lastModified: now,
       changeFrequency: 'weekly',
-      priority: 0.85,
+      priority: 0.9,
     },
     {
       url: `${SITE_URL}/welcome`,
       lastModified: now,
       changeFrequency: 'monthly',
-      priority: 0.6,
+      priority: 0.7,
     },
     {
       url: `${SITE_URL}/terms`,
